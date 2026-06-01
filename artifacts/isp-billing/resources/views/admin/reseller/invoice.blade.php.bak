@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Invoice {{ $bill->bill_no }}</title>
+@php $isPdfMode = isset($isPdf) && $isPdf; @endphp
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+@if($isPdfMode)
+/* ===== PDF / DomPDF mode ===== */
+@page { size: A4 portrait; margin: 0; }
+body {
+    font-family: DejaVu Sans, Arial, sans-serif;
+    font-size: 11px;
+    color: #222;
+    background: #fff;
+    padding: 10mm 12mm 10mm 12mm;
+    width: 210mm;
+}
+@else
+/* ===== Browser / Screen mode ===== */
+body {
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    color: #222;
+    background: #6b7280;
+    min-height: 100vh;
+    padding: 24px 0;
+}
+.page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    margin: 0 auto;
+    padding: 10mm 12mm;
+    box-shadow: 0 4px 28px rgba(0,0,0,.4);
+    border-radius: 2px;
+}
+@media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; border-radius: 0; width: 100%; min-height: auto; padding: 10mm 12mm; }
+}
+@endif
+
+/* ===== Shared styles ===== */
+.hdr-tbl { width:100%; border-collapse:collapse; margin-bottom:5px; page-break-inside:avoid; }
+.hdr-tbl td { vertical-align:top; padding:0; }
+.co-name { font-size:15px; font-weight:700; color:#1a3a5c; }
+.co-sub  { font-size:9.5px; color:#555; line-height:1.6; margin-top:2px; }
+.inv-label { font-size:20px; font-weight:700; color:#1a3a5c; text-transform:uppercase; letter-spacing:2px; text-align:right; }
+.inv-meta  { text-align:right; font-size:11px; margin-top:4px; line-height:1.7; }
+.inv-meta b { color:#1a3a5c; }
+.hdiv { border-top:2.5px solid #1a3a5c; margin:5px 0; }
+
+.badge { padding:2px 6px; border-radius:2px; font-size:8.5px; font-weight:700; text-transform:uppercase; }
+.b-paid    { background:#d5f5e3; color:#1e8449; border:1px solid #1e8449; }
+.b-partial { background:#fef9e7; color:#b7950b; border:1px solid #b7950b; }
+.b-unpaid  { background:#fadbd8; color:#c0392b; border:1px solid #c0392b; }
+
+.two-tbl { width:100%; border-collapse:collapse; margin-bottom:7px; page-break-inside:avoid; }
+.two-tbl td { vertical-align:top; }
+
+.bill-to-box { background:#f5f7fa; border:1px solid #d5d8dc; border-radius:3px; padding:8px 10px; }
+.bill-to-box .lbl { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#888; font-weight:700; border-bottom:1px solid #ddd; padding-bottom:3px; margin-bottom:4px; }
+.bill-to-box p { margin:2px 0; font-size:11px; }
+.bill-to-box p span { color:#666; }
+
+.sum-box { background:#f5f7fa; border:1px solid #d5d8dc; border-radius:3px; padding:8px 10px; }
+.sum-box .lbl { font-size:9px; text-transform:uppercase; letter-spacing:1px; color:#888; font-weight:700; border-bottom:1px solid #ddd; padding-bottom:3px; margin-bottom:4px; }
+.sum-tbl { width:100%; border-collapse:collapse; }
+.sum-tbl td { padding:2px 0; font-size:11px; }
+.sum-tbl td.sr { text-align:right; font-weight:600; }
+.sum-tbl tr.s-total td { font-weight:700; font-size:12px; color:#1a3a5c; border-top:1px solid #ccc; padding-top:3px; }
+.sum-tbl tr.s-due td   { font-weight:700; font-size:12px; color:#c0392b; }
+.sum-tbl tr.s-paid td  { color:#1e8449; font-weight:700; }
+.sum-tbl tr.s-close td { color:#666; }
+
+.sec { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#1a3a5c; border-left:3px solid #1a3a5c; padding:2px 0 2px 7px; margin:7px 0 4px; page-break-after:avoid; }
+
+table.dt { width:100%; border-collapse:collapse; font-size:11px; margin-bottom:6px; }
+table.dt thead { display:table-header-group; }
+table.dt th { background:#1a3a5c; color:#fff; padding:4px 6px; text-align:left; font-size:9.5px; text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap; }
+table.dt th.r, table.dt td.r { text-align:right; }
+table.dt th.c, table.dt td.c { text-align:center; }
+table.dt td { padding:3.5px 6px; border-bottom:1px solid #e8e8e8; }
+table.dt tr { page-break-inside:avoid; }
+table.dt tr:nth-child(even) td { background:#f8f9fa; }
+table.dt tfoot td { background:#e8edf5; font-weight:700; border-top:2px solid #1a3a5c; padding:3.5px 6px; font-size:11px; }
+
+table.at th       { background:#7d3c98; }
+table.at tfoot td { background:#f5eef8; border-top:2px solid #7d3c98; }
+tr.seg td { font-size:9.5px; color:#666; background:#fffde7 !important; padding:2px 6px 2px 20px; font-style:italic; }
+
+table.pt th       { background:#1e6b3c; }
+table.pt tfoot td { background:#eafaf1; border-top:2px solid #1e6b3c; }
+
+.ftr { width:100%; border-collapse:collapse; border-top:1px solid #ddd; margin-top:10px; page-break-inside:avoid; }
+.ftr td { vertical-align:bottom; font-size:9.5px; color:#888; padding-top:6px; }
+.sig-line { border-top:1px solid #888; width:130px; margin:22px 0 3px; margin-left:auto; }
+.no-upper { text-transform:none !important; }
+</style>
+</head>
+<body>
+<div class="{{ $isPdfMode ? '' : 'page' }}">
+
+{{-- HEADER --}}
+<table class="hdr-tbl"><tbody><tr>
+<td style="width:55%;">
+    @if(!empty($logoBase64))
+    <img src="data:image/png;base64,{{ $logoBase64 }}" style="height:40px;width:auto;margin-bottom:3px;display:block;" alt="">
+    @endif
+    <div class="co-name">{{ $companyName }}</div>
+    <div class="co-sub">
+        @if($companyAddress){{ $companyAddress }}<br>@endif
+        @if($companyPhone)Phone: {{ $companyPhone }}@endif
+        @if(!empty($companyAltPhone)) | Mobile: {{ $companyAltPhone }}@endif
+        @if($companyEmail) | Email: {{ $companyEmail }}@endif
+    </div>
+</td>
+<td style="width:45%;">
+    <div class="inv-label">Invoice</div>
+    <div class="inv-meta">
+        <b>Invoice No:</b> {{ $bill->bill_no }}<br>
+        <b>Period:</b> {{ \Carbon\Carbon::createFromDate($bill->bill_year,$bill->bill_month,1)->format('F Y') }}<br>
+        <b>Date:</b> {{ now()->format('d M Y') }}&nbsp;
+        <span class="badge {{ $bill->status==='paid'?'b-paid':($bill->status==='partial'?'b-partial':'b-unpaid') }}">{{ ucfirst($bill->status) }}</span>
+    </div>
+</td>
+</tr></tbody></table>
+<div class="hdiv"></div>
+
+{{-- BILL TO + SUMMARY --}}
+<table class="two-tbl"><tbody><tr>
+<td style="width:46%;padding-right:8px;">
+    <div class="bill-to-box">
+        <div class="lbl">Bill To</div>
+        <p><b>{{ $reseller->name }}</b></p>
+        <p><span>Type:</span> {{ $reseller->type === 'bandwidth' ? 'Bandwidth Reseller' : 'MAC Reseller' }}</p>
+        @if($reseller->phone)<p><span>Phone:</span> {{ $reseller->phone }}</p>@endif
+        @if($reseller->thana)<p><span>Area:</span> {{ $reseller->thana }}</p>@endif
+    </div>
+</td>
+<td style="width:54%;">
+    <div class="sum-box">
+        <div class="lbl">Bill Summary</div>
+        <table class="sum-tbl"><tbody>
+            <tr><td>Opening Balance</td><td class="sr">BDT {{ number_format($bill->opening_balance,2) }}</td></tr>
+            <tr class="s-total"><td>Total Bill</td><td class="sr">BDT {{ number_format($bill->total_recharge,2) }}</td></tr>
+            @if($bill->discount_amount>0)
+            <tr><td>Discount</td><td class="sr" style="color:#1e8449;">- BDT {{ number_format($bill->discount_amount,2) }}</td></tr>
+            @endif
+            <tr class="s-paid"><td>Total Paid</td><td class="sr">BDT {{ number_format($bill->total_paid,2) }}</td></tr>
+            <tr class="s-due"><td>Due Amount</td><td class="sr">BDT {{ number_format($bill->due_amount,2) }}</td></tr>
+            <tr class="s-close"><td>Closing Balance</td><td class="sr">BDT {{ number_format($bill->closing_balance,2) }}</td></tr>
+        </tbody></table>
+    </div>
+</td>
+</tr></tbody></table>
+
+{{-- BANDWIDTH BREAKDOWN --}}
+@if(!empty($bill->bandwidth_breakdown) && count($bill->bandwidth_breakdown)>0)
+<div class="sec">Bandwidth Allocation Breakdown</div>
+<table class="dt"><thead>
+    <tr>
+        <th>Category</th>
+        <th class="r no-upper" style="width:65px;">Mbps</th>
+        <th class="r no-upper" style="width:105px;">Rate (BDT/Mbps)</th>
+        <th class="r" style="width:100px;">Subtotal (BDT)</th>
+    </tr>
+</thead><tbody>
+@php $bwTotal=0; @endphp
+@foreach($bill->bandwidth_breakdown as $cat)
+@php $bwTotal += $cat['subtotal']??0; $hasSegs = !empty($cat['segments']); @endphp
+<tr>
+    <td>{{ $cat['label']??$cat['category']??'-' }}{{ !empty($cat['prorated'])?' *':'' }}</td>
+    <td class="r">{{ number_format($cat['mbps']??0,2) }}</td>
+    <td class="r">{{ number_format($cat['rate']??0,2) }}</td>
+    <td class="r"><b>{{ number_format($cat['subtotal']??0,2) }}</b></td>
+</tr>
+@if($hasSegs)
+@foreach($cat['segments'] as $seg)
+<tr class="seg">
+    <td colspan="2">&#x21B3; {{ $seg['from'] }} - {{ $seg['to'] }} ({{ $seg['days'] }} days @ {{ $seg['mbps'] }} Mbps)</td>
+    <td class="r">{{ number_format($seg['rate'],2) }}</td>
+    <td class="r">{{ number_format($seg['amount'],2) }}</td>
+</tr>
+@endforeach
+@endif
+@endforeach
+</tbody><tfoot>
+    <tr><td colspan="3" class="r">Total Bandwidth Charge</td><td class="r">BDT {{ number_format($bwTotal,2) }}</td></tr>
+</tfoot></table>
+@if($bwTotal != $bill->total_recharge)<p style="font-size:9.5px;color:#888;margin-bottom:4px;">* Pro-rated due to mid-month adjustment</p>@endif
+@endif
+
+{{-- MID-MONTH ADJUSTMENTS --}}
+@if(!empty($adjustments) && count($adjustments)>0)
+<div class="sec" style="border-left-color:#7d3c98;color:#7d3c98;">Mid-Month Adjustments</div>
+<table class="dt at"><thead>
+    <tr>
+        <th>Category</th>
+        <th style="width:75px;">Effective Date</th>
+        <th class="r no-upper" style="width:60px;">Old Mbps</th>
+        <th class="r no-upper" style="width:60px;">New Mbps</th>
+        <th class="r no-upper" style="width:80px;">Rate</th>
+        <th>Reason</th>
+    </tr>
+</thead><tbody>
+@foreach($adjustments as $adj)
+<tr>
+    <td>{{ \App\Models\BandwidthAdjustment::$categoryLabels[$adj->category_key] ?? $adj->category_key }}</td>
+    <td>{{ $adj->effective_date->format('d M Y') }}</td>
+    <td class="r">{{ number_format($adj->old_mbps,0) }}</td>
+    <td class="r"><b>{{ number_format($adj->new_mbps,0) }}</b></td>
+    <td class="r">BDT {{ number_format($adj->rate,0) }}/Mbps</td>
+    <td>{{ $adj->reason ?? '-' }}</td>
+</tr>
+@endforeach
+</tbody></table>
+@endif
+
+{{-- CLIENT ENTRIES --}}
+@if(!empty($rechargeEntries) && count($rechargeEntries)>0)
+<div class="sec">Client Bill Entries</div>
+<table class="dt"><thead>
+    <tr>
+        <th style="width:22px;">#</th><th>Client</th><th>Username</th><th>Package</th>
+        <th class="r" style="width:85px;">Amount (BDT)</th>
+        <th class="c" style="width:65px;">Start</th>
+        <th class="c" style="width:65px;">End</th>
+        <th class="c" style="width:32px;">Days</th>
+    </tr>
+</thead><tbody>
+@php $eTotal=0;$sn=1; @endphp
+@foreach($rechargeEntries as $e)
+@php $eTotal+=$e->recharge_amount; @endphp
+<tr>
+    <td>{{ $sn++ }}</td>
+    <td>{{ $e->client->name??'-' }}</td>
+    <td>{{ $e->client->username??'-' }}</td>
+    <td>{{ $e->package_name??'-' }}</td>
+    <td class="r">{{ number_format($e->recharge_amount,2) }}</td>
+    <td class="c">{{ $e->start_date?$e->start_date->format('d-m-Y'):'-' }}</td>
+    <td class="c">{{ $e->end_date?$e->end_date->format('d-m-Y'):'-' }}</td>
+    <td class="c">{{ $e->days??'-' }}</td>
+</tr>
+@endforeach
+</tbody><tfoot>
+    <tr><td colspan="4" class="r">Total</td><td class="r">BDT {{ number_format($eTotal,2) }}</td><td colspan="3"></td></tr>
+</tfoot></table>
+@endif
+
+{{-- PAYMENT HISTORY --}}
+@if(!empty($paymentEntries) && count($paymentEntries)>0)
+<div class="sec" style="border-left-color:#1e6b3c;color:#1e6b3c;">Payment History</div>
+<table class="dt pt"><thead>
+    <tr>
+        <th style="width:22px;">#</th>
+        <th style="width:65px;">Date</th>
+        <th class="r" style="width:90px;">Amount (BDT)</th>
+        <th class="r" style="width:60px;">Discount</th>
+        <th style="width:48px;">Method</th>
+        <th>Reference</th>
+        <th>Received By</th>
+    </tr>
+</thead><tbody>
+@php $pTotal=0;$ps=1; @endphp
+@foreach($paymentEntries as $p)
+@php $pTotal+=$p->amount; @endphp
+<tr>
+    <td>{{ $ps++ }}</td>
+    <td>{{ $p->payment_date?$p->payment_date->format('d-m-Y'):'-' }}</td>
+    <td class="r"><b>{{ number_format($p->amount,2) }}</b></td>
+    <td class="r">{{ number_format($p->discount_amount??0,2) }}</td>
+    <td>{{ ucfirst($p->payment_method??'-') }}</td>
+    <td>{{ $p->payment_reference??'-' }}</td>
+    <td>{{ $p->receivedByUser->name??'-' }}</td>
+</tr>
+@endforeach
+</tbody><tfoot>
+    <tr><td colspan="2" class="r">Total Paid</td><td class="r">BDT {{ number_format($pTotal,2) }}</td><td colspan="4"></td></tr>
+</tfoot></table>
+@endif
+
+{{-- FOOTER --}}
+<table class="ftr"><tbody><tr>
+<td style="width:65%;">
+    <p>This is a system-generated invoice.</p>
+    <p style="margin-top:3px;">{{ $companyName }} &mdash; {{ now()->format('d M Y H:i') }}</p>
+</td>
+<td style="width:35%;text-align:right;">
+    <div class="sig-line"></div>
+    <p>Authorized Signature</p>
+</td>
+</tr></tbody></table>
+
+</div>
+</body>
+</html>

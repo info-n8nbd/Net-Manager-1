@@ -1,0 +1,7 @@
+Homepage: success=100/100 (100%), time=1639ms, rps=61
+Login Page: success=100/100 (100%), time=4867ms, rps=20
+Health Check: success=100/100 (100%), time=1550ms, rps=64
+Self-Service Portal: success=100/100 (100%), time=4341ms, rps=23
+New Application: success=100/100 (100%), time=5686ms, rps=17
+Login Flood: success=200/200 (100%), time=9370ms, rps=21
+Zone API: success=50/50 (100%), time=2148ms, rps=23

@@ -1,0 +1,178 @@
+@extends('layouts.admin')
+
+@section('title', 'Quick Import/Export')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-upload mr-2"></i>One-Click Import</h3>
+                    </div>
+                    <form action="{{ route('admin.data-transfer.quick-import') }}" method="POST" enctype="multipart/form-data" id="quickImportForm">
+                        @csrf
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-magic mr-2"></i>
+                                <strong>Smart Import:</strong> Fields are automatically detected and mapped. Just upload your file!
+                            </div>
+
+                            <div class="form-group">
+                                <label for="data_type">Data Type <span class="text-danger">*</span></label>
+                                <select class="form-control" id="data_type" name="data_type" required>
+                                    <option value="">-- Select Data Type --</option>
+                                    @foreach($dataTypes as $type)
+                                    <option value="{{ $type }}">{{ ucfirst($type) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="file">Import File <span class="text-danger">*</span></label>
+                                <div class="custom-file">
+                                    <input type="file" class="custom-file-input" id="file" name="file" 
+                                           accept=".xlsx,.xls,.csv,.json" required>
+                                    <label class="custom-file-label" for="file">Choose file</label>
+                                </div>
+                                <small class="form-text text-muted">Excel, CSV, or JSON (max 50MB)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="skip_duplicates" name="skip_duplicates" value="1" checked>
+                                    <label class="custom-control-label" for="skip_duplicates">Skip duplicate records</label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="create_missing" name="create_missing" value="1" checked>
+                                    <label class="custom-control-label" for="create_missing">Auto-create missing zones/packages</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button type="submit" class="btn btn-primary btn-lg" id="importBtn">
+                                <i class="fas fa-upload mr-1"></i> Import Now
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card" id="importResultCard" style="display: none;">
+                    <div class="card-header bg-success">
+                        <h3 class="card-title text-white"><i class="fas fa-check mr-2"></i>Import Complete</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <h3 class="text-success" id="importedCount">0</h3>
+                                <small>Imported</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-warning" id="skippedCount">0</h3>
+                                <small>Skipped</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-danger" id="failedCount">0</h3>
+                                <small>Failed</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card card-success card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-download mr-2"></i>One-Click Export</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success">
+                            <i class="fas fa-bolt mr-2"></i>
+                            <strong>Instant Export:</strong> Download all your data with a single click!
+                        </div>
+
+                        <p class="mb-4">Export complete data backup including all clients, bills, payments, zones, packages, and more.</p>
+
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <a href="{{ route('admin.data-transfer.quick-export', 'xlsx') }}" class="btn btn-success btn-block btn-lg">
+                                    <i class="fas fa-file-excel fa-2x mb-2 d-block"></i>
+                                    Excel Export
+                                </a>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <a href="{{ route('admin.data-transfer.quick-export', 'json') }}" class="btn btn-warning btn-block btn-lg">
+                                    <i class="fas fa-file-code fa-2x mb-2 d-block"></i>
+                                    JSON Export
+                                </a>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <a href="{{ route('admin.data-transfer.quick-export', 'csv') }}" class="btn btn-info btn-block btn-lg">
+                                    <i class="fas fa-file-csv fa-2x mb-2 d-block"></i>
+                                    CSV Export
+                                </a>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <a href="{{ route('admin.data-transfer.quick-export', 'zip') }}" class="btn btn-secondary btn-block btn-lg">
+                                    <i class="fas fa-file-archive fa-2x mb-2 d-block"></i>
+                                    ZIP Bundle
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-database mr-2"></i>Quick Stats</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped mb-0">
+                            <tbody>
+                                <tr>
+                                    <td><i class="fas fa-users text-primary mr-2"></i>Clients</td>
+                                    <td class="text-right"><strong>{{ number_format($stats['clients'] ?? 0) }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-file-invoice text-warning mr-2"></i>Bills</td>
+                                    <td class="text-right"><strong>{{ number_format($stats['bills'] ?? 0) }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-money-bill text-success mr-2"></i>Payments</td>
+                                    <td class="text-right"><strong>{{ number_format($stats['payments'] ?? 0) }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-map-marker-alt text-danger mr-2"></i>Zones</td>
+                                    <td class="text-right"><strong>{{ number_format($stats['zones'] ?? 0) }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><i class="fas fa-cube text-info mr-2"></i>Packages</td>
+                                    <td class="text-right"><strong>{{ number_format($stats['packages'] ?? 0) }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@push('scripts')
+<script>
+document.querySelector('.custom-file-input').addEventListener('change', function(e) {
+    var fileName = e.target.files[0]?.name || 'Choose file';
+    e.target.nextElementSibling.textContent = fileName;
+});
+
+document.getElementById('quickImportForm').addEventListener('submit', function() {
+    document.getElementById('importBtn').innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Importing...';
+    document.getElementById('importBtn').disabled = true;
+});
+</script>
+@endpush
+@endsection

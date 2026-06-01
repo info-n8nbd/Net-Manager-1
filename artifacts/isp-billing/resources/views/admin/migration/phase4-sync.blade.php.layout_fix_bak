@@ -1,0 +1,208 @@
+@extends('layouts.admin')
+
+@section('title', 'Phase 4: Safe Sync')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        @include('partials.alerts')
+        @include('admin.migration._phase-steps', ['currentPhase' => 4, 'run' => $run])
+
+        <div class="callout callout-warning">
+            <h5><i class="fas fa-shield-alt"></i> Safe Sync Rules</h5>
+            <ul class="mb-0">
+                <li>All actions run inside database transactions</li>
+                <li>Every action is logged in the audit trail</li>
+                <li>No MikroTik user will be deleted</li>
+                <li>You can apply actions individually or all at once</li>
+            </ul>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="info-box">
+                    <span class="info-box-icon bg-warning"><i class="fas fa-tasks"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Actionable Items</span>
+                        <span class="info-box-number">{{ $summary['actionable'] }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-box">
+                    <span class="info-box-icon bg-success"><i class="fas fa-check-double"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Already Synced</span>
+                        <span class="info-box-number">{{ $summary['synced'] }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-box">
+                    <span class="info-box-icon bg-info"><i class="fas fa-database"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Total Snapshots</span>
+                        <span class="info-box-number">{{ $summary['total'] }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if($summary['actionable'] > 0 && !$run->isPhaseComplete(4))
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Bulk Actions</h3>
+                <div class="card-tools">
+                    <form action="{{ route('admin.migration.phase4-apply-all', $run) }}" method="POST" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Apply all sync actions? This will link matched users, update profiles, and fix status mismatches.')">
+                            <i class="fas fa-check-double"></i> Apply All Safe Actions
+                        </button>
+                    </form>
+                    <form action="{{ route('admin.migration.phase4-skip', $run) }}" method="POST" class="d-inline ml-2">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-secondary" onclick="return confirm('Skip sync phase?')">
+                            <i class="fas fa-forward"></i> Skip
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        @if($snapshots->count() > 0)
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list"></i> Items Requiring Action</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Router</th>
+                                <th>Status</th>
+                                <th>Router Profile</th>
+                                <th>Billing Client</th>
+                                <th>Issue</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($snapshots as $snap)
+                            <tr>
+                                <td><code>{{ $snap->username }}</code></td>
+                                <td>{{ $snap->device_name }}</td>
+                                <td>
+                                    @if($snap->disabled)
+                                    <span class="badge badge-danger">Disabled</span>
+                                    @else
+                                    <span class="badge badge-success">Enabled</span>
+                                    @endif
+                                </td>
+                                <td>{{ $snap->profile }}</td>
+                                <td>
+                                    @if($snap->billing_client_id)
+                                    {{ $snap->billingClient->name ?? 'ID: ' . $snap->billing_client_id }}
+                                    @else
+                                    <span class="text-danger">No billing client</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @php
+                                    $badgeClass = match($snap->match_status) {
+                                        'matched' => 'badge-success',
+                                        'ghost_user' => 'badge-danger',
+                                        'profile_mismatch' => 'badge-warning',
+                                        'status_mismatch' => 'badge-info',
+                                        'synced' => 'badge-success',
+                                        default => 'badge-secondary',
+                                    };
+                                    @endphp
+                                    <span class="badge {{ $badgeClass }}">{{ ucwords(str_replace('_', ' ', $snap->match_status)) }}</span>
+                                </td>
+                                <td>
+                                    @if($snap->match_status !== 'synced' && $snap->match_status !== 'skipped')
+                                    <div class="btn-group btn-group-sm">
+                                        @if($snap->match_status === 'matched')
+                                        <form action="{{ route('admin.migration.phase4-apply', [$run, $snap->id]) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="action" value="link">
+                                            <button class="btn btn-success btn-sm" title="Link to billing"><i class="fas fa-link"></i></button>
+                                        </form>
+                                        @elseif($snap->match_status === 'ghost_user')
+                                        <form action="{{ route('admin.migration.phase4-apply', [$run, $snap->id]) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="action" value="create_in_billing">
+                                            <button class="btn btn-primary btn-sm" title="Create in billing"><i class="fas fa-user-plus"></i></button>
+                                        </form>
+                                        @elseif($snap->match_status === 'profile_mismatch')
+                                        <form action="{{ route('admin.migration.phase4-apply', [$run, $snap->id]) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="action" value="update_profile">
+                                            <button class="btn btn-warning btn-sm" title="Update profile"><i class="fas fa-sync"></i></button>
+                                        </form>
+                                        @elseif($snap->match_status === 'status_mismatch')
+                                        <form action="{{ route('admin.migration.phase4-apply', [$run, $snap->id]) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="action" value="update_status">
+                                            <button class="btn btn-info btn-sm" title="Fix status"><i class="fas fa-toggle-on"></i></button>
+                                        </form>
+                                        @endif
+                                        <form action="{{ route('admin.migration.phase4-apply', [$run, $snap->id]) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="action" value="skip">
+                                            <button class="btn btn-secondary btn-sm" title="Skip"><i class="fas fa-forward"></i></button>
+                                        </form>
+                                    </div>
+                                    @else
+                                    <span class="text-success"><i class="fas fa-check"></i> Done</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if($snapshots->hasPages())
+            <div class="card-footer"><div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-1">
+    <div class="d-flex align-items-center">
+        <label class="small text-muted mb-0 mr-2" style="white-space:nowrap;">SHOW</label>
+        <select class="form-control form-control-sm bulk-show-entries" style="width:80px;">
+            <option value="20" {{ request('per_page',20)==20?'selected':'' }}>20</option>
+            <option value="50" {{ request('per_page',20)==50?'selected':'' }}>50</option>
+            <option value="100" {{ request('per_page',20)==100?'selected':'' }}>100</option>
+            <option value="200" {{ request('per_page',20)==200?'selected':'' }}>200</option>
+        </select>
+        <label class="small text-muted mb-0 ml-2" style="white-space:nowrap;">ENTRIES</label>
+    </div>
+    <div>
+        {{ $snapshots->appends(request()->query())->links() }}
+    </div>
+</div>
+<script>
+(function(){
+    var sel = document.querySelector('.bulk-show-entries');
+    if(sel){ sel.addEventListener('change',function(){
+        var p=new URLSearchParams(window.location.search);
+        p.set('per_page',this.value); p.delete('page');
+        window.location=window.location.pathname+'?'+p.toString();
+    }); }
+})();
+</script></div>
+            @endif
+        </div>
+        @endif
+
+        @if($run->isPhaseComplete(4))
+        <div class="text-center mt-3">
+            <a href="{{ route('admin.migration.phase5', $run) }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-arrow-right"></i> Proceed to Phase 5: Go Live
+            </a>
+        </div>
+        @endif
+    </div>
+</section>
+@endsection

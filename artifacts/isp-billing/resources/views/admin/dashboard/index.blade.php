@@ -1,0 +1,2327 @@
+@extends('layouts.admin')
+
+@section('title', 'Dashboard')
+@section('breadcrumb')
+<li class="breadcrumb-item active">Dashboard</li>
+@endsection
+
+@push('styles')
+<style>
+    .stat-col {
+        height: 70px;
+    }
+    .stat-col > a {
+        display: block;
+        height: 100%;
+    }
+    .stat-card {
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: white;
+        margin-bottom: 3px;
+        cursor: pointer;
+        height: 100%;
+        min-height: 70px;
+        box-sizing: border-box;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    }
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -30%;
+        width: 100px;
+        height: 100px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+    }
+    .stat-card .icon {
+        font-size: 22px;
+        opacity: 0.95;
+        margin-bottom: 3px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+    .stat-card .number {
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.2;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .stat-card .title {
+        font-size: 11px;
+        font-weight: 700;
+        margin-bottom: 2px;
+        letter-spacing: 0.3px;
+    }
+    .stat-card .subtitle {
+        font-size: 11px;
+        opacity: 0.85;
+        line-height: 1.3;
+    }
+    .bg-c1 { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #3b7dd8 100%); }
+    .bg-c2 { background: linear-gradient(135deg, #0d7377 0%, #14a3a8 50%, #17c5cb 100%); }
+    .bg-c3 { background: linear-gradient(135deg, #1d976c 0%, #2eb87a 50%, #45d68b 100%); }
+    .bg-c4 { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ff6b6b 100%); }
+    .bg-c5 { background: linear-gradient(135deg, #b71540 0%, #e8234a 50%, #ff4757 100%); }
+    .bg-c6 { background: linear-gradient(135deg, #0652DD 0%, #1e90ff 50%, #4facfe 100%); }
+    .bg-c7 { background: linear-gradient(135deg, #009432 0%, #20bf55 50%, #38ef7d 100%); }
+    .bg-c8 { background: linear-gradient(135deg, #6C3483 0%, #8E44AD 50%, #BB6BD9 100%); }
+    .bg-c9 { background: linear-gradient(135deg, #b8860b 0%, #d4a017 50%, #f0c040 100%); }
+    .bg-c10 { background: linear-gradient(135deg, #1B4F72 0%, #2980B9 50%, #5dade2 100%); }
+    .bg-c11 { background: linear-gradient(135deg, #922B21 0%, #CB4335 50%, #E74C3C 100%); }
+    .bg-c12 { background: linear-gradient(135deg, #117864 0%, #1ABC9C 50%, #48E0A0 100%); }
+    .bg-c13 { background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #f59e0b 100%); }
+    .bg-c14 { background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3f51b5 100%); }
+    .bg-c15 { background: linear-gradient(135deg, #7B1FA2 0%, #9C27B0 50%, #CE93D8 100%); }
+    .bg-c16 { background: linear-gradient(135deg, #B71C1C 0%, #E53935 50%, #EF5350 100%); }
+    .bg-c17 { background: linear-gradient(135deg, #2E7D32 0%, #43A047 50%, #66BB6A 100%); }
+    .bg-c18 { background: linear-gradient(135deg, #37474F 0%, #546E7A 50%, #78909C 100%); }
+    .bg-c19 { background: linear-gradient(135deg, #795548 0%, #8D6E63 50%, #A1887F 100%); }
+    .bg-c20 { background: linear-gradient(135deg, #4527A0 0%, #5E35B1 50%, #9575CD 100%); }
+    .bg-c21 { background: linear-gradient(135deg, #AD1457 0%, #C2185B 50%, #E91E63 100%); }
+    .bg-c22 { background: linear-gradient(135deg, #00695C 0%, #00897B 50%, #26A69A 100%); }
+    .bg-c23 { background: linear-gradient(135deg, #0277BD 0%, #0288D1 50%, #29B6F6 100%); }
+    .bg-c24 { background: linear-gradient(135deg, #E65100 0%, #EF6C00 50%, #FF9800 100%); }
+    .bg-c25 { background: linear-gradient(135deg, #4A148C 0%, #6A1B9A 50%, #AB47BC 100%); }
+    .stat-card-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .stat-card-row .icon-wrapper {
+        min-width: 38px;
+        height: 38px;
+        background: rgba(255,255,255,0.18);
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .stat-card-row .content {
+        flex: 1;
+        min-width: 0;
+    }
+    .chart-card {
+        background: white;
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        height: 100%;
+        border: 1px solid rgba(0,0,0,0.04);
+    }
+    .chart-card .chart-title {
+        font-weight: 600;
+        font-size: 12px;
+        margin-bottom: 5px;
+        color: #444;
+    }
+    .doughnut-wrapper {
+        margin: 0 auto;
+        max-width: 80%;
+    }
+    .live-mikrotik-box {
+        background: linear-gradient(135deg, #0f2027 0%, #203a43 40%, #2c5364 100%);
+        border-radius: 12px;
+        padding: 16px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        position: relative;
+        overflow: hidden;
+    }
+    .live-mikrotik-box::after {
+        content: '';
+        position: absolute;
+        top: -40%;
+        right: -20%;
+        width: 120px;
+        height: 120px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+    }
+    .live-mikrotik-box .count {
+        font-size: 36px;
+        font-weight: 700;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .live-mikrotik-box .label {
+        font-size: 13px;
+        opacity: 0.9;
+    }
+    .live-toggle-btn {
+        cursor: pointer;
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 11px;
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        transition: all 0.3s;
+    }
+    .live-toggle-btn:hover { background: rgba(255,255,255,0.2); }
+    .live-toggle-btn.paused { background: rgba(220,53,69,0.3); border-color: #dc3545; }
+    .live-graph-box {
+        background: #fff;
+        border-radius: 6px;
+        padding: 16px;
+        color: #333;
+        box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+        border: 1px solid rgba(0,0,0,.125);
+    }
+    .live-graph-box .graph-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #444;
+    }
+    .stat-col { flex: 0 0 20%; max-width: 20%; }
+    @media (max-width: 991px) { .stat-col { flex: 0 0 50%; max-width: 50%; } }
+    @media (max-width: 575px) { .stat-col { flex: 0 0 50%; max-width: 50%; } }
+</style>
+@endpush
+
+@section('content')
+@php
+    $__featureCompany = \App\Services\TenantContext::get() ?? auth()->user()->company ?? null;
+    // Use Company model's hasFeature() which handles aliases (e.g. 'client' → 'clients')
+    // and empty features (all-access) correctly.
+    $__hasFeature = function($key) use ($__featureCompany): bool {
+        if (!$__featureCompany) return true;
+        return $__featureCompany->hasFeature($key);
+    };
+@endphp
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <span class="text-muted">Last updated: <span id="lastUpdated">{{ now()->format('h:i:s A') }}</span></span>
+        <span class="badge badge-success ml-2" style="font-size: 11px;">
+            <i class="fas fa-circle" style="font-size: 6px; animation: pulse 1s infinite;"></i> Live
+        </span>
+    </div>
+    <div>
+        <button class="btn btn-sm btn-outline-primary" onclick="refreshDashboard(true)">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
+
+
+
+
+@if($__hasFeature('billing') && ($pendingPaymentsCount ?? 0) > 0)
+<div class="alert alert-warning alert-dismissible fade show mb-3" role="alert">
+    <i class="fas fa-clock mr-2"></i>
+    <strong>{{ $pendingPaymentsCount }} payment(s) pending verification!</strong>
+    <a href="{{ route('admin.payments.pending') }}" class="btn btn-warning btn-sm ml-3">
+        <i class="fas fa-check-circle"></i> Review Now
+    </a>
+    <button type="button" class="close" data-dismiss="alert">&times;</button>
+</div>
+@endif
+
+@php
+    $__dashCompany = \App\Services\TenantContext::get();
+    $__dashMaxClients = $__dashCompany ? $__dashCompany->max_clients : 0;
+    $__dashClientCount = $__dashCompany ? $__dashCompany->clientCount() : 0;
+    $__dashCanAdd = $__dashCompany ? $__dashCompany->canAddMoreClients() : true;
+    $__dashHasLimit = $__dashMaxClients > 0;
+@endphp
+
+@if($__dashHasLimit && !$__dashCanAdd)
+<div class="alert alert-danger d-flex align-items-center mb-3" style="border-radius: 10px; border: none; background: linear-gradient(135deg, #ffebee, #ffcdd2); box-shadow: 0 2px 8px rgba(244,67,54,0.15);">
+    <i class="fas fa-exclamation-triangle text-danger mr-3" style="font-size: 22px;"></i>
+    <div>
+        <strong style="font-size: 15px;">Client Limit Reached!</strong><br>
+        <span>You have used <strong>{{ $__dashClientCount }}/{{ $__dashMaxClients }}</strong> clients. New client registration is disabled. Please contact support to upgrade your plan.</span>
+    </div>
+</div>
+@endif
+
+@if($__hasFeature('client'))
+<div class="row">
+    <!-- Row 1: Total Clients, Online, Active, Inactive -->
+    @if($__canAction('dashboard', 'total_clients'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.clients.index') }}" class="text-decoration-none d-block h-100">
+            <div class="stat-card bg-c1 stat-card-row">
+                <div class="icon-wrapper"><i class="fas fa-users icon"></i></div>
+                <div class="content">
+                    <div class="title">Total Clients</div>
+                    <div class="number" data-stat="total_clients">{{ number_format($totalClients ?? 0) }}</div>
+                    <div class="subtitle">
+                        @if($__dashHasLimit)
+                            {{ $__dashClientCount }}/{{ $__dashMaxClients }} (Limit)
+                        @else
+                            All registered clients
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'online_clients'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.clients.index') }}?status=active" class="text-decoration-none d-block h-100">
+            <div class="stat-card bg-c2 stat-card-row">
+                <div class="icon-wrapper"><i class="fas fa-signal icon"></i></div>
+                <div class="content">
+                    <div class="title">Online Clients</div>
+                    <div class="number" data-stat="online_clients">{{ number_format($onlineClients ?? 0) }}</div>
+                    <div class="subtitle">Currently connected</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'total_active'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.clients.index') }}?status=active" class="text-decoration-none d-block h-100">
+            <div class="stat-card bg-c3 stat-card-row">
+                <div class="icon-wrapper"><i class="fas fa-user-shield icon"></i></div>
+                <div class="content">
+                    <div class="title">Total Active</div>
+                    <div class="number" data-stat="active_total">{{ number_format($activeTotal ?? 0) }}</div>
+                    <div class="subtitle">Active accounts</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'total_inactive'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.clients.inactive') }}" class="text-decoration-none d-block h-100">
+            <div class="stat-card bg-c4 stat-card-row">
+                <div class="icon-wrapper"><i class="fas fa-user-slash icon"></i></div>
+                <div class="content">
+                    <div class="title">Total Inactive</div>
+                    <div class="number" data-stat="inactive_clients">{{ number_format($inactiveTotal ?? 0) }}</div>
+                    <div class="subtitle">Inactive accounts</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+
+    <!-- Row 2: Collection & Revenue -->
+    @if($__canAction('dashboard', 'monthly_collection'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.reports.monthly') }}" class="text-decoration-none d-block h-100">
+            <div class="stat-card bg-c6 stat-card-row">
+                <div class="icon-wrapper"><i class="fas fa-chart-line icon"></i></div>
+                <div class="content">
+                    <div class="title">Monthly Collection</div>
+                    <div class="number" data-stat="monthly_collection">{{ number_format($monthlyCollection ?? 0) }}</div>
+                    <div class="subtitle">This month's revenue</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'today_collection'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c12 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-cash-register icon"></i></div>
+            <div class="content">
+                <div class="title">Today's Collection</div>
+                <div class="number" data-stat="today_collection">{{ number_format($todayCollection ?? 0) }}</div>
+                <div class="subtitle">Received today</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'running_month_bills'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c14 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-file-alt icon"></i></div>
+            <div class="content">
+                <div class="title">Running Month Bills</div>
+                <div class="number" data-stat="running_month_bills">{{ number_format($runningMonthBills ?? 0) }}</div>
+                <div class="subtitle">Total bills amount</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'month_bills_collected'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c15 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-hand-holding-usd icon"></i></div>
+            <div class="content">
+                <div class="title">Month Bills Collected</div>
+                <div class="number" data-stat="month_bills_collected">{{ number_format($runningMonthBillsCollection ?? 0) }}</div>
+                <div class="subtitle">This month's paid</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    <!-- Row 3: Due Amounts -->
+    @if($__canAction('dashboard', 'prev_month_due'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c24 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-calendar-minus icon"></i></div>
+            <div class="content">
+                <div class="title">Prev Month Due</div>
+                <div class="number" data-stat="prev_month_due">{{ number_format($prevMonthDue ?? 0) }}</div>
+                <div class="subtitle">{{ now()->subMonth()->format('F') }} dues</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'this_month_due'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c25 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-calendar-times icon"></i></div>
+            <div class="content">
+                <div class="title">This Month Due</div>
+                <div class="number" data-stat="this_month_due">{{ number_format($thisMonthDue ?? 0) }}</div>
+                <div class="subtitle">{{ now()->format('F') }} dues</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'total_dues'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c16 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-exclamation-triangle icon"></i></div>
+            <div class="content">
+                <div class="title">Total Dues</div>
+                <div class="number" data-stat="total_due">{{ number_format($totalDue ?? 0) }}</div>
+                <div class="subtitle">All unpaid amounts</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'overdue_clients'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c13 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-user-clock icon"></i></div>
+            <div class="content">
+                <div class="title">Overdue Clients</div>
+                <div class="number" data-stat="overdue_clients">{{ number_format($overdueClients ?? 0) }}</div>
+                <div class="subtitle">Clients with dues</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    <!-- Row 4: Paid Clients & Expense -->
+    @if($__hasFeature('billing'))
+    @if($__canAction('dashboard', 'prev_month_paid'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c22 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-user-check icon"></i></div>
+            <div class="content">
+                <div class="title">Prev Month Paid</div>
+                <div class="number" data-stat="prev_month_paid">{{ number_format($prevMonthPaidClients ?? 0) }}</div>
+                <div class="subtitle">Clients paid</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__canAction('dashboard', 'this_month_paid'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c23 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-user-shield icon"></i></div>
+            <div class="content">
+                <div class="title">This Month Paid</div>
+                <div class="number" data-stat="this_month_paid">{{ number_format($thisMonthPaidClients ?? 0) }}</div>
+                <div class="subtitle">Clients paid</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @endif
+    @if($__hasFeature('accounts') && $__canAction('dashboard', 'today_expense'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c11 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-wallet icon"></i></div>
+            <div class="content">
+                <div class="title">Today's Expense</div>
+                <div class="number" data-stat="today_expense">{{ number_format($todayExpense ?? 0) }}</div>
+                <div class="subtitle">Total expenses today</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__hasFeature('billing') && $__canAction('dashboard', 'monthly_expense'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c21 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-money-check-alt icon"></i></div>
+            <div class="content">
+                <div class="title">Monthly Expense</div>
+                <div class="number" data-stat="monthly_expense">{{ number_format($monthlyExpense ?? 0) }}</div>
+                <div class="subtitle">This month total</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    <!-- Row 5: Client Status & Operations -->
+    @if($__hasFeature('client') && $__canAction('dashboard', 'unpaid_clients'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.clients.due') }}" class="text-decoration-none d-block h-100">
+            <div class="stat-card bg-c5 stat-card-row">
+                <div class="icon-wrapper"><i class="fas fa-file-invoice-dollar icon"></i></div>
+                <div class="content">
+                    <div class="title">Unpaid Clients</div>
+                    <div class="number" data-stat="unpaid_clients">{{ number_format($unpaidClients ?? 0) }}</div>
+                    <div class="subtitle">With pending bills</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+    @if($__hasFeature('billing') && $__canAction('dashboard', 'billing_clients'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.billing.index') }}" class="text-decoration-none d-block h-100">
+            <div class="stat-card bg-c7 stat-card-row">
+                <div class="icon-wrapper"><i class="fas fa-receipt icon"></i></div>
+                <div class="content">
+                    <div class="title">Billing Clients</div>
+                    <div class="number" data-stat="billing_clients">{{ number_format($billingClients ?? 0) }}</div>
+                    <div class="subtitle">Bills generated this month</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+
+    @if($__hasFeature('support') && $__canAction('dashboard', 'pending_tickets'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.support.tickets') }}" class="text-decoration-none d-block h-100">
+            <div class="stat-card bg-c9 stat-card-row">
+                <div class="icon-wrapper"><i class="fas fa-headset icon"></i></div>
+                <div class="content">
+                    <div class="title">Pending Tickets</div>
+                    <div class="number" data-stat="pending_tickets">{{ $pendingTickets ?? 0 }}</div>
+                    <div class="subtitle">Awaiting response</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+    <!-- Row 6: Signup, Reseller, Others, Network, SMS -->
+    @if($__hasFeature('client') && $__canAction('dashboard', 'installation_charge'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c14 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-tools icon"></i></div>
+            <div class="content">
+                <div class="title">Installation Charge</div>
+                <div class="number" data-stat="installation_charge_total">৳{{ number_format($installationChargeTotal ?? 0) }}</div>
+                <div class="subtitle" data-stat-sub="installation_charge_subtitle">Paid: ৳{{ number_format($installationChargePaid ?? 0) }} | Due: ৳{{ number_format($installationChargeDue ?? 0) }}</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__hasFeature('reseller') && $__canAction('dashboard', 'reseller_collection'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c18 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-store-alt icon"></i></div>
+            <div class="content">
+                <div class="title">Reseller Client Collection</div>
+                <div class="number" data-stat="reseller_collection">{{ number_format($resellerCollection ?? 0) }}</div>
+                <div class="subtitle">This month (client payments)</div>
+            </div>
+        </div>
+    </div>
+    {{-- Reseller Bill (Monthly bill paid by MAC resellers to ISP) --}}
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.reseller.index') }}" class="text-decoration-none d-block h-100">
+        <div class="stat-card stat-card-row" style="background: linear-gradient(135deg,#0077b6,#023e8a);">
+            <div class="icon-wrapper"><i class="fas fa-file-invoice-dollar icon"></i></div>
+            <div class="content">
+                <div class="title" style="color:#90e0ef;">Reseller Bill</div>
+                <div class="number" data-stat="mac_reseller_bill_monthly">{{ number_format($macResellerBillMonthly ?? 0) }}</div>
+                <div class="subtitle" style="color:#ade8f4;">Due: ৳{{ number_format($macResellerBillDue ?? 0) }} | {{ $macResellerCount ?? 0 }} resellers</div>
+            </div>
+        </div>
+        </a>
+    </div>
+    {{-- Bandwidth Reseller Bill --}}
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.reseller.index') }}" class="text-decoration-none d-block h-100">
+        <div class="stat-card stat-card-row" style="background: linear-gradient(135deg,#f77f00,#d62828);">
+            <div class="icon-wrapper"><i class="fas fa-satellite-dish icon"></i></div>
+            <div class="content">
+                <div class="title" style="color:#ffd166;">Bandwidth Reseller Bill</div>
+                <div class="number" data-stat="bw_reseller_bill_monthly">{{ number_format($bwResellerBillMonthly ?? 0) }}</div>
+                <div class="subtitle" style="color:#ffd166;">Due: ৳{{ number_format($bwResellerBillDue ?? 0) }} | {{ $bwResellerCount ?? 0 }} resellers</div>
+            </div>
+        </div>
+        </a>
+    </div>
+    @endif
+    @if($__hasFeature('billing') && $__canAction('dashboard', 'other_collection'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <div class="stat-card bg-c19 stat-card-row">
+            <div class="icon-wrapper"><i class="fas fa-piggy-bank icon"></i></div>
+            <div class="content">
+                <div class="title">Others Collection</div>
+                <div class="number" data-stat="other_collection">{{ number_format($otherCollection ?? 0) }}</div>
+                <div class="subtitle">Misc. income</div>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if(($__hasFeature('network') || $__hasFeature('mikrotik')) && $__canAction('dashboard', 'total_pops'))
+    <div class="col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2 mb-2 stat-col">
+        <a href="{{ route('admin.network.devices') }}" class="text-decoration-none d-block h-100">
+            <div class="stat-card bg-c8 stat-card-row">
+                <div class="icon-wrapper"><i class="fas fa-network-wired icon"></i></div>
+                <div class="content">
+                    <div class="title">Total POPs</div>
+                    <div class="number" data-stat="total_pops">{{ number_format($totalPops ?? 0) }}</div>
+                    <div class="subtitle">Network devices</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @endif
+</div>
+
+
+@endif
+
+
+@if($__hasFeature('mikrotik') || $__hasFeature('network') || $__hasFeature('client'))
+<div class="row mt-2 mb-2">
+    @if(($__hasFeature('mikrotik') || $__hasFeature('network')) && $__canAction('dashboard', 'live_online_chart'))
+    <div class="col-12">
+        <div style="position:relative; background:#fff; border-radius:10px; padding:12px 16px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+            <div class="d-flex align-items-center justify-content-between mb-1" style="flex-wrap:wrap; gap:6px; position:relative; z-index:10;">
+                <div class="d-flex align-items-center" style="gap:10px;">
+                    <span style="font-size:14px; font-weight:700; color:#1a1a2e;">Online Clients</span>
+                    <span style="font-size:10px; color:#94a3b8;">3-Day History</span>
+                    <span class="d-flex align-items-center" style="gap:4px;">
+                        <i class="fas fa-circle" id="liveIndicator" style="font-size:6px; color:#22c55e;"></i>
+                        <span id="liveStatusText" style="font-size:10px; color:#64748b; font-weight:600;">LIVE</span>
+                    </span>
+                </div>
+                <div class="d-flex align-items-center" style="gap:8px;">
+                    <div id="graph3DaySummary" style="display:none; gap:6px;"></div>
+                    <div style="background:#0f172a; color:#fff; padding:2px 10px; border-radius:14px; font-size:16px; font-weight:800; min-width:40px; text-align:center;" id="liveMikrotikCount">{{ $onlineClients ?? 0 }}</div>
+                    <span id="graphCurrentCount" style="display:none;">{{ $onlineClients ?? 0 }}</span>
+                    <button type="button" class="btn btn-link p-0 m-0" id="liveToggleBtn" onclick="toggleLiveRefresh()" style="color:#94a3b8; font-size:11px; border:none; text-decoration:none;" title="Toggle live refresh">
+                        <i class="fas fa-pause" id="liveToggleIcon" style="font-size:9px;"></i> <span id="liveToggleLabel" style="font-size:9px;">30s</span>
+                    </button>
+                </div>
+            </div>
+            <canvas id="liveOnlineChart" height="35"></canvas>
+            <small class="d-block text-right" id="mikrotikLastUpdate" style="font-size:9px; color:#cbd5e1; margin-top:2px;">Updated: {{ now()->format('H:i:s') }}</small>
+            <div id="graphDaySummary" style="display:none;"></div>
+            <div id="graphPausedOverlay" onclick="toggleLiveRefresh()" style="display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(255,255,255,0.85); border-radius:10px; z-index:5; align-items:center; justify-content:center; cursor:pointer;" title="Click to resume">
+                <span style="color:#fff; font-size:13px; font-weight:600; background:rgba(220,53,69,0.8); padding:4px 14px; border-radius:16px;"><i class="fas fa-pause mr-1"></i>PAUSED</span>
+            </div>
+        </div>
+    </div>
+    @endif
+
+</div>
+@endif
+
+<!-- Custom Charts Row: Polar Area + New vs Left + Sunburst -->
+@php
+try {
+    $zoneStatusData = \DB::table('zones')
+        ->leftJoin('clients', function($j) {
+            $j->on('clients.zone_id', '=', 'zones.id')
+              ->whereNull('clients.reseller_id')
+              ->whereIn('clients.status', ['active', 'inactive', 'left']);
+        })
+        ->select('zones.id', 'zones.name')
+        ->selectRaw("COALESCE(SUM(CASE WHEN clients.status='active' THEN 1 ELSE 0 END),0) as active_c")
+        ->selectRaw("COALESCE(SUM(CASE WHEN clients.status='inactive' THEN 1 ELSE 0 END),0) as inactive_c")
+        ->selectRaw("COALESCE(SUM(CASE WHEN clients.status='left' THEN 1 ELSE 0 END),0) as left_c")
+        ->groupBy('zones.id', 'zones.name')
+        ->orderByRaw("(COALESCE(SUM(CASE WHEN clients.status='active' THEN 1 ELSE 0 END),0) + COALESCE(SUM(CASE WHEN clients.status='inactive' THEN 1 ELSE 0 END),0)) DESC")
+        ->limit(8)
+        ->get()
+        ->filter(fn($z) => ($z->active_c + $z->inactive_c + $z->left_c) > 0)
+        ->values();
+} catch (\Exception $e) { $zoneStatusData = collect(); }
+
+@endphp
+<!-- Staff Dues Section -->
+@if($__hasFeature('billing') && $__canAction('dashboard', 'staff_dues'))
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:linear-gradient(135deg,#1e5f74 0%,#133b5c 100%);border-radius:4px 4px 0 0;">
+                <span style="font-size:13px;font-weight:700;color:#fff;"><i class="fas fa-hand-holding-usd mr-1"></i>Staff Dues</span>
+                <a href="{{ route('admin.staff-dues.index') }}" style="padding:3px 10px;background:#343a40;color:#fff;border-radius:5px;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap;"><i class="fas fa-eye mr-1" style="font-size:10px;"></i>View All</a>
+            </div>
+            <div class="card-body p-2">
+                {{-- Compact 3-stat row --}}
+                <div style="display:flex;gap:6px;margin-bottom:10px;">
+                    <div style="flex:1;background:#fff3f3;border-radius:8px;padding:8px 10px;border-left:3px solid #dc3545;">
+                        <div style="font-size:10px;color:#888;font-weight:600;">Pending</div>
+                        <div style="font-size:14px;font-weight:800;color:#dc3545;" data-stat="staff_dues_pending">৳{{ number_format($staffDuesStats['total_pending'] ?? 0, 0) }}</div>
+                    </div>
+                    <div style="flex:1;background:#f0f8ff;border-radius:8px;padding:8px 10px;border-left:3px solid #17a2b8;">
+                        <div style="font-size:10px;color:#888;font-weight:600;">Collected</div>
+                        <div style="font-size:14px;font-weight:800;color:#17a2b8;" data-stat="staff_dues_collected">৳{{ number_format($staffDuesStats['total_collected'] ?? 0, 0) }}</div>
+                    </div>
+                    <div style="flex:1;background:#f0fff4;border-radius:8px;padding:8px 10px;border-left:3px solid #28a745;">
+                        <div style="font-size:10px;color:#888;font-weight:600;">Submitted</div>
+                        <div style="font-size:14px;font-weight:800;color:#28a745;" data-stat="staff_dues_submitted">৳{{ number_format($staffDuesStats['total_submitted'] ?? 0, 0) }}</div>
+                    </div>
+                </div>
+
+                @if(($staffWithDues ?? collect())->count() > 0)
+                <table class="table table-sm table-hover mb-0" style="table-layout:fixed;width:100%;">
+                    <colgroup>
+                        <col style="width:38%">
+                        <col style="width:20%" class="d-none d-sm-table-column">
+                        <col style="width:18%" class="d-none d-sm-table-column">
+                        <col style="width:30%">
+                        <col style="width:14%">
+                    </colgroup>
+                    <thead style="background:#f8f9fa;">
+                        <tr style="font-size:11px;">
+                            <th class="pl-2 py-2">Staff</th>
+                            <th class="py-2 d-none d-sm-table-cell">Collected</th>
+                            <th class="py-2 d-none d-sm-table-cell">Submitted</th>
+                            <th class="py-2 text-danger">Due</th>
+                            <th class="py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size:12px;">
+                        @foreach($staffWithDues as $staffDue)
+                        <tr>
+                            <td class="pl-2 py-2" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">
+                                <i class="fas fa-user-circle text-primary mr-1" style="font-size:11px;"></i>
+                                {{ $staffDue->user->name ?? 'Unknown' }}
+                            </td>
+                            <td class="py-2 d-none d-sm-table-cell" style="font-size:11px;color:#555;">৳{{ number_format($staffDue->total_collected, 0) }}</td>
+                            <td class="py-2 d-none d-sm-table-cell" style="font-size:11px;color:#555;">৳{{ number_format($staffDue->total_submitted, 0) }}</td>
+                            <td class="py-2 text-danger font-weight-bold" style="font-size:13px;">৳{{ number_format($staffDue->current_due, 0) }}</td>
+                            <td class="py-2">
+                                <a href="{{ route('admin.staff-dues.show', $staffDue->user_id) }}" class="btn btn-xs btn-info" style="padding:3px 7px;font-size:11px;">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                @else
+                <div class="text-center text-success py-4">
+                    <i class="fas fa-check-circle fa-3x mb-3"></i>
+                    <h5>All Clear!</h5>
+                    <p class="text-muted">No pending staff dues at this time.</p>
+                </div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+<div class="row mt-3">
+    @if($__canAction('dashboard', 'chart_monthly_revenue'))
+    <div class="col-12 mb-3">
+        <div class="card shadow-sm border-0" style="border-radius:10px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);">
+                <span style="font-size:14px;font-weight:700;color:#fff;">
+                    <i class="fas fa-chart-bar mr-2"></i>Daily Collection &mdash; {{ date('F Y') }}
+                </span>
+                <div style="display:flex;gap:12px;align-items:center;">
+                    <span style="font-size:12px;color:#b8d4ff;">
+                        Total: <strong style="color:#fff;">৳{{ number_format($dashboardDailyData->sum('total'), 0) }}</strong>
+                    </span>
+                    @if($dashboardDailyData->count() > 0)
+                    <span style="font-size:12px;color:#b8d4ff;">
+                        Avg/day: <strong style="color:#fff;">৳{{ number_format($dashboardDailyData->sum('total') / $dashboardDailyData->count(), 0) }}</strong>
+                    </span>
+                    @endif
+                    <a href="{{ route('admin.reports.monthly') }}" style="padding:4px 12px;background:rgba(255,255,255,0.15);color:#fff;border-radius:5px;font-size:11px;font-weight:600;text-decoration:none;border:1px solid rgba(255,255,255,0.3);">
+                        <i class="fas fa-external-link-alt mr-1" style="font-size:10px;"></i>Full Report
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-2" style="background:#fff;">
+                @if($dashboardDailyData->count() > 0)
+                <canvas id="dashDailyChart" height="55"></canvas>
+                @else
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-chart-bar fa-3x mb-3" style="color:#ddd;"></i>
+                    <p class="mb-0">No collection data for this month yet.</p>
+                </div>
+                @endif
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__hasFeature('client'))
+    <div class="col-xl-4 col-lg-4 col-md-12 mb-3">
+        <div class="chart-card" style="padding:14px 16px 10px; overflow:hidden; min-height:310px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <span style="font-weight:700;font-size:12px;color:#1e293b;">
+                    <i class="fas fa-random mr-1" style="color:#0984e3;"></i>New vs Left &mdash; 30 Days
+                </span>
+                <span style="font-size:10px;font-weight:500;color:#64748b;">
+                    <span style="display:inline-block;width:10px;height:10px;background:#0984e3;border-radius:2px;vertical-align:middle;margin-right:2px;"></span>New
+                    <span style="display:inline-block;width:10px;height:10px;background:#e17055;border-radius:2px;vertical-align:middle;margin-right:2px;margin-left:5px;"></span>Left
+                </span>
+            </div>
+            <svg id="glowTimelineSvg" width="100%" height="255" style="display:block;" viewBox="0 0 600 255" preserveAspectRatio="none"></svg>
+        </div>
+    </div>
+    @endif
+    @if($__hasFeature('client') && $__canAction('dashboard', 'chart_zone_clients'))
+    <div class="col-xl-4 col-lg-4 col-md-12 mb-3">
+        <div class="chart-card" style="padding:12px 14px 10px;overflow:hidden;min-height:310px;">
+            <div style="display:flex;align-items:center;margin-bottom:6px;">
+                <i class="fas fa-circle-notch mr-2" style="color:#6366f1;font-size:11px;"></i>
+                <span style="font-weight:700;font-size:12px;color:#1e293b;">Zone &times; Status Sunburst</span>
+            </div>
+            <canvas id="sunburstCanvas" style="display:block;width:100%;"></canvas>
+            <div style="font-size:9px;text-align:center;margin-top:4px;">
+                <span style="color:#222;">&#9679; Active</span>
+                <span style="color:#f59e0b;margin-left:5px;">&#9679; Inactive</span>
+                <span style="color:#94a3b8;margin-left:5px;">&#9679; Left</span>
+            </div>
+        </div>
+    </div>
+    @endif
+    @if($__hasFeature('billing') && $__canAction('dashboard', 'chart_due_bills'))
+    <div class="col-xl-4 col-lg-4 col-md-6 mb-3">
+        <div class="chart-card" style="padding:14px 16px 10px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.06); overflow:hidden; min-height:310px; display:flex; flex-direction:column;">
+            <div class="chart-title" style="font-size:12px; margin-bottom:6px; font-weight:700;"><i class="fas fa-layer-group text-warning mr-1"></i>Due Bills by Month</div>
+            <svg id="dueBillsSvg" width="100%" style="display:block;flex:1;min-height:0;" viewBox="0 0 400 265" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+    </div>
+    @endif
+</div>
+<!-- Recent Auto Inactivated Clients & Zone Wise — side by side -->
+@if($__hasFeature('client'))
+<div class="row mt-3">
+
+    @if($__canAction('dashboard', 'recent_auto_inactive'))
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-danger">
+                <h3 class="card-title text-white"><i class="fas fa-user-xmark mr-2"></i>Recent Auto Inactivated Clients</h3>
+            </div>
+            <div class="card-body p-0" style="max-height:300px;overflow-y:auto;">
+                <table class="table table-sm table-hover mb-0" style="table-layout:fixed;width:100%;">
+                    <colgroup>
+                        <col style="width:36%">
+                        <col style="width:22%" class="d-none d-sm-table-column">
+                        <col style="width:18%">
+                        <col style="width:24%">
+                    </colgroup>
+                    <thead style="background:#fff3f3;">
+                        <tr style="font-size:11px;">
+                            <th class="pl-3 py-2 text-danger" style="white-space:nowrap;">Name</th>
+                            <th class="py-2 text-danger d-none d-sm-table-cell" style="white-space:nowrap;">Phone</th>
+                            <th class="py-2 text-danger" style="white-space:nowrap;">Expired</th>
+                            <th class="py-2 text-danger" style="white-space:nowrap;">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size:12px;">
+                        @forelse($recentAutoInactive ?? [] as $client)
+                        <tr>
+                            <td class="pl-3 py-2" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">
+                                <a href="{{ route('admin.clients.show', $client->id) }}" class="text-dark font-weight-bold">{{ $client->name }}</a>
+                                <div style="font-size:10px;color:#888;">{{ $client->client_id }}</div>
+                            </td>
+                            <td class="py-2 d-none d-sm-table-cell" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">{{ $client->phone }}</td>
+                            <td class="py-2 text-warning font-weight-bold" style="white-space:nowrap;font-size:11px;">{{ $client->expire_date ? \Carbon\Carbon::parse($client->expire_date)->format('d M') : '-' }}</td>
+                            <td class="py-2 text-muted" style="white-space:nowrap;font-size:10px;">{{ $client->last_inactive_date ? \Carbon\Carbon::parse($client->last_inactive_date)->format('d M, h:i A') : '-' }}</td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3" style="font-size:12px;">No auto inactivated clients recently</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if($__canAction('dashboard', 'zone_inactive_clients'))
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-secondary">
+                <h3 class="card-title"><i class="fas fa-map-marker-alt mr-2"></i>Zone Wise Auto Inactive/Terminated Clients</h3>
+            </div>
+            <div class="card-body" style="max-height:300px;overflow-y:auto;">
+                <div class="row">
+                    @forelse($zoneAutoInactive ?? [] as $zone)
+                    <div class="col-md-6 col-sm-6 col-6 mb-3">
+                        <div class="info-box mb-0">
+                            <span class="info-box-icon bg-{{ $zone->clients_count > 10 ? 'danger' : ($zone->clients_count > 5 ? 'warning' : 'success') }}">
+                                <i class="fas fa-user-slash"></i>
+                            </span>
+                            <div class="info-box-content">
+                                <span class="info-box-text" style="white-space: normal; line-height: 1.3;">{{ $zone->name }}</span>
+                                <span class="info-box-number">{{ $zone->clients_count }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    @empty
+                    <div class="col-12 text-center text-muted py-3">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <p>No auto-inactivated clients by zone</p>
+                    </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+</div>
+@endif
+
+@if($__hasFeature('billing') && $__canAction('dashboard', 'chart_30d_collection'))
+<div class="row mt-4">
+    <div class="col-xl-12 col-lg-12 col-md-12 mb-3">
+        <div class="chart-card" style="padding:10px 12px 6px;">
+            <canvas id="arcProgressCanvas" style="width:100%;display:block;height:210px;"></canvas>
+        </div>
+    </div>
+</div>
+@endif
+@if($__hasFeature('client') || $__hasFeature('billing'))
+<!-- Charts Row 1: New Clients + Auto Inactive (2 cols) -->
+<div class="row mt-4">
+    @if($__hasFeature('client') && $__canAction('dashboard', 'chart_30d_clients'))
+    <div class="col-xl-12 col-lg-12 col-md-12 mb-3">
+        <div class="chart-card" style="padding:14px 14px 8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <span style="font-weight:700;font-size:12.5px;color:#1e293b;">Last 30 Days New Clients</span>
+                <span id="bubbleTotalBadge" style="background:#eff6ff;color:#3b82f6;font-size:11px;font-weight:700;padding:2px 9px;border-radius:6px;"></span>
+            </div>
+            <canvas id="bubbleNewClientsCanvas" style="width:100%;display:block;height:185px;"></canvas>
+        </div>
+    </div>
+    @endif
+
+</div>
+@endif
+
+
+
+
+</style>
+
+
+<!-- === Canvas Donut Charts Row === -->
+<div class="row mt-3">
+
+    {{-- 1. Zone Wise Problem Occurrence --}}
+    <div class="col-xl-4 col-lg-4 col-md-12 mb-3">
+        <div class="chart-card" style="min-height:280px;overflow:hidden;">
+            <div class="chart-title" style="font-size:13px;">
+                <i class="fas fa-map-marked-alt text-danger mr-1"></i>Zone Wise Problem Occurrence
+            </div>
+            @php
+                $zLabels2 = ($zoneAllTickets ?? collect())->pluck('name')->toArray();
+                $zVals2   = ($zoneAllTickets ?? collect())->pluck('cnt')->map(fn($v)=>(int)$v)->toArray();
+            @endphp
+            <canvas id="cvZone" style="display:block;width:100%;cursor:crosshair;"></canvas>
+        </div>
+    </div>
+
+    {{-- 2. Problem Type Occurrence --}}
+    <div class="col-xl-4 col-lg-4 col-md-12 mb-3">
+        <div class="chart-card" style="min-height:280px;overflow:hidden;">
+            <div class="chart-title" style="font-size:13px;">
+                <i class="fas fa-tags text-warning mr-1"></i>Problem Type Occurrence
+            </div>
+            @php
+                $cLabels2 = ($ticketCategories ?? collect())->pluck('name')->toArray();
+                $cVals2   = ($ticketCategories ?? collect())->pluck('cnt')->map(fn($v)=>(int)$v)->toArray();
+            @endphp
+            <canvas id="cvCat" style="display:block;width:100%;cursor:crosshair;"></canvas>
+        </div>
+    </div>
+
+    {{-- 3. Technician Efficiency --}}
+    <div class="col-xl-4 col-lg-4 col-md-12 mb-3">
+        <div class="chart-card" style="min-height:280px;overflow:hidden;">
+            <div class="chart-title" style="font-size:13px;">
+                <i class="fas fa-user-check text-primary mr-1"></i>Technician Efficiency
+            </div>
+            @php
+                $tLabels2 = []; $tVals2 = []; $tAssigned2 = [];
+                foreach(($empTicketStats ?? collect())->where('assigned','>',0)->take(6) as $tt2) {
+                    $tLabels2[] = explode(' ', $tt2->user_name)[0];
+                    $tVals2[]   = (int)$tt2->resolved;
+                    $tAssigned2[] = (int)$tt2->assigned;
+                }
+            @endphp
+            <canvas id="cvTech" style="display:block;width:100%;cursor:crosshair;"></canvas>
+        </div>
+    </div>
+
+</div>
+<script>
+(function() {
+    var _cd = {
+        zone:  { lbl: {!! json_encode($zLabels2 ?? []) !!}, val: {!! json_encode($zVals2 ?? []) !!},
+                 clr: ['#4e73df','#e74a3b','#1cc88a','#f6c23e'] },
+        cat:   { lbl: {!! json_encode($cLabels2 ?? []) !!}, val: {!! json_encode($cVals2 ?? []) !!},
+                 clr: ['#e74a3b','#4e73df','#1cc88a','#f6c23e','#36b9cc','#6f42c1','#fd7e14','#20c9a6'] },
+        tech:  { lbl: {!! json_encode($tLabels2 ?? []) !!}, val: {!! json_encode($tVals2 ?? []) !!},
+                 assigned: {!! json_encode($tAssigned2 ?? []) !!},
+                 clr: ['#36b9cc','#6f42c1','#fd7e14','#20c9a6','#4e73df','#e74a3b'], showCount: true }
+    };
+
+    function buildDonut(canvasId, d) {
+        var cv = document.getElementById(canvasId);
+        if (!cv || !d.lbl.length) return;
+        var dpr = window.devicePixelRatio || 1;
+        var W = cv.parentElement.offsetWidth - 24;
+        var H = 250;
+        cv.width  = W * dpr; cv.height = H * dpr;
+        cv.style.width = W + 'px'; cv.style.height = H + 'px';
+        var ctx = cv.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        var total = d.val.reduce(function(a,b){return a+b;},0) || 1;
+        var outerR = Math.min(W, H) * 0.36;
+        var innerR = outerR * 0.58;
+        var cx = W * 0.38, cy = H / 2;   // chart left, legend right
+        var clrs = d.clr;
+        var n = d.lbl.length;
+
+        // Precompute arcs
+        var arcs = [];
+        var angle = -Math.PI / 2;
+        d.val.forEach(function(v, i) {
+            var sweep = (v / total) * Math.PI * 2;
+            arcs.push({ start: angle, end: angle + sweep, pct: Math.round(v/total*100), i: i, v: v });
+            angle += sweep;
+        });
+
+        var hovered = -1;
+        var prog = 0;
+
+        function draw(t, hovIdx) {
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+
+            // Slices
+            arcs.forEach(function(a) {
+                var clr = clrs[a.i % clrs.length];
+                var isHov = a.i === hovIdx;
+                var r = outerR * Math.min(1, t) + (isHov ? 6 : 0);
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, a.start, a.end);
+                ctx.closePath();
+                ctx.fillStyle = clr + (isHov ? 'ff' : 'dd');
+                ctx.fill();
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            });
+
+            // Inner hole
+            ctx.beginPath();
+            ctx.arc(cx, cy, innerR * Math.min(1, t), 0, Math.PI * 2);
+            ctx.fillStyle = '#fff'; ctx.fill();
+
+            // Center text
+            if (t > 0.8) {
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                if (hovIdx >= 0) {
+                    ctx.font = 'bold 14px sans-serif'; ctx.fillStyle = clrs[hovIdx % clrs.length];
+                    ctx.fillText(d.showCount ? arcs[hovIdx].v + '' : arcs[hovIdx].pct + '%', cx, cy - 8);
+                    ctx.font = '9px sans-serif'; ctx.fillStyle = '#666';
+                    var lbl = d.lbl[hovIdx]; if (lbl.length > 8) lbl = lbl.substr(0,7)+'..';
+                    ctx.fillText(lbl, cx, cy + 8);
+                } else {
+                    // Show max pct
+                    var maxA = arcs.reduce(function(a,b){ return b.pct>a.pct?b:a; }, arcs[0]);
+                    ctx.font = 'bold 16px sans-serif'; ctx.fillStyle = '#3a3b45';
+                    ctx.fillText(maxA.pct + '%', cx, cy);
+                }
+            }
+
+            // Legend
+            var legendX = cx + outerR + 16;
+            var legendY = cy - (n * 16) / 2 + 8;
+            d.lbl.forEach(function(lbl, i) {
+                var ly = legendY + i * 18;
+                var clr = clrs[i % clrs.length];
+                var isHov = i === hovIdx;
+                // Dot
+                ctx.beginPath(); ctx.arc(legendX + 5, ly, 5, 0, Math.PI * 2);
+                ctx.fillStyle = clr; ctx.fill();
+                // Label
+                ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                ctx.font = isHov ? 'bold 10px sans-serif' : '10px sans-serif';
+                ctx.fillStyle = isHov ? clr : '#444';
+                var shortLbl = lbl.length > 12 ? lbl.substr(0,11)+'..' : lbl;
+                var legendTxt = d.showCount
+                    ? shortLbl + ': ' + d.val[i] + ' solved'
+                    : shortLbl + ' (' + arcs[i].pct + '%)';
+                ctx.fillText(legendTxt, legendX + 13, ly);
+            });
+        }
+
+        function animate() { prog = Math.min(1, prog + 0.04); draw(prog, hovered); if (prog < 1) requestAnimationFrame(animate); }
+        requestAnimationFrame(animate);
+
+        // Hover
+        cv.addEventListener('mousemove', function(e) {
+            var rect = cv.getBoundingClientRect();
+            var mx = (e.clientX - rect.left) * (W / rect.width);
+            var my = (e.clientY - rect.top) * (H / rect.height);
+            var dx = mx - cx, dy = my - cy;
+            var dist = Math.sqrt(dx*dx + dy*dy);
+            var newHov = -1;
+            if (dist >= innerR && dist <= outerR + 8) {
+                var a = Math.atan2(dy, dx);
+                if (a < -Math.PI/2) a += Math.PI * 2;
+                arcs.forEach(function(arc) {
+                    var s = arc.start < -Math.PI/2 ? arc.start + Math.PI*2 : arc.start;
+                    var en = arc.end < -Math.PI/2 ? arc.end + Math.PI*2 : arc.end;
+                    if (a >= s && a <= en) newHov = arc.i;
+                });
+            }
+            if (newHov !== hovered) { hovered = newHov; draw(1, hovered); }
+        });
+        cv.addEventListener('mouseleave', function() { hovered = -1; draw(1, -1); });
+    }
+
+    // Init after DOM ready (script is in page body — use small delay)
+    setTimeout(function() {
+        buildDonut('cvZone', _cd.zone);
+        buildDonut('cvCat',  _cd.cat);
+        buildDonut('cvTech', _cd.tech);
+    }, 50);
+})();
+</script>
+
+@if($__hasFeature('billing') || $__hasFeature('support'))
+{{-- Row: Online Payments | Recent Payments (submitted bills) --}}
+<div class="row mt-3">
+    {{-- Online Payments: ALL methods --}}
+    @if($__hasFeature('billing') && $__canAction('dashboard', 'recent_online_payments'))
+    <div class="{{ $__canAction('dashboard', 'recent_payments') ? 'col-md-6' : 'col-md-12' }}">
+        <div class="card">
+            <div class="card-header bg-success">
+                <h3 class="card-title text-white"><i class="fas fa-credit-card mr-2"></i>Recent Online Payments</h3>
+                <div class="card-tools">
+                    <a href="{{ route('admin.payments.index') }}" class="btn btn-tool text-white btn-sm">
+                        <i class="fas fa-external-link-alt"></i> View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0" style="max-height:320px;overflow-y:auto;">
+                @php
+                    $allOnlinePayments = \App\Models\Payment::with(['client', 'paymentMethod'])
+                        ->where(function($q) {
+                            $q->whereHas('paymentMethod', function($pm) {
+                                $pm->whereRaw("LOWER(name) NOT LIKE '%cash%'");
+                            })->orWhereNotNull('transaction_id');
+                        })
+                        ->orderBy('created_at', 'desc')
+                        ->take(12)
+                        ->get();
+                @endphp
+                <table class="table table-sm table-hover mb-0" style="table-layout:fixed;width:100%;">
+                    <colgroup>
+                        <col style="width:32%"><col style="width:16%"><col style="width:18%"><col style="width:34%">
+                    </colgroup>
+                    <thead style="background:#f0fdf4;">
+                        <tr style="font-size:11px;">
+                            <th class="pl-3 py-2 text-success">Client</th>
+                            <th class="py-2 text-success">Amount</th>
+                            <th class="py-2 text-success">Method</th>
+                            <th class="py-2 text-success">Trx / Time</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size:12px;">
+                        @forelse($allOnlinePayments as $op)
+                        <tr>
+                            <td class="pl-3 py-2" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">
+                                <a href="{{ ($op->client_id ? route('admin.clients.show', $op->client_id) : '#') }}" class="text-dark font-weight-bold">{{ $op->client->name ?? 'N/A' }}</a>
+                            </td>
+                            <td class="py-2 text-success font-weight-bold" style="white-space:nowrap;">৳{{ number_format($op->amount, 0) }}</td>
+                            <td class="py-2">
+                                @php $pm = strtolower($op->payment_method ?? ''); @endphp
+                                @if($pm == 'bkash' || $op->payment_method_id == 2)
+                                    <span class="badge" style="background:#E2136E;color:#fff;font-size:10px;">bKash</span>
+                                @elseif($pm == 'nagad' || $op->payment_method_id == 3)
+                                    <span class="badge" style="background:#F6921E;color:#fff;font-size:10px;">Nagad</span>
+                                @elseif($pm == 'rocket' || $op->payment_method_id == 4)
+                                    <span class="badge" style="background:#8C3494;color:#fff;font-size:10px;">Rocket</span>
+                                @elseif($pm == 'card')
+                                    <span class="badge badge-primary" style="font-size:10px;">Card</span>
+                                @else
+                                    <span class="badge badge-info" style="font-size:10px;">{{ $op->paymentMethod->name ?? ucfirst($pm ?: 'Online') }}</span>
+                                @endif
+                            </td>
+                            <td class="py-2" style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">
+                                @if($op->transaction_id)
+                                    <span class="text-muted">{{ Str::limit($op->transaction_id, 14) }}</span><br>
+                                @endif
+                                <span class="text-muted">{{ $op->created_at->diffForHumans() }}</span>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="4" class="text-center text-muted py-3"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>No online payments</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Recent Payments: All submitted bills (by employee/admin) --}}
+    @if($__hasFeature('billing') && $__canAction('dashboard', 'recent_payments'))
+    <div class="{{ $__canAction('dashboard', 'recent_online_payments') ? 'col-md-6' : 'col-md-12' }}">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-history mr-2"></i>Recent Payments
+                    <small class="text-muted ml-1" style="font-size:11px;">All submitted bills</small>
+                </h3>
+                <div class="card-tools">
+                    <a href="{{ route('admin.payments.index') }}" class="btn btn-tool btn-sm">
+                        <i class="fas fa-external-link-alt"></i> View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0" style="max-height:320px;overflow-y:auto;">
+                <table class="table table-sm table-hover mb-0" style="table-layout:fixed;width:100%;">
+                    <colgroup>
+                        <col style="width:28%"><col style="width:14%"><col style="width:16%"><col style="width:22%"><col style="width:20%">
+                    </colgroup>
+                    <thead style="background:#f8f9fa;">
+                        <tr style="font-size:11px;">
+                            <th class="pl-3 py-2">Client</th>
+                            <th class="py-2">Amount</th>
+                            <th class="py-2">Method</th>
+                            <th class="py-2">Submitted By</th>
+                            <th class="py-2">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size:12px;">
+                        @forelse($recentPayments ?? [] as $payment)
+                        @php $pay = is_array($payment) ? (object)$payment : $payment; @endphp
+                        <tr>
+                            <td class="pl-3 py-2" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">
+                                <span class="font-weight-bold text-dark">{{ $pay->client_name ?? 'N/A' }}</span>
+                                @if(!empty($pay->client_id))
+                                <div style="font-size:9px;color:#aaa;">{{ $pay->client_id }}</div>
+                                @endif
+                            </td>
+                            <td class="py-2 text-success font-weight-bold" style="white-space:nowrap;">{{ $pay->amount_formatted ?? '৳'.number_format($pay->amount??0,0) }}</td>
+                            <td class="py-2" style="white-space:nowrap;">
+                                @php $m = strtolower($pay->method ?? 'cash'); @endphp
+                                @if($m == 'bkash')
+                                    <span class="badge" style="background:#E2136E;color:#fff;font-size:10px;">bKash</span>
+                                @elseif($m == 'nagad')
+                                    <span class="badge" style="background:#F6921E;color:#fff;font-size:10px;">Nagad</span>
+                                @elseif($m == 'rocket')
+                                    <span class="badge" style="background:#8C3494;color:#fff;font-size:10px;">Rocket</span>
+                                @elseif($m == 'cash')
+                                    <span class="badge badge-secondary" style="font-size:10px;">Cash</span>
+                                @else
+                                    <span class="badge badge-info" style="font-size:10px;">{{ ucfirst($m) }}</span>
+                                @endif
+                            </td>
+                            <td class="py-2" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;font-size:11px;">
+                                <i class="fas fa-user-tie mr-1 text-primary" style="font-size:9px;"></i>
+                                {{ $pay->submitted_by ?? 'Admin' }}
+                                @if(!empty($pay->submitted_by_type))
+                                <span class="badge badge-light" style="font-size:9px;">{{ $pay->submitted_by_type }}</span>
+                                @endif
+                            </td>
+                            <td class="py-2 text-muted" style="white-space:nowrap;font-size:10px;">{{ $pay->time ?? '' }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="5" class="text-center text-muted py-3" style="font-size:12px;">No payments yet</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+</div>
+{{-- Row: Recent Tickets --}}
+<div class="row mt-3">
+    @if($__hasFeature('support') && $__canAction('dashboard', 'recent_tickets'))
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-ticket-alt mr-2"></i>Recent Tickets</h3>
+            </div>
+            <div class="card-body p-0" style="max-height:320px;overflow-y:auto;">
+                <table class="table table-sm table-hover mb-0" style="table-layout:fixed;width:100%;">
+                    <colgroup>
+                        <col style="width:38%">
+                        <col style="width:38%">
+                        <col style="width:24%">
+                    </colgroup>
+                    <thead style="background:#f8f9fa;">
+                        <tr style="font-size:11px;">
+                            <th class="pl-3 py-2">Client</th>
+                            <th class="py-2">Subject</th>
+                            <th class="py-2">Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size:12px;">
+                        @forelse($recentTickets ?? [] as $ticket)
+                        <tr>
+                            <td class="pl-3 py-2" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;">{{ $ticket->client->name ?? 'N/A' }}</td>
+                            <td class="py-2" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0;" title="{{ $ticket->subject }}">{{ Str::limit($ticket->subject, 25) }}</td>
+                            <td class="py-2">
+                                <span class="badge badge-{{ $ticket->priority == 'urgent' ? 'danger' : ($ticket->priority == 'high' ? 'warning' : 'secondary') }}" style="font-size:10px;">
+                                    {{ ucfirst($ticket->priority) }}
+                                </span>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-3" style="font-size:12px;">No recent tickets</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
+</div>
+@endif
+
+
+
+{{-- ═══════════════════════════════════════════
+     SERVER HEALTH MONITOR WIDGET
+════════════════════════════════════════════ --}}
+
+
+@endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const zoneLabels = {!! json_encode(($zoneStats ?? collect())->pluck('name')->toArray()) !!};
+    const zoneData = {!! json_encode(($zoneStats ?? collect())->pluck('clients_count')->toArray()) !!};
+    
+    const areaLabels = {!! json_encode(($areaStats ?? collect())->take(10)->map(fn($a) => ($a->zone ? $a->zone->name . ' - ' : '') . $a->name)->values()->toArray()) !!};
+    const areaData = {!! json_encode(($areaStats ?? collect())->take(10)->pluck('clients_count')->toArray()) !!};
+    
+    const revenueLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const revenueData = {!! json_encode($monthlyRevenue ?? []) !!};
+    
+    const chartColors = ['#17a2b8', '#e17055', '#636e72', '#20c997', '#6c5ce7', '#fd79a8', '#fdcb6e', '#00b894', '#0984e3', '#e84393'];
+    
+    var doughnutColors = ['#2563eb', '#e84393', '#f39c12', '#27ae60', '#8e44ad', '#17a2b8', '#fd79a8', '#00b894', '#e17055', '#636e72'];
+
+    var doughnutOpts = {
+        responsive: true,
+        maintainAspectRatio: true,
+        devicePixelRatio: window.devicePixelRatio || 2,
+        aspectRatio: 1,
+        cutout: '55%',
+        plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 9 }, usePointStyle: true, pointStyle: 'circle', padding: 6 } },
+            tooltip: {
+                backgroundColor: '#1e293b',
+                titleFont: { size: 11 },
+                bodyFont: { size: 11 },
+                cornerRadius: 6,
+                padding: 8,
+                callbacks: {
+                    label: function(ctx) {
+                        var total = ctx.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                        var pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                        return ctx.label + ': ' + pct + '%';
+                    }
+                }
+            },
+            datalabels: false
+        },
+        elements: { arc: { borderWidth: 2, borderColor: '#fff' } },
+        layout: { padding: 2 }
+    };
+
+    function createDoughnut(canvasId, labels, data, colors) {
+        var ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff', hoverOffset: 8 }] },
+            options: doughnutOpts
+        });
+    }
+
+    // Zone chart replaced by Sunburst (see below)
+    
+    // Area Wise Clients — Horizontal Rainbow Bar
+    (function() {
+        var svg = document.getElementById('areaWiseSvg');
+        if (!svg) return;
+        var labels = (areaLabels||[]).slice(0,8);
+        var data   = (areaData||[]).slice(0,8);
+        if (!labels.length) {
+            svg.setAttribute('viewBox','0 0 400 80');
+            svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#94a3b8" font-size="12">No Data</text>';
+            return;
+        }
+        var max  = Math.max.apply(null, data.concat([1]));
+        var bH=17, gap=4, padL=94, padR=40, padT=10, svgW=400;
+        var totalH = labels.length*(bH+gap)+padT+8;
+        svg.setAttribute('viewBox','0 0 '+svgW+' '+totalH);
+        svg.setAttribute('height', totalH);
+        var colors=['#6c5ce7','#0984e3','#00b894','#fd79a8','#fdcb6e','#e17055','#74b9ff','#55efc4'];
+        var html='<defs>';
+        colors.forEach(function(col,i){ html+='<linearGradient id="awg'+i+'" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="'+col+'"/><stop offset="100%" stop-color="'+col+'" stop-opacity="0.35"/></linearGradient>'; });
+        html+='</defs>';
+        labels.forEach(function(lbl,i){
+            var y    = padT + i*(bH+gap);
+            var barW = Math.max((data[i]/max)*(svgW-padL-padR), 4);
+            var ci   = i % colors.length;
+            var short= lbl.length>13 ? lbl.slice(0,12)+'…' : lbl;
+            html += '<text x="'+(padL-5)+'" y="'+(y+bH*0.74).toFixed(1)+'" text-anchor="end" font-size="10.5" fill="#475569" font-family="system-ui,sans-serif">'+short+'</text>';
+            html += '<rect x="'+padL+'" y="'+y+'" width="0" height="'+bH+'" rx="4" fill="url(#awg'+ci+')"><animate attributeName="width" from="0" to="'+barW.toFixed(1)+'" dur="'+(0.32+i*0.07).toFixed(2)+'s" fill="freeze" calcMode="spline" keySplines="0.25,0.1,0.25,1"/></rect>';
+            html += '<text x="'+(padL+barW+5)+'" y="'+(y+bH*0.74).toFixed(1)+'" font-size="10.5" fill="#1e293b" font-weight="700" font-family="system-ui,sans-serif">'+data[i]+'</text>';
+        });
+        svg.innerHTML = html;
+    })();
+    
+    // --- Daily Collection Bar Chart ---
+    (function() {
+        var canvas = document.getElementById('dashDailyChart');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        var gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(42, 82, 152, 0.85)');
+        gradient.addColorStop(1, 'rgba(42, 82, 152, 0.25)');
+
+        var dailyLabels = @json($dashboardDailyData->pluck('date')->map(fn($d) => date('d M', strtotime($d))));
+        var dailyAmounts = @json($dashboardDailyData->pluck('total')->map(fn($v) => round($v)));
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dailyLabels,
+                datasets: [{
+                    label: 'Collection (BDT)',
+                    data: dailyAmounts,
+                    backgroundColor: gradient,
+                    borderColor: 'rgba(30, 60, 114, 0.7)',
+                    borderWidth: 1,
+                    borderRadius: 5,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                animation: { duration: 600 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ' ৳' + ctx.raw.toLocaleString('en-IN');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) {
+                                if (v >= 1000) return '৳' + (v/1000).toFixed(0) + 'k';
+                                return '৳' + v;
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    }
+                }
+            }
+        });
+    })();
+
+
+    // ─── Zone × Status Sunburst ─────────────────────────────────────────
+    (function() {
+        var _sData = {!! json_encode(($zoneStatusData ?? collect())->values()) !!};
+        var canvas = document.getElementById('sunburstCanvas');
+        if (!canvas || !_sData.length) return;
+        var dpr = window.devicePixelRatio || 1;
+        var W = (canvas.parentElement.offsetWidth || 300) - 28;
+        var H = 268;
+        canvas.width  = W * dpr; canvas.height = H * dpr;
+        canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+        var ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        var cx = W / 2, cy = H / 2 - 4;
+        var holeR  = Math.min(W, H) * 0.185;
+        var midR   = Math.min(W, H) * 0.320;
+        var outerR = Math.min(W, H) * 0.455;
+        var ZONE_COLORS = ['#4e73df','#1cc88a','#36b9cc','#f6c23e','#e74a3b','#6f42c1','#fd7e14','#20c9a6','#e83e8c','#17a2b8'];
+        var STATUS = { active:'#22c55e', inactive:'#f59e0b', left:'#94a3b8' };
+        var STATUS_LABEL = { active:'Active', inactive:'Inactive', left:'Left' };
+        var totalClients = _sData.reduce(function(s,z){ return s+(z.active_c*1)+(z.inactive_c*1)+(z.left_c*1); },0) || 1;
+
+        // Build zone arcs (inner ring)
+        var zArcs=[], a=-Math.PI/2;
+        _sData.forEach(function(z,i){
+            var t=(z.active_c*1)+(z.inactive_c*1)+(z.left_c*1);
+            var sw=(t/totalClients)*Math.PI*2;
+            zArcs.push({s:a,e:a+sw,z:z,i:i,t:t,ring:'zone'});
+            a+=sw;
+        });
+
+        // Build status arcs (outer ring)
+        var sArcs=[];
+        zArcs.forEach(function(za){
+            var a2=za.s;
+            [['active',STATUS.active],['inactive',STATUS.inactive],['left',STATUS.left]].forEach(function(st){
+                var v=za.z[st[0]+'_c']*1;
+                if(v<=0) return;
+                var sw=(v/totalClients)*Math.PI*2;
+                sArcs.push({s:a2,e:a2+sw,clr:st[1],v:v,name:za.z.name,key:st[0],ring:'status',
+                    zone:za.z,zClr:ZONE_COLORS[za.i%ZONE_COLORS.length]});
+                a2+=sw;
+            });
+        });
+
+        // Tooltip element
+        var tip = document.createElement('div');
+        tip.style.cssText='position:fixed;pointer-events:none;display:none;background:rgba(15,23,42,0.92);color:#fff;'+
+            'padding:7px 11px;border-radius:8px;font-size:11px;line-height:1.55;z-index:9999;'+
+            'box-shadow:0 4px 18px rgba(0,0,0,0.28);max-width:180px;white-space:nowrap;';
+        document.body.appendChild(tip);
+
+        var hovZ=-1, hovS=-1, prog=0;
+
+        function angleInArc(angle, s, e) {
+            // normalize to [0, 2PI)
+            var a = angle;
+            if(a < -Math.PI/2) a += Math.PI*2;
+            var ss = s < -Math.PI/2 ? s + Math.PI*2 : s;
+            var ee = e < -Math.PI/2 ? e + Math.PI*2 : e;
+            if(ee < ss) ee += Math.PI*2;
+            if(a < ss) a += Math.PI*2;
+            return a >= ss && a <= ee;
+        }
+
+        function draw(t){
+            ctx.clearRect(0,0,W,H);
+            ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+
+            // Inner zone ring
+            zArcs.forEach(function(arc, idx){
+                var clr=ZONE_COLORS[arc.i%ZONE_COLORS.length];
+                var end=arc.s+(arc.e-arc.s)*Math.min(1,t);
+                var isHov = idx===hovZ;
+                ctx.beginPath(); ctx.moveTo(cx,cy);
+                ctx.arc(cx,cy, isHov ? midR+5 : midR, arc.s, end); ctx.closePath();
+                ctx.fillStyle = isHov ? clr+'ff' : clr+'cc'; ctx.fill();
+                ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+                if(t>=1 && arc.t>0){
+                    var mid=(arc.s+arc.e)/2;
+                    var lx=cx+Math.cos(mid)*(holeR+midR)/2;
+                    var ly=cy+Math.sin(mid)*(holeR+midR)/2;
+                    var nm=arc.z.name||''; if(nm.length>7) nm=nm.substr(0,6)+'..';
+                    ctx.save(); ctx.translate(lx,ly);
+                    ctx.textAlign='center'; ctx.textBaseline='middle';
+                    ctx.font='bold 8px system-ui,sans-serif'; ctx.fillStyle='#fff';
+                    ctx.fillText(nm,0,0); ctx.restore();
+                }
+            });
+
+            // White hole
+            ctx.beginPath(); ctx.arc(cx,cy,holeR*Math.min(1,t),0,Math.PI*2);
+            ctx.fillStyle='#fff'; ctx.fill();
+
+            // Outer status ring
+            sArcs.forEach(function(arc, idx){
+                var end=arc.s+(arc.e-arc.s)*Math.min(1,t);
+                var isHov = idx===hovS;
+                ctx.beginPath();
+                ctx.arc(cx,cy, isHov ? outerR+5 : outerR, arc.s, end);
+                ctx.arc(cx,cy, midR+2, end, arc.s, true);
+                ctx.closePath();
+                ctx.fillStyle = isHov ? arc.clr+'ff' : arc.clr+'dd'; ctx.fill();
+                ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+            });
+
+            // Center total
+            if(t>=0.85){
+                ctx.textAlign='center'; ctx.textBaseline='middle';
+                ctx.font='bold 20px system-ui,sans-serif'; ctx.fillStyle='#1e293b';
+                ctx.fillText(totalClients,cx,cy-7);
+                ctx.font='10px system-ui,sans-serif'; ctx.fillStyle='#94a3b8';
+                ctx.fillText('clients',cx,cy+9);
+            }
+        }
+
+        function animate(){ prog=Math.min(1,prog+0.04); draw(prog); if(prog<1) requestAnimationFrame(animate); }
+        setTimeout(function(){ requestAnimationFrame(animate); },80);
+
+        canvas.addEventListener('mousemove', function(e){
+            if(prog < 1) return;
+            var rect = canvas.getBoundingClientRect();
+            var mx = (e.clientX - rect.left) * (W / rect.width);
+            var my = (e.clientY - rect.top)  * (H / rect.height);
+            var dx=mx-cx, dy=my-cy, dist=Math.sqrt(dx*dx+dy*dy);
+            var angle=Math.atan2(dy,dx);
+            var newZ=-1, newS=-1;
+            var tipHTML='';
+            canvas.style.cursor='default';
+
+            if(dist >= holeR && dist < midR+5){
+                // Zone ring
+                zArcs.forEach(function(arc,idx){
+                    if(angleInArc(angle,arc.s,arc.e)){
+                        newZ=idx;
+                        var z=arc.z;
+                        var pct=Math.round(arc.t/totalClients*100);
+                        tipHTML='<strong style="color:#93c5fd;">'+z.name+'</strong><br>'+
+                            '<span style="color:#86efac;">&#9679; Active: '+z.active_c+'</span><br>'+
+                            '<span style="color:#fcd34d;">&#9679; Inactive: '+z.inactive_c+'</span><br>'+
+                            '<span style="color:#94a3b8;">&#9679; Left: '+z.left_c+'</span><br>'+
+                            '<span style="color:#cbd5e1;">Total: '+arc.t+' ('+pct+'%)</span>';
+                        canvas.style.cursor='pointer';
+                    }
+                });
+            } else if(dist >= midR+2 && dist < outerR+8){
+                // Status ring
+                sArcs.forEach(function(arc,idx){
+                    if(angleInArc(angle,arc.s,arc.e)){
+                        newS=idx;
+                        var pct=Math.round(arc.v/totalClients*100);
+                        var stLabel=STATUS_LABEL[arc.key]||arc.key;
+                        var stClrMap={active:'#86efac',inactive:'#fcd34d',left:'#cbd5e1'};
+                        tipHTML='<strong style="color:#93c5fd;">'+arc.name+'</strong><br>'+
+                            '<span style="color:'+(stClrMap[arc.key]||'#fff')+';">&#9679; '+stLabel+': '+arc.v+'</span><br>'+
+                            '<span style="color:#cbd5e1;font-size:10px;">'+pct+'% of total</span>';
+                        canvas.style.cursor='pointer';
+                    }
+                });
+            }
+
+            if(newZ!==hovZ || newS!==hovS){ hovZ=newZ; hovS=newS; draw(1); }
+
+            if(tipHTML){
+                tip.innerHTML=tipHTML;
+                tip.style.display='block';
+                var tx=e.clientX+14, ty=e.clientY-10;
+                if(tx+190>window.innerWidth) tx=e.clientX-200;
+                tip.style.left=tx+'px'; tip.style.top=ty+'px';
+            } else {
+                tip.style.display='none';
+            }
+        });
+
+        canvas.addEventListener('mouseleave', function(){
+            hovZ=-1; hovS=-1; draw(1);
+            tip.style.display='none';
+            canvas.style.cursor='default';
+        });
+    })();
+
+    // Load chart data and initialize 30-day/180-day charts
+    function loadChartData() {
+        fetch('{{ route("admin.api.chart-data") }}')
+            .then(response => response.json())
+            .then(data => {
+                // Last 30 Days New Clients — Bubble Timeline (custom canvas2D)
+                if (document.getElementById('bubbleNewClientsCanvas')) {
+                    const rawLabels = data.last_30_days_clients.map(d => d.date);
+                    const rawCounts = data.last_30_days_clients.map(d => d.count);
+                    const total = rawCounts.reduce((a,b)=>a+b,0);
+                    const badge = document.getElementById('bubbleTotalBadge');
+                    if(badge) badge.textContent = 'Total: ' + total;
+                    const bCanvas = document.getElementById('bubbleNewClientsCanvas');
+                    const _bDpr = window.devicePixelRatio || 1;
+                    const W = bCanvas.offsetWidth || bCanvas.parentElement.offsetWidth - 28;
+                    const H = 170;
+                    bCanvas.width = W * _bDpr; bCanvas.height = H * _bDpr;
+                    bCanvas.style.width = W + 'px'; bCanvas.style.height = H + 'px';
+                    const bCtx = bCanvas.getContext('2d');
+                    bCtx.scale(_bDpr, _bDpr);
+                    const maxVal = Math.max(...rawCounts) || 1;
+                    const padL=36,padR=12,padT=12,padB=38;
+                    const plotW=W-padL-padR, plotH=H-padT-padB;
+                    const stepX=plotW/(rawCounts.length-1||1);
+                    const pulse=rawCounts.map(()=>Math.random()*Math.PI*2);
+                    let bT=0;
+                    function drawBubble(){
+                        bCtx.clearRect(0,0,W,H);
+                        bCtx.fillStyle='#fff'; bCtx.fillRect(0,0,W,H);
+                        for(let g=0;g<=3;g++){
+                            const gy=padT+g*(plotH/3);
+                            bCtx.beginPath(); bCtx.moveTo(padL,gy); bCtx.lineTo(W-padR,gy);
+                            bCtx.strokeStyle='#f1f5f9'; bCtx.lineWidth=1; bCtx.stroke();
+                            if(g<3){
+                                const v=Math.round(maxVal*(1-g/3));
+                                bCtx.font='8px Inter,sans-serif'; bCtx.fillStyle='#94a3b8';
+                                bCtx.textAlign='right'; bCtx.fillText(v,padL-4,gy+3);
+                            }
+                        }
+                        const prog=Math.min(bT/60,1);
+                        const eased=1-Math.pow(1-prog,3);
+                        // connecting line
+                        bCtx.beginPath();
+                        rawCounts.forEach((v,i)=>{
+                            const px=padL+i*stepX, py=padT+plotH-(v/maxVal)*plotH*eased;
+                            i===0?bCtx.moveTo(px,py):bCtx.lineTo(px,py);
+                        });
+                        bCtx.strokeStyle='rgba(59,130,246,0.1)'; bCtx.lineWidth=1; bCtx.stroke();
+                        // bubbles
+                        rawCounts.forEach((v,i)=>{
+                            const px=padL+i*stepX, py=padT+plotH-(v/maxVal)*plotH*eased;
+                            if(i*2>bT) return;
+                            const pf=v===0?0:0.88+0.12*Math.sin(bT*0.05+pulse[i]);
+                            const r=v===0?2.5:4+v*2.8;
+                            if(v>0){
+                                bCtx.beginPath(); bCtx.arc(px,py,r*pf+5,0,Math.PI*2);
+                                bCtx.strokeStyle='rgba(59,130,246,'+(0.07+v/maxVal*0.08)+')';
+                                bCtx.lineWidth=1.5; bCtx.stroke();
+                                const grd=bCtx.createRadialGradient(px-r*0.3,py-r*0.3,0,px,py,r*pf);
+                                grd.addColorStop(0,'rgba(147,197,253,0.95)');
+                                grd.addColorStop(0.4,'rgba(59,130,246,0.85)');
+                                grd.addColorStop(1,'rgba(29,78,216,0.6)');
+                                bCtx.beginPath(); bCtx.arc(px,py,r*pf,0,Math.PI*2);
+                                bCtx.fillStyle=grd; bCtx.fill();
+                                if(r>8){
+                                    bCtx.font='bold '+(Math.min(r*0.65,10))+'px Inter,sans-serif';
+                                    bCtx.fillStyle='#fff'; bCtx.textAlign='center'; bCtx.textBaseline='middle';
+                                    bCtx.fillText(v,px,py); bCtx.textBaseline='alphabetic';
+                                }
+                            } else {
+                                bCtx.beginPath(); bCtx.arc(px,py,2.5,0,Math.PI*2);
+                                bCtx.fillStyle='#e2e8f0'; bCtx.fill();
+                            }
+                            if(i%6===0){
+                                bCtx.font='8px Inter,sans-serif'; bCtx.fillStyle='#94a3b8';
+                                bCtx.textAlign='center'; bCtx.fillText(rawLabels[i]||'',px,H-5);
+                            }
+                        });
+                        bT++;
+                        if(bT<=65) requestAnimationFrame(drawBubble);
+                    }
+                    drawBubble();
+                }
+
+                // Last 30 Days Bill Collection — Arc Progress Circles (Clear)
+                if (document.getElementById('arcProgressCanvas')) {
+                    (function() {
+                        var c = document.getElementById('arcProgressCanvas');
+                        var collData = data.last_30_days_collection || [];
+                        var dpr = window.devicePixelRatio || 1;
+                        var W = c.offsetWidth || 900, H = 210;
+                        c.width = W * dpr; c.height = H * dpr;
+                        c.style.width = W + 'px'; c.style.height = H + 'px';
+                        var ctx = c.getContext('2d');
+                        ctx.scale(dpr, dpr);
+                        var amounts = collData.map(function(d){ return +(d&&d.amount)||0; });
+                        var maxV = Math.max.apply(null, amounts.concat([1]));
+                        var tot  = amounts.reduce(function(a,b){return a+b;},0);
+                        var n = collData.length || 30;
+                        /* layout: 10 cols x 3 rows */
+                        var cols=10, rows=3;
+                        var padL=10, padR=10, padT=32, padB=10;
+                        var cellW=(W-padL-padR)/cols;
+                        var cellH=(H-padT-padB)/rows;
+                        var R=Math.min(cellW,cellH)*0.40;
+                        var t=0;
+                        function hue(v){ return v===0?210:150+(v/maxV)*30; }
+                        function fmt(v){
+                            if(v>=100000) return '৳'+(v/100000).toFixed(1)+'L';
+                            if(v>=1000)   return '৳'+(v/1000).toFixed(1)+'k';
+                            return '৳'+v;
+                        }
+                        function draw(){
+                            ctx.clearRect(0,0,W,H);
+                            ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+                            var prog=Math.min(t/60,1);
+                            for(var i=0;i<n;i++){
+                                var v=amounts[i]||0;
+                                var col=i%cols, row=Math.floor(i/cols);
+                                var cx2=padL+col*cellW+cellW/2;
+                                var cy2=padT+row*cellH+cellH/2;
+                                var revA=Math.min(1,Math.max(0,(prog*n-i)/6));
+                                var norm=v/maxV;
+                                var h=hue(v);
+                                /* track arc */
+                                ctx.beginPath();
+                                ctx.arc(cx2,cy2,R,-Math.PI*0.75,Math.PI*0.75);
+                                ctx.strokeStyle=v>0?'#e8f4fd':'#f1f5f9';
+                                ctx.lineWidth=5.5; ctx.lineCap='round'; ctx.stroke();
+                                if(v>0){
+                                    /* filled arc */
+                                    var sweep=(-Math.PI*0.75)+(norm*Math.PI*1.5*revA);
+                                    var grd=ctx.createLinearGradient(cx2-R,cy2,cx2+R,cy2);
+                                    grd.addColorStop(0,'hsl('+h+',78%,58%)');
+                                    grd.addColorStop(1,'hsl('+h+',88%,42%)');
+                                    ctx.beginPath();
+                                    ctx.arc(cx2,cy2,R,-Math.PI*0.75,sweep);
+                                    ctx.strokeStyle=grd; ctx.lineWidth=5.5; ctx.lineCap='round'; ctx.stroke();
+                                    /* dot at arc end */
+                                    if(revA>0.3){
+                                        var dx=cx2+Math.cos(sweep)*R, dy=cy2+Math.sin(sweep)*R;
+                                        ctx.beginPath(); ctx.arc(dx,dy,4,0,Math.PI*2);
+                                        ctx.fillStyle='hsl('+h+',88%,48%)'; ctx.fill();
+                                        ctx.beginPath(); ctx.arc(dx,dy,2,0,Math.PI*2);
+                                        ctx.fillStyle='#fff'; ctx.fill();
+                                    }
+                                }
+                                ctx.textAlign='center'; ctx.textBaseline='middle';
+                                if(v>0&&revA>0.45){
+                                    /* amount — bold, bigger */
+                                    ctx.font='bold '+Math.round(R*0.52)+'px Inter,sans-serif';
+                                    ctx.fillStyle='hsl('+h+',72%,32%)';
+                                    ctx.fillText(fmt(v),cx2,cy2-2);
+                                    /* date */
+                                    ctx.font=Math.round(R*0.38)+'px Inter,sans-serif';
+                                    ctx.fillStyle='#94a3b8';
+                                    var ds=collData[i].date?collData[i].date.substring(5):('D'+(i+1));
+                                    ctx.fillText(ds,cx2,cy2+R*0.52);
+                                } else {
+                                    /* empty cell: show date in readable grey */
+                                    ctx.font=Math.round(R*0.38)+'px Inter,sans-serif';
+                                    ctx.fillStyle='#cbd5e1';
+                                    var ds2=collData[i]&&collData[i].date?collData[i].date.substring(5):(i+1);
+                                    ctx.fillText(ds2,cx2,cy2);
+                                }
+                                ctx.textBaseline='alphabetic';
+                            }
+                            /* title */
+                            ctx.font='bold 13px Inter,sans-serif'; ctx.fillStyle='#1e293b';
+                            ctx.textAlign='left'; ctx.fillText('Last 30 Days Bill Collection',padL,22);
+                            /* total badge */
+                            var bw=88,bh=22,bx=W-padR-bw,by=6;
+                            ctx.beginPath();
+                            if(ctx.roundRect) ctx.roundRect(bx,by,bw,bh,6); else ctx.rect(bx,by,bw,bh);
+                            ctx.fillStyle='#ecfdf5'; ctx.fill();
+                            ctx.strokeStyle='#6ee7b7'; ctx.lineWidth=1.2; ctx.stroke();
+                            ctx.font='bold 12px Inter,sans-serif'; ctx.fillStyle='#059669';
+                            ctx.textAlign='center'; ctx.textBaseline='middle';
+                            ctx.fillText(fmt(tot),bx+bw/2,by+bh/2);
+                            ctx.textBaseline='alphabetic';
+                            t++;
+                            if(t<=75) requestAnimationFrame(draw);
+                        }
+                        draw();
+                    })();
+                }
+
+                // Last 30 Days Auto Inactive
+                if (document.getElementById('autoInactiveChart')) {
+                    // Update total badge
+                    var aiTotal = (data.last_30_days_auto_inactive||[]).reduce(function(s,d){return s+(+d.count||0);},0);
+                    var aiB = document.getElementById('autoInactiveTotalBadge');
+                    if(aiB) aiB.textContent = 'Total: '+aiTotal;
+                    const aiCtx = document.getElementById('autoInactiveChart').getContext('2d');
+                    const aiGradient = aiCtx.createLinearGradient(0, 0, 0, 200);
+                    aiGradient.addColorStop(0, 'rgba(225, 112, 85, 0.4)');
+                    aiGradient.addColorStop(1, 'rgba(225, 112, 85, 0.02)');
+                    new Chart(aiCtx, {
+                        type: 'line',
+                        data: {
+                            labels: data.last_30_days_auto_inactive.map(d => d.date),
+                            datasets: [{
+                                label: 'Auto Inactive',
+                                data: data.last_30_days_auto_inactive.map(d => d.count),
+                                borderColor: '#e17055',
+                                backgroundColor: aiGradient,
+                                fill: true,
+                                tension: 0.4,
+                                borderWidth: 3,
+                                pointRadius: 4,
+                                pointBackgroundColor: '#e17055',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false }, ticks: { maxTicksLimit: 7 } } }
+                        }
+                    });
+                }
+
+                // Due Bills by Month (3D Pie)
+                // Due Bills by Month — Animated Column Chart
+                (function() {
+                    var svg = document.getElementById('dueBillsSvg');
+                    if (!svg) return;
+                    var monthData = (data.due_bills_by_month || []).slice().reverse();
+                    if (!monthData.length) {
+                        svg.innerHTML = '<text x="50%" y="45%" text-anchor="middle" fill="#94a3b8" font-size="12">No Data</text>';
+                        return;
+                    }
+                    var W=400, H=258, padB=32, padT=22, padL=8, padR=8, gapX=5;
+                    var n=monthData.length, bW=Math.floor((W-padL-padR-(n-1)*gapX)/n);
+                    var maxV=Math.max.apply(null, monthData.map(function(d){return d.due;}).concat([1]));
+                    var colPairs=[['#fd7979','#e74c3c'],['#fd9858','#e67e22'],['#fdc558','#f39c12'],['#58d68d','#27ae60'],['#5dade2','#2980b9'],['#af7ac5','#8e44ad']];
+                    var html='<defs>';
+                    colPairs.forEach(function(cp,i){ html+='<linearGradient id="dbg'+i+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+cp[0]+'"/><stop offset="100%" stop-color="'+cp[1]+'" stop-opacity="0.2"/></linearGradient>'; });
+                    html+='</defs>';
+                    /* base line */
+                    html+='<line x1="'+padL+'" y1="'+(H-padB)+'" x2="'+(W-padR)+'" y2="'+(H-padB)+'" stroke="#e2e8f0" stroke-width="1"/>';
+                    monthData.forEach(function(d,i){
+                        var x   = padL+i*(bW+gapX);
+                        var bH  = Math.max((d.due/maxV)*(H-padB-padT), 5);
+                        var y   = H-padB-bH;
+                        var ci  = i % colPairs.length;
+                        var lbl = d.due>=100000?(d.due/100000).toFixed(1)+'L':d.due>=1000?Math.round(d.due/1000)+'K':d.due;
+                        /* bar */
+                        html+='<rect x="'+x+'" y="'+(H-padB)+'" width="'+bW+'" height="0" rx="3" fill="url(#dbg'+ci+')" stroke="'+colPairs[ci][0]+'" stroke-width="0.5">'
+                            +'<animate attributeName="y" from="'+(H-padB)+'" to="'+y.toFixed(1)+'" dur="'+(0.36+i*0.09).toFixed(2)+'s" fill="freeze" calcMode="spline" keySplines="0.25,0.1,0.25,1"/>'
+                            +'<animate attributeName="height" from="0" to="'+bH.toFixed(1)+'" dur="'+(0.36+i*0.09).toFixed(2)+'s" fill="freeze" calcMode="spline" keySplines="0.25,0.1,0.25,1"/>'
+                            +'</rect>';
+                        /* top glow line */
+                        html+='<line x1="'+x+'" y1="'+y.toFixed(1)+'" x2="'+(x+bW)+'" y2="'+y.toFixed(1)+'" stroke="'+colPairs[ci][0]+'" stroke-width="2" stroke-linecap="round" opacity="0"/>'
+                            +'<animate attributeName="opacity" from="0" to="1" begin="'+(0.36+i*0.09).toFixed(2)+'s" dur="0.2s" fill="freeze" target="line"/>';
+                        /* value label */
+                        html+='<text x="'+(x+bW/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="9" fill="'+colPairs[ci][1]+'" font-weight="700" font-family="system-ui,sans-serif">'+lbl+'</text>';
+                        /* month label */
+                        var mo = d.month||'';
+                        html+='<text x="'+(x+bW/2).toFixed(1)+'" y="'+(H-padB+14)+'" text-anchor="middle" font-size="8" fill="#64748b" font-family="system-ui,sans-serif">'+mo+'</text>';
+                    });
+                    svg.innerHTML = html;
+                })();
+
+                // Reseller Expense by Month (3D Pie)
+                if (document.getElementById('resellerExpensePieChart')) {
+                    const resellerData = data.reseller_expense_by_month || [];
+                    const reData = resellerData.length > 0 ? resellerData.map(d => d.total) : [1];
+                    const reLabels = resellerData.length > 0 ? resellerData.map(d => d.month) : ['No Data'];
+                    createDoughnut('resellerExpensePieChart', reLabels, reData, doughnutColors.slice(0, reData.length));
+                }
+
+                // Client Status Donut replaced by Funnel (see below)
+
+                // 180 Days Collection vs Discount
+                if (document.getElementById('collectionVsDiscountChart')) {
+                    new Chart(document.getElementById('collectionVsDiscountChart'), {
+                        type: 'line',
+                        data: {
+                            labels: data.last_180_days_collection_vs_discount.map(d => d.month),
+                            datasets: [
+                                {
+                                    label: 'Collection',
+                                    data: data.last_180_days_collection_vs_discount.map(d => d.collection),
+                                    borderColor: '#00b894',
+                                    tension: 0.4,
+                                    fill: false
+                                },
+                                {
+                                    label: 'Discount',
+                                    data: data.last_180_days_collection_vs_discount.map(d => d.discount),
+                                    borderColor: '#e17055',
+                                    tension: 0.4,
+                                    fill: false
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { position: 'top' } },
+                            scales: { y: { beginAtZero: true } }
+                        }
+                    });
+                }
+
+                // --- New vs Left Clients — Full-width diverging bar chart ---
+                (function() {
+                    var svg = document.getElementById('glowTimelineSvg');
+                    if (!svg) return;
+                    var newData = data.last_30_days_clients || [];
+                    var inactData = data.last_30_days_left_clients || [];
+                    var days = 30;
+                    var newSlice = newData.slice(-days);
+                    var inSlice = inactData.slice(-days);
+                    var n = Math.max(newSlice.length, inSlice.length, 1);
+                    var allVals = newSlice.map(function(d){return d.count||0;}).concat(inSlice.map(function(d){return d.count||0;}));
+                    var maxVal = Math.max.apply(null, allVals) || 1;
+                    // ViewBox: 600 x 255
+                    var W = 600, H = 255;
+                    var padL = 10, padR = 10, padT = 38, padB = 28;
+                    var plotW = W - padL - padR;
+                    var plotH = (H - padT - padB) / 2;   // half-height each side
+                    var midY = padT + plotH;              // center baseline
+                    var colW = plotW / n;
+                    var barW = Math.max(16, colW * 0.80);
+                    var out = '';
+                    // Alternate column tint
+                    for (var i = 0; i < n; i++) {
+                        if (i % 2 === 0) {
+                            var bx2 = padL + i * colW;
+                            out += '<rect x="' + bx2 + '" y="' + padT + '" width="' + colW + '" height="' + (plotH * 2) + '" fill="rgba(241,245,249,0.4)"/>';
+                        }
+                    }
+                    // Horizontal grid lines (above center)
+                    for (var g = 1; g <= 3; g++) {
+                        var gy = midY - (plotH * g / 3);
+                        out += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" stroke="#f1f5f9" stroke-width="1"/>';
+                        var gy2 = midY + (plotH * g / 3);
+                        out += '<line x1="' + padL + '" y1="' + gy2 + '" x2="' + (W - padR) + '" y2="' + gy2 + '" stroke="#f1f5f9" stroke-width="1"/>';
+                    }
+                    // Center baseline
+                    out += '<line x1="' + padL + '" y1="' + midY + '" x2="' + (W - padR) + '" y2="' + midY + '" stroke="#cbd5e1" stroke-width="1.5"/>';
+                    // Axis labels: "NEW" above, "LEFT" below
+                    out += '<text x="' + (W/2) + '" y="14" text-anchor="middle" font-size="13" fill="#0984e3" font-weight="700" letter-spacing="1">NEW CLIENTS</text>';
+                    out += '<text x="' + (W/2) + '" y="' + (H - padB + 18) + '" text-anchor="middle" font-size="13" fill="#e17055" font-weight="700" letter-spacing="1">LEFT CLIENTS</text>';
+                    // Bars
+                    for (var i = 0; i < n; i++) {
+                        var ni = newSlice[i] || {date:'', count:0};
+                        var ii = inSlice[i] || {date:'', count:0};
+                        var cx3 = padL + i * colW + colW / 2;
+                        var nH = Math.max(2, (ni.count / maxVal) * plotH);
+                        var iH = Math.max(2, (ii.count / maxVal) * plotH);
+                        var dl = (ni.date || ii.date || '').replace(/^\d{4}-/, '').replace('-', '/');
+                        // New bar (grows UP from midY)
+                        if (ni.count > 0) {
+                            out += '<rect x="' + (cx3 - barW/2) + '" y="' + (midY - nH) + '" width="' + barW + '" height="' + nH + '" rx="2" fill="rgba(9,132,227,0.80)"/>';
+                            if (nH > 8) {
+                                out += '<text x="' + cx3 + '" y="' + (midY - nH - 4) + '" text-anchor="middle" font-size="13" fill="#0369a1" font-weight="700">' + ni.count + '</text>';
+                            }
+                        }
+                        // Left bar (grows DOWN from midY)
+                        if (ii.count > 0) {
+                            out += '<rect x="' + (cx3 - barW/2) + '" y="' + midY + '" width="' + barW + '" height="' + iH + '" rx="2" fill="rgba(225,112,85,0.80)"/>';
+                            if (iH > 8) {
+                                out += '<text x="' + cx3 + '" y="' + (midY + iH + 14) + '" text-anchor="middle" font-size="13" fill="#c0392b" font-weight="700">' + ii.count + '</text>';
+                            }
+                        }
+                        // Date label on center line
+                        if (i % 4 === 0 || n <= 12) {
+                            out += '<text x="' + cx3 + '" y="' + (midY + 4) + '" text-anchor="middle" font-size="9.5" fill="#94a3b8">' + dl + '</text>';
+                        }
+                    }
+                    // Totals
+                    var tNew = newSlice.reduce(function(s,d){return s+(d.count||0);},0);
+                    var tIn = inSlice.reduce(function(s,d){return s+(d.count||0);},0);
+                    out += '<text x="' + (padL + 2) + '" y="34" font-size="13" fill="#0984e3" font-weight="600">Total: ' + tNew + '</text>';
+                    out += '<text x="' + (padL + 2) + '" y="' + (H - padB + 22) + '" font-size="13" fill="#e17055" font-weight="600">Total: ' + tIn + '</text>';
+                    svg.innerHTML = out;
+                })();
+
+            })
+            .catch(error => console.error('Failed to load chart data:', error));
+    }
+
+    var liveRefreshEnabled = localStorage.getItem('liveRefreshEnabled') !== 'false';
+    var liveRefreshInterval = null;
+    var dashboardRefreshInterval = null;
+    var liveOnlineChart = null;
+    var liveChartLabels = [];
+    var liveChartData = [];
+    var maxDataPoints = 500;
+
+    function initLiveOnlineChart() {
+        var ctx = document.getElementById('liveOnlineChart');
+        if (!ctx) return;
+
+        fetch('{{ route("admin.dashboard.online-client-history") }}')
+            .then(function(r) { return r.json(); })
+            .then(function(history) {
+                liveChartLabels = history.labels || [];
+                liveChartData = history.data || [];
+
+                var dayEl = document.getElementById('graphDaySummary');
+                if (dayEl && history.days) {
+                    dayEl.style.display = 'none';
+                }
+
+                var summaryEl = document.getElementById('graph3DaySummary');
+                if (summaryEl && history.days && history.days.length > 0) {
+                    var html = '';
+                    history.days.forEach(function(d) {
+                        html += '<span style="background:#f1f5f9;padding:2px 7px;border-radius:10px;color:#475569;font-size:10px;font-weight:600;white-space:nowrap;">'
+                            + d.day_name.substring(0,3) + ' <span style="color:#2563eb;">' + d.peak + '</span>'
+                            + '<span style="color:#cbd5e1;margin:0 2px;">/</span>'
+                            + '<span style="color:#059669;">' + d.avg + '</span>'
+                            + '<span style="color:#cbd5e1;margin:0 2px;">/</span>'
+                            + '<span style="color:#dc2626;">' + d.min + '</span></span>';
+                    });
+                    summaryEl.innerHTML = html;
+                    summaryEl.style.display = 'flex';
+                }
+
+                buildChart(ctx);
+            })
+            .catch(function() {
+                var initialCount = parseInt(document.getElementById('liveMikrotikCount')?.textContent?.replace(/,/g, '') || '0');
+                var now = new Date();
+                liveChartLabels.push(now.toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}));
+                liveChartData.push(initialCount);
+                buildChart(ctx);
+            });
+    }
+
+    function buildChart(ctx) {
+        var maxVal = liveChartData.length > 0 ? Math.max.apply(null, liveChartData) : 5;
+        var suggestedMax = maxVal <= 5 ? maxVal + 2 : Math.ceil(maxVal * 1.15);
+
+        var gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, ctx.height || 200);
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
+        gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.05)');
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+        liveOnlineChart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: liveChartLabels,
+                datasets: [{
+                    label: 'Online Clients',
+                    data: liveChartData,
+                    borderColor: '#3b82f6',
+                    backgroundColor: gradient,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: '#3b82f6',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#f1f5f9',
+                        bodyColor: '#e2e8f0',
+                        titleFont: { size: 11, weight: '600' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            title: function(items) { return items[0].label; },
+                            label: function(item) { return 'Online: ' + item.formattedValue; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8', font: { size: 9, family: "'Inter', sans-serif" }, maxTicksLimit: 8, maxRotation: 0 },
+                        grid: { display: false },
+                        border: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: suggestedMax,
+                        ticks: { color: '#94a3b8', font: { size: 10, family: "'Inter', sans-serif" }, stepSize: Math.max(1, Math.ceil(suggestedMax / 5)), padding: 8 },
+                        grid: { color: 'rgba(148, 163, 184, 0.08)', drawBorder: false },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+
+        if (liveChartData.length > 0) {
+            updateGraphCurrentCount(liveChartData[liveChartData.length - 1]);
+        }
+    }
+
+    function addChartDataPoint(count) {
+        if (!liveOnlineChart) return;
+        var now = new Date();
+        liveChartLabels.push(now.toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'}));
+        liveChartData.push(count);
+        if (liveChartLabels.length > maxDataPoints) {
+            liveChartLabels.shift();
+            liveChartData.shift();
+        }
+        var maxVal = Math.max.apply(null, liveChartData);
+        var suggestedMax = maxVal <= 5 ? maxVal + 2 : Math.ceil(maxVal * 1.15);
+        liveOnlineChart.options.scales.y.suggestedMax = suggestedMax;
+        liveOnlineChart.options.scales.y.ticks.stepSize = Math.max(1, Math.ceil(suggestedMax / 5));
+        liveOnlineChart.update('none');
+        updateGraphCurrentCount(count);
+    }
+
+    function updateGraphCurrentCount(count) {
+        var el = document.getElementById('graphCurrentCount');
+        if (el && count !== undefined) el.textContent = count;
+    }
+
+    function refreshLiveMikrotikCount() {
+        if (!liveRefreshEnabled) return;
+        fetch('{{ route("admin.api.live-mikrotik-count") }}')
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                var countEl = document.getElementById('liveMikrotikCount');
+                if (countEl) {
+                    var newCount = data.total_online;
+                    countEl.textContent = newCount.toLocaleString();
+                    countEl.style.transition = 'all 0.3s ease';
+                    addChartDataPoint(newCount);
+                }
+                var updateEl = document.getElementById('mikrotikLastUpdate');
+                if (updateEl) {
+                    updateEl.textContent = 'Updated: ' + data.timestamp;
+                }
+            })
+            .catch(function(error) { console.error('MikroTik count refresh failed:', error); });
+    }
+
+    function applyLiveState() {
+        var btn = document.getElementById('liveToggleBtn');
+        var icon = document.getElementById('liveToggleIcon');
+        var label = document.getElementById('liveToggleLabel');
+        var indicator = document.getElementById('liveIndicator');
+        var statusText = document.getElementById('liveStatusText');
+        var overlay = document.getElementById('graphPausedOverlay');
+
+        if (liveRefreshEnabled) {
+            if (btn) btn.classList.remove('paused');
+            if (icon) icon.className = 'fas fa-pause';
+            if (label) label.textContent = '30s';
+            if (indicator) indicator.style.color = '#28a745';
+            if (statusText) statusText.textContent = 'LIVE';
+            if (overlay) overlay.style.display = 'none';
+        } else {
+            if (btn) btn.classList.add('paused');
+            if (icon) icon.className = 'fas fa-play';
+            if (label) label.textContent = 'OFF';
+            if (indicator) indicator.style.color = '#dc3545';
+            if (statusText) statusText.textContent = 'PAUSED';
+            if (overlay) overlay.style.display = 'flex';
+        }
+    }
+
+    function toggleLiveRefresh() {
+        liveRefreshEnabled = !liveRefreshEnabled;
+        localStorage.setItem('liveRefreshEnabled', liveRefreshEnabled ? 'true' : 'false');
+        applyLiveState();
+        if (liveRefreshEnabled) {
+            refreshLiveMikrotikCount();
+            refreshDashboard();
+            if (!dashboardRefreshInterval) {
+                dashboardRefreshInterval = setInterval(refreshDashboard, 30000);
+            }
+        } else {
+            if (dashboardRefreshInterval) {
+                clearInterval(dashboardRefreshInterval);
+                dashboardRefreshInterval = null;
+            }
+        }
+    }
+
+    liveRefreshInterval = setInterval(refreshLiveMikrotikCount, 30000);
+
+    // Dashboard refresh
+    let isManualRefresh = false;
+    function refreshDashboard(manual = false) {
+        if (!liveRefreshEnabled && !manual) return;
+        isManualRefresh = manual;
+        const btn = document.querySelector('button[onclick="refreshDashboard(true)"]');
+        const icon = btn ? btn.querySelector('i') : null;
+        if (icon) icon.classList.add('fa-spin');
+        
+        const url = manual ? '{{ route("admin.api.live-stats") }}?force_refresh=1' : '{{ route("admin.api.live-stats") }}';
+        fetch(url)
+            .then(response => {
+                if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+                    throw new Error('Session expired or server error');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const statMappings = {
+                    'total_clients': data.total_clients,
+                    'online_clients': data.online_clients,
+                    'active_total': data.active_total,
+                    'inactive_clients': data.inactive_clients,
+                    'unpaid_clients': data.unpaid_clients,
+                    'monthly_collection': data.monthly_collection_formatted,
+                    'today_collection': data.today_collection_formatted,
+                    'billing_clients': data.billing_clients,
+                    'total_pops': data.total_pops,
+                    'pending_tickets': data.pending_tickets,
+                    'total_due': data.total_due_formatted,
+                    'running_month_bills': data.running_month_bills,
+                    'month_bills_collected': data.month_bills_collected,
+                    'prev_month_due': data.prev_month_due,
+                    'this_month_due': data.this_month_due,
+                    'overdue_clients': data.overdue_clients,
+                    'prev_month_paid': data.prev_month_paid,
+                    'this_month_paid': data.this_month_paid,
+                    'today_expense': data.today_expense,
+                    'monthly_expense': data.monthly_expense,
+                    'today_auto_inactive': data.today_auto_inactive,
+                    'installation_charge_total': data.installation_charge_total,
+                    'reseller_collection': data.reseller_collection,
+                    'other_collection': data.other_collection,
+                    'mac_reseller_bill_monthly': data.mac_reseller_bill_monthly,
+                    'bw_reseller_bill_monthly': data.bw_reseller_bill_monthly,
+                    'staff_dues_pending': data.staff_dues_pending,
+                    'staff_dues_collected': data.staff_dues_collected,
+                    'staff_dues_submitted': data.staff_dues_submitted
+                };
+                
+                for (const [key, value] of Object.entries(statMappings)) {
+                    const el = document.querySelector(`[data-stat="${key}"]`);
+                    if (el) {
+                        const oldValue = el.textContent.trim();
+                        const newValue = typeof value === 'number' ? value.toLocaleString() : String(value);
+                        if (oldValue !== newValue) {
+                            el.textContent = newValue;
+                            el.style.transition = 'all 0.3s ease';
+                            el.style.transform = 'scale(1.1)';
+                            setTimeout(() => el.style.transform = 'scale(1)', 300);
+                        }
+                    }
+                }
+
+                if (data.installation_charge_subtitle) {
+                    const subEl = document.querySelector('[data-stat-sub="installation_charge_subtitle"]');
+                    if (subEl) subEl.textContent = data.installation_charge_subtitle;
+                }
+                
+                document.getElementById('lastUpdated').textContent = data.timestamp;
+                if (icon) icon.classList.remove('fa-spin');
+                isManualRefresh = false;
+            })
+            .catch(error => {
+                console.error('Dashboard refresh failed:', error);
+                if (icon) icon.classList.remove('fa-spin');
+                isManualRefresh = false;
+            });
+    }
+    
+    dashboardRefreshInterval = setInterval(refreshDashboard, 30000);
+    
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadChartData();
+        initLiveOnlineChart();
+        applyLiveState();
+        if (liveRefreshEnabled) {
+            refreshLiveMikrotikCount();
+            // Immediately refresh dashboard stats on page load
+            setTimeout(function() { refreshDashboard(); }, 500);
+        }
+    });
+</script>
+
+@endpush

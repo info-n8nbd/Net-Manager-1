@@ -1,0 +1,1277 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\OltDevice;
+use App\Services\OltService;
+use App\Services\OnuProvisioningService;
+use App\Services\OnuManagementService;
+use App\Services\OLT\SNMPClient;
+use App\Services\OLT\MonitoringService;
+use App\Services\OLT\BdcomTelnetPoller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class OltController extends Controller
+{
+    public function index()
+    {
+        $olts = OltDevice::orderBy('name')->paginate(in_array((int)request()->per_page,[20,50,100,200])?(int)request()->per_page:20);
+
+        $oltIds = $olts->pluck('id')->toArray();
+        $onuCounts = DB::table('onus')
+            ->whereIn('olt_device_id', $oltIds)
+            ->selectRaw('olt_device_id, COUNT(*) as total, SUM(CASE WHEN status = \'online\' THEN 1 ELSE 0 END) as online_count, SUM(CASE WHEN status = \'offline\' THEN 1 ELSE 0 END) as offline_count')
+            ->groupBy('olt_device_id')
+            ->get()
+            ->keyBy('olt_device_id');
+
+        return view('admin.network.olt-devices', compact('olts', 'onuCounts'));
+    }
+
+    public function create()
+    {
+        $vendors = OltDevice::VENDORS;
+        return view('admin.network.olt-create', compact('vendors'));
+    }
+
+    public function store(Request $request)
+    {
+        $isSNMP = $request->connection_type === 'snmp';
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'ip_address' => 'required|ip',
+            'port' => 'required|integer|min:1|max:65535',
+            'username' => $isSNMP ? 'nullable|string|max:255' : 'required|string|max:255',
+            'password' => $isSNMP ? 'nullable|string|max:255' : 'required|string|max:255',
+            'vendor' => 'required|string',
+            'pon_type' => 'required|string|in:epon,gpon',
+            'connection_type' => 'required|string|in:telnet,ssh,http,snmp',
+            'model' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'total_ports' => 'required|integer|min:1',
+            'snmp_community' => $isSNMP ? 'required|string|max:255' : 'nullable|string|max:255',
+            'snmp_write_community' => 'nullable|string|max:255',
+            'snmp_port' => 'nullable|integer|min:1|max:65535',
+        ]);
+
+        $data = $request->only([
+            'name', 'ip_address', 'port', 'username', 'password', 'vendor',
+            'pon_type', 'connection_type', 'model', 'location', 'total_ports',
+            'snmp_community', 'snmp_write_community', 'snmp_port',
+        ]);
+        // Route port value to the right specific column based on connection type
+        $portVal = $request->filled('port') ? (int)$request->port : 23;
+        $data['port'] = $portVal;
+        $connType = $request->connection_type;
+        $data['telnet_port'] = $connType === 'telnet' ? $portVal : null;
+        $data['ssh_port']    = $connType === 'ssh'    ? $portVal : null;
+        $data['http_port']   = $connType === 'http'   ? $portVal : null;
+        $data['is_active'] = $request->has('is_active');
+        $data['username'] = $data['username'] ?? '';
+        $data['password'] = $data['password'] ?? '';
+        $data['snmp_enabled'] = $request->has('snmp_enabled') || $connType === 'snmp';
+        if ($data['snmp_enabled'] && empty($data['snmp_port'])) {
+            $data['snmp_port'] = $connType === 'snmp' ? $portVal : 161;
+        }
+
+        OltDevice::create($data);
+        return redirect()->route('admin.olt.index')->with('success', 'OLT device added successfully.');
+    }
+
+    public function edit(OltDevice $olt)
+    {
+        $vendors = OltDevice::VENDORS;
+        return view('admin.network.olt-edit', compact('olt', 'vendors'));
+    }
+
+    public function update(Request $request, OltDevice $olt)
+    {
+        $isSNMP = $request->connection_type === 'snmp';
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'ip_address' => 'required|ip',
+            'port' => 'required|integer|min:1|max:65535',
+            'username' => $isSNMP ? 'nullable|string|max:255' : 'required|string|max:255',
+            'vendor' => 'required|string',
+            'pon_type' => 'required|string|in:epon,gpon',
+            'connection_type' => 'required|string|in:telnet,ssh,http,snmp',
+            'model' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'total_ports' => 'required|integer|min:1',
+            'snmp_community' => $isSNMP ? 'required|string|max:255' : 'nullable|string|max:255',
+            'snmp_write_community' => 'nullable|string|max:255',
+            'snmp_port' => 'nullable|integer|min:1|max:65535',
+        ]);
+
+        $data = $request->only([
+            'name', 'ip_address', 'port', 'username', 'vendor',
+            'pon_type', 'connection_type', 'model', 'location', 'total_ports',
+            'snmp_community', 'snmp_write_community', 'snmp_port',
+        ]);
+        // Route port value to the right specific column based on connection type
+        $portVal = $request->filled('port') ? (int)$request->port : 23;
+        $data['port'] = $portVal;
+        $connType = $request->connection_type;
+        $data['telnet_port'] = $connType === 'telnet' ? $portVal : null;
+        $data['ssh_port']    = $connType === 'ssh'    ? $portVal : null;
+        $data['http_port']   = $connType === 'http'   ? $portVal : null;
+        $data['is_active'] = $request->has('is_active');
+        $data['username'] = $data['username'] ?? '';
+        if ($request->filled('password')) {
+            $data['password'] = $request->password;
+        }
+        $data['snmp_enabled'] = $request->has('snmp_enabled') || $request->connection_type === 'snmp';
+        if ($data['snmp_enabled'] && empty($data['snmp_port'])) {
+            $data['snmp_port'] = $connType === 'snmp' ? $portVal : 161;
+        }
+
+        $olt->update($data);
+        return redirect()->route('admin.olt.index')->with('success', 'OLT device updated successfully.');
+    }
+
+    public function destroy(OltDevice $olt)
+    {
+        $olt->delete();
+        return redirect()->route('admin.olt.index')->with('success', 'OLT device deleted successfully.');
+    }
+
+    public function testConnection(OltDevice $olt)
+    {
+        try {
+            if ($olt->connection_type === 'snmp' || $olt->snmp_enabled) {
+                $snmpClient = SNMPClient::fromDevice($olt);
+                $result = $snmpClient->testConnection();
+
+                if ($result['success']) {
+                    $olt->update([
+                        'status' => 'active',
+                        'system_description' => $result['system_description'] ?? null,
+                        'last_sync' => now(),
+                    ]);
+                    $usedPort = $result['snmp_port'] ?? $olt->snmp_port ?? 161;
+                    return response()->json([
+                        'success' => true,
+                        'message' => "Connected to {$olt->name} via SNMP ({$olt->ip_address}:{$usedPort})",
+                        'connection_method' => $result['method'],
+                        'system_description' => $result['system_description'] ?? null,
+                        'system_name' => $result['system_name'] ?? null,
+                        'uptime' => $result['uptime'] ?? null,
+                        'location' => $result['location'] ?? null,
+                        'latency_ms' => $result['latency_ms'] ?? null,
+                    ]);
+                }
+
+                if ($olt->connection_type !== 'snmp') {
+                    return $this->testNonSnmpConnection($olt);
+                }
+
+                $olt->update(['status' => 'inactive']);
+                $errorType = $snmpClient->getErrorType();
+                $errorMsg = match($errorType) {
+                    'timeout' => "SNMP timeout — device {$olt->ip_address} did not respond. Check IP address and ensure SNMP is enabled on the OLT.",
+                    'unreachable' => "Device {$olt->ip_address} is unreachable. Check network connectivity.",
+                    'auth_error' => "SNMP authentication failed. Check the community string.",
+                    default => $result['error'] ?? 'SNMP connection failed.',
+                };
+
+                return response()->json(['success' => false, 'message' => $errorMsg, 'error_type' => $errorType]);
+            }
+
+            return $this->testNonSnmpConnection($olt);
+        } catch (\Exception $e) {
+            $olt->update(['status' => 'inactive']);
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+
+    protected function testNonSnmpConnection(OltDevice $olt)
+    {
+        $api = OltService::fromDevice($olt);
+        if ($api->connect()) {
+            $method = $api->getConnectionMethod();
+            $api->disconnect();
+            $olt->update(['status' => 'active']);
+            return response()->json([
+                'success' => true,
+                'message' => "Connected to {$olt->name} via {$method} ({$olt->ip_address}:{$olt->port})",
+                'connection_method' => $method,
+            ]);
+        }
+        $error = $api->getLastError();
+        $olt->update(['status' => 'inactive']);
+        return response()->json([
+            'success' => false,
+            'message' => $error ?: "Connection failed to {$olt->ip_address}:{$olt->port}. Check IP, port, username and password.",
+        ]);
+    }
+
+    public function getOnuInfo(Request $request, OltDevice $olt)
+    {
+        $request->validate(['serial' => 'required|string']);
+
+        try {
+            $api = OltService::fromDevice($olt);
+            if ($api->connect()) {
+                $info = $api->getOnuInfo($request->serial);
+                $api->disconnect();
+
+                try {
+                    $clientName = $info['description'] ?? $info['client_name'] ?? 'Unknown';
+                    $onuSN = $request->serial;
+                    $status = $info['status'] ?? 'Unknown';
+                    $signal = $info['rx_power'] ?? $info['signal'] ?? null;
+                    $oltName = $olt->name;
+                    $pppoeUser = $info['pppoe_user'] ?? $info['username'] ?? '';
+                    if (!$pppoeUser && ($info['client_id'] ?? null)) {
+                        $onuClient = \App\Models\Client::where('client_id', $info['client_id'])->first();
+                        if ($onuClient) $pppoeUser = $onuClient->username ?? '';
+                    }
+                    (new \App\Services\TelegramService())->sendOnuPingNotification(
+                        $info['client_id'] ?? $onuSN,
+                        $clientName,
+                        $onuSN,
+                        $status,
+                        $signal,
+                        $oltName,
+                        $pppoeUser
+                    );
+                } catch (\Throwable $e) {
+                }
+
+                return response()->json(['success' => true, 'data' => $info]);
+            }
+            return response()->json(['success' => false, 'message' => 'Failed to connect to OLT.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function users(Request $request)
+    {
+        $query = DB::table('clients')
+            ->leftJoin('olt_devices', 'clients.olt_device_id', '=', 'olt_devices.id')
+            ->where(function ($q) {
+                $q->whereNotNull('clients.onu_serial')
+                  ->orWhereNotNull('clients.olt_device_id');
+            })
+            ->select(
+                'clients.id',
+                'clients.name as client_name',
+                'clients.client_id as client_code',
+                'clients.onu_serial',
+                'clients.onu_mac',
+                'clients.olt_port',
+                'clients.onu_status',
+                'clients.onu_rx_power',
+                'clients.onu_model',
+                'clients.status as client_status',
+                'olt_devices.name as olt_name',
+                'olt_devices.ip_address as olt_ip'
+            );
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('clients.name', 'like', "%$s%")
+                  ->orWhere('clients.client_id', 'like', "%$s%")
+                  ->orWhere('clients.onu_serial', 'like', "%$s%");
+            });
+        }
+
+        if ($request->filled('onu_status')) {
+            $query->where('clients.onu_status', $request->onu_status);
+        }
+
+        if ($request->filled('olt_device_id')) {
+            $query->where('clients.olt_device_id', $request->olt_device_id);
+        }
+
+        $users = $query->orderBy('clients.name')->paginate(in_array((int)request()->per_page,[20,50,100,200])?(int)request()->per_page:30);
+        $oltDevices = OltDevice::orderBy('name')->get();
+
+        $stats = [
+            'total'   => DB::table('clients')->where(function ($q) { $q->whereNotNull('onu_serial')->orWhereNotNull('olt_device_id'); })->count(),
+            'online'  => DB::table('clients')->where('onu_status', 'online')->count(),
+            'offline' => DB::table('clients')->where('onu_status', 'offline')->count(),
+        ];
+
+        return view('admin.olt.users', compact('users', 'oltDevices', 'stats'));
+    }
+
+    public function onuList()
+    {
+        $companyId = auth()->user()->company_id;
+
+        $query = DB::table('onus')
+            ->join('olt_devices', 'onus.olt_device_id', '=', 'olt_devices.id')
+            ->leftJoin('clients', 'onus.client_id', '=', 'clients.id');
+
+        if ($companyId) {
+            $query->where('onus.company_id', $companyId);
+        }
+
+        $stats = [
+            'total' => (clone $query)->count(),
+            'online' => (clone $query)->where('onus.status', 'online')->count(),
+            'offline' => (clone $query)->where('onus.status', 'offline')->count(),
+            'assigned' => (clone $query)->whereNotNull('onus.client_id')->count(),
+        ];
+
+        $onus = $query->select(
+                'onus.*',
+                'olt_devices.name as olt_name',
+                'olt_devices.vendor as olt_vendor',
+                'clients.name as client_name',
+                'clients.client_id as client_code',
+                'clients.username as client_username'
+            )
+            ->orderBy('onus.olt_device_id')
+            ->orderBy('onus.pon_port')
+            ->orderBy('onus.onu_number')
+            ->paginate(in_array((int)request()->per_page,[20,50,100,200])?(int)request()->per_page:50);
+
+        $olts = OltDevice::where('is_active', true)
+            ->when($companyId, fn($q) => $q->where('company_id', $companyId))
+            ->get();
+
+        return view('admin.olt.onu-list', compact('onus', 'olts', 'stats'));
+    }
+
+    public function dashboard(OltDevice $olt)
+    {
+        $mgmtService = app(OnuManagementService::class);
+
+        $totalOnus = DB::table('onus')->where('olt_device_id', $olt->id)->count();
+        $onlineOnus = DB::table('onus')->where('olt_device_id', $olt->id)->where('status', 'online')->count();
+        $offlineOnus = DB::table('onus')->where('olt_device_id', $olt->id)->where('status', 'offline')->count();
+        $alarmCount = DB::table('onu_alarm_logs')->where('olt_device_id', $olt->id)->where('is_resolved', false)->count();
+
+        $portSummary = $mgmtService->getOltPortSummary($olt->id);
+
+        $signalDistribution = DB::table('onus')
+            ->where('olt_device_id', $olt->id)
+            ->whereNotNull('rx_power')
+            ->select(
+                DB::raw("SUM(CASE WHEN rx_power >= -15 THEN 1 ELSE 0 END) as excellent"),
+                DB::raw("SUM(CASE WHEN rx_power >= -20 AND rx_power < -15 THEN 1 ELSE 0 END) as good"),
+                DB::raw("SUM(CASE WHEN rx_power >= -25 AND rx_power < -20 THEN 1 ELSE 0 END) as fair"),
+                DB::raw("SUM(CASE WHEN rx_power < -25 THEN 1 ELSE 0 END) as poor")
+            )
+            ->first();
+
+        $recentAlarms = DB::table('onu_alarm_logs')
+            ->where('olt_device_id', $olt->id)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        $avgRxPower = DB::table('onus')
+            ->where('olt_device_id', $olt->id)
+            ->whereNotNull('rx_power')
+            ->avg('rx_power');
+        $avgRxPower = $avgRxPower ? round($avgRxPower, 2) : null;
+
+        $latestSnmpStat = DB::table('olt_snmp_stats')
+            ->where('olt_device_id', $olt->id)
+            ->orderByDesc('polled_at')
+            ->first();
+
+        $trafficStats = DB::table('olt_traffic_stats')
+            ->where('olt_device_id', $olt->id)
+            ->whereIn('id', function ($q) use ($olt) {
+                $q->selectRaw('MAX(id)')
+                    ->from('olt_traffic_stats')
+                    ->where('olt_device_id', $olt->id)
+                    ->groupBy('port_no');
+            })
+            ->orderBy('port_no')
+            ->get();
+
+        $snmpHistory = DB::table('olt_snmp_stats')
+            ->where('olt_device_id', $olt->id)
+            ->orderByDesc('polled_at')
+            ->limit(24)
+            ->get()
+            ->reverse()
+            ->values();
+
+        return view('admin.network.olt-dashboard', compact(
+            'olt', 'totalOnus', 'onlineOnus', 'offlineOnus', 'alarmCount',
+            'portSummary', 'signalDistribution', 'recentAlarms',
+            'avgRxPower', 'latestSnmpStat', 'trafficStats', 'snmpHistory'
+        ));
+    }
+
+    public function onuManagement(OltDevice $olt)
+    {
+        $provisioningService = app(OnuProvisioningService::class);
+        $filters = request()->only(['status', 'port', 'assigned', 'search']);
+        $onus = $provisioningService->getOnuList($olt->id, $filters);
+
+        $ports = DB::table('onus')
+            ->where('olt_device_id', $olt->id)
+            ->distinct()
+            ->pluck('pon_port')
+            ->toArray();
+
+        $totalOnus = DB::table('onus')->where('olt_device_id', $olt->id)->count();
+        $onlineOnus = DB::table('onus')->where('olt_device_id', $olt->id)->where('status', 'online')->count();
+        $offlineOnus = DB::table('onus')->where('olt_device_id', $olt->id)->where('status', 'offline')->count();
+
+        $allOlts = OltDevice::orderBy('name')->get();
+
+        return view('admin.network.onu-management', compact(
+            'olt', 'onus', 'ports', 'filters', 'totalOnus', 'onlineOnus', 'offlineOnus', 'allOlts'
+        ));
+    }
+
+    public function discoverOnus(OltDevice $olt)
+    {
+        $provisioningService = app(OnuProvisioningService::class);
+        $result = $provisioningService->discoverUnregistered($olt->id);
+        return response()->json($result);
+    }
+
+    public function syncOnus(OltDevice $olt)
+    {
+        try {
+            // For BDCOM Telnet OLTs use our dedicated poller (correct commands + pagination)
+            if (strtolower($olt->vendor ?? '') === 'bdcom' && strtolower($olt->connection_type ?? '') === 'telnet') {
+                $poller = new BdcomTelnetPoller($olt);
+                $onus   = $poller->getOnuStatuses();
+            } else {
+                $api = OltService::fromDevice($olt);
+                if (!$api->connect()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $api->getLastError() ?: 'Failed to connect to OLT',
+                    ]);
+                }
+                $onus = $api->getAllOnus();
+                $api->disconnect();
+            }
+
+            if (empty($onus)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No ONUs found on OLT or unsupported connection method for ONU sync.',
+                ]);
+            }
+
+            $synced = 0;
+            $updated = 0;
+            foreach ($onus as $onuData) {
+                $existing = \DB::table('onus')
+                    ->where('serial_number', $onuData['serial_number'])
+                    ->first();
+
+                // Normalize status — treat auto-configured, configured, etc. as 'online'
+                $rawStatus   = $onuData['status'] ?? 'unknown';
+                $normalized  = \App\Services\OltService::normalizeOnuStatus($rawStatus);
+                $finalStatus = $normalized['status'];
+                $downReason  = $onuData['down_reason'] ?? $normalized['down_reason'];
+                // If ONU is online, clear down_reason
+                if ($finalStatus === 'online') $downReason = null;
+
+                $record = [
+                    'olt_device_id' => $olt->id,
+                    'serial_number' => $onuData['serial_number'],
+                    'pon_port'      => $onuData['pon_port'] ?? $onuData['port'] ?? null,
+                    'onu_number'    => $onuData['onu_number'] ?? null,
+                    'model'         => $onuData['model'] ?? null,
+                    'mac_address'   => $onuData['mac_address'] ?? null,
+                    'status'        => $finalStatus,
+                    'down_reason'   => $downReason,
+                    'rx_power'      => $onuData['rx_power'] ?? null,
+                    'tx_power'      => $onuData['tx_power'] ?? null,
+                    'temperature'   => $onuData['temperature'] ?? null,
+                    'distance'      => $onuData['distance'] ?? null,
+                    'tx_bias'       => $onuData['tx_bias'] ?? null,
+                    'voltage'       => $onuData['voltage'] ?? null,
+                    'vendor'        => $onuData['vendor'] ?? null,
+                    'company_id'    => $olt->company_id,
+                ];
+
+                if (!empty($onuData['description'])) {
+                    $record['description'] = $onuData['description'];
+                } elseif (!$existing) {
+                    $record['description'] = null;
+                }
+
+                // Track last_down_reason and last_offline_at
+                if ($finalStatus === 'offline' && $downReason) {
+                    $record['last_down_reason'] = $downReason;
+                    $record['last_offline_at']  = now();
+                }
+
+                $matchedClient = \DB::table('clients')
+                    ->where(function ($q) use ($onuData) {
+                        $q->where('onu_serial', $onuData['serial_number']);
+                        if (!empty($onuData['mac_address'])) {
+                            $q->orWhere('onu_mac', $onuData['mac_address']);
+                        }
+                    })
+                    ->first();
+                if ($matchedClient) {
+                    $record['client_id'] = $matchedClient->id;
+                }
+
+                if ($existing) {
+                    \DB::table('onus')->where('id', $existing->id)->update(array_merge($record, ['updated_at' => now()]));
+                    $updated++;
+                } else {
+                    \DB::table('onus')->insert(array_merge($record, [
+                        'is_provisioned' => true,
+                        'provisioned_at' => now(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]));
+                    $synced++;
+                }
+            }
+
+            // Mark ONUs in DB that were NOT in this sync as offline
+            $syncedSerials = array_filter(array_column($onus, 'serial_number'));
+            if (!empty($syncedSerials)) {
+                $offlineCount = \DB::table('onus')
+                    ->where('olt_device_id', $olt->id)
+                    ->where('status', 'online')
+                    ->whereNotIn('serial_number', $syncedSerials)
+                    ->update([
+                        'status'      => 'offline',
+                        'down_reason' => 'snmp-not-found',
+                        'last_down_reason' => 'snmp-not-found',
+                        'last_offline_at' => now(),
+                        'updated_at'  => now(),
+                    ]);
+            }
+
+            // Auto-sync clients.onu_status from onus table
+            \DB::statement("
+                UPDATE clients
+                SET onu_status   = onus.status,
+                    onu_rx_power = onus.rx_power,
+                    onu_id       = onus.id,
+                    olt_port     = onus.pon_port
+                FROM onus
+                WHERE clients.onu_serial = onus.serial_number
+                   OR clients.onu_mac = onus.mac_address
+            ");
+
+            $olt->update(['last_sync' => now()]);
+
+            $allOnus = DB::table('onus')
+                ->leftJoin('clients', 'onus.client_id', '=', 'clients.id')
+                ->leftJoin('olt_devices', 'onus.olt_device_id', '=', 'olt_devices.id')
+                ->select(
+                    'onus.id', 'onus.serial_number', 'onus.mac_address', 'onus.pon_port',
+                    'onus.onu_number', 'onus.model', 'onus.status',
+                    'onus.rx_power', 'onus.client_id', 'onus.olt_device_id',
+                    'clients.name as client_name', 'clients.client_id as client_code',
+                    'olt_devices.name as olt_name'
+                )
+                ->orderByRaw("CASE WHEN onus.status = 'online' THEN 0 ELSE 1 END")
+                ->orderBy('onus.pon_port')
+                ->orderBy('onus.onu_number')
+                ->limit(200)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Synced {$synced} new ONUs, updated {$updated} existing. Total: " . count($onus),
+                'total' => count($onus),
+                'new' => $synced,
+                'updated' => $updated,
+                'onus' => $allOnus,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sync error: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function provisionOnu(Request $request, OltDevice $olt)
+    {
+        $request->validate([
+            'serial' => 'required|string|max:255',
+            'port' => 'required|string|max:50',
+            'line_profile' => 'nullable|string|max:255',
+            'service_profile' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:255',
+            'vlan' => 'nullable|string|max:50',
+            'client_id' => 'nullable|integer|exists:clients,id',
+        ]);
+
+        $provisioningService = app(OnuProvisioningService::class);
+        $result = $provisioningService->provision($olt->id, $request->serial, $request->port, [
+            'line_profile' => $request->line_profile ?? 'default',
+            'service_profile' => $request->service_profile ?? 'default',
+            'description' => $request->description,
+            'vlan' => $request->vlan,
+            'user_id' => auth()->id(),
+        ]);
+
+        if ($result['success'] && $request->client_id && isset($result['data']['onu_id'])) {
+            $provisioningService->assignToClient($result['data']['onu_id'], $request->client_id);
+        }
+
+        return response()->json($result);
+    }
+
+    public function decommissionOnu(Request $request, $onuId)
+    {
+        $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        $provisioningService = app(OnuProvisioningService::class);
+        $result = $provisioningService->decommission((int) $onuId, auth()->id(), $request->reason ?? '');
+        return response()->json($result);
+    }
+
+    public function assignOnu(Request $request, $onuId)
+    {
+        $request->validate([
+            'client_id' => 'required|integer|exists:clients,id',
+        ]);
+
+        $provisioningService = app(OnuProvisioningService::class);
+        $result = $provisioningService->assignToClient((int) $onuId, $request->client_id);
+        return response()->json($result);
+    }
+
+    public function onuDetail($onuId)
+    {
+        $onu = DB::table('onus')
+            ->leftJoin('clients', 'onus.client_id', '=', 'clients.id')
+            ->leftJoin('olt_devices', 'onus.olt_device_id', '=', 'olt_devices.id')
+            ->where('onus.id', $onuId)
+            ->select(
+                'onus.*',
+                'clients.name as client_name',
+                'clients.client_id as client_code',
+                'clients.phone as client_phone',
+                'clients.email as client_email',
+                'olt_devices.name as olt_name',
+                'olt_devices.vendor as olt_vendor',
+                'olt_devices.ip_address as olt_ip'
+            )
+            ->first();
+
+        if (!$onu) {
+            abort(404, 'ONU not found');
+        }
+
+        $olt = OltDevice::find($onu->olt_device_id);
+
+        $provisionLogs = DB::table('onu_provision_logs')
+            ->leftJoin('users', 'onu_provision_logs.performed_by', '=', 'users.id')
+            ->where('onu_provision_logs.onu_id', $onuId)
+            ->select('onu_provision_logs.*', 'users.name as performed_by_name')
+            ->orderByDesc('onu_provision_logs.created_at')
+            ->limit(20)
+            ->get();
+
+        $rebootHistory = DB::table('onu_reboot_history')
+            ->where('onu_id', $onuId)
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        $alarms = DB::table('onu_alarm_logs')
+            ->where('onu_id', $onuId)
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        return view('admin.network.onu-detail', compact('onu', 'olt', 'provisionLogs', 'rebootHistory', 'alarms'));
+    }
+
+    public function portUtilization(OltDevice $olt)
+    {
+        $mgmtService = app(OnuManagementService::class);
+        $portSummary = $mgmtService->getOltPortSummary($olt->id);
+
+        $portData = [];
+        for ($i = 1; $i <= $olt->total_ports; $i++) {
+            $existing = collect($portSummary)->firstWhere('pon_port', (string) $i);
+            $portData[] = [
+                'port' => $i,
+                'total' => $existing->total ?? 0,
+                'online' => $existing->online ?? 0,
+                'offline' => $existing->offline ?? 0,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Port utilization data',
+            'data' => $portData,
+        ]);
+    }
+
+    public function alarms(OltDevice $olt)
+    {
+        $alarms = DB::table('onu_alarm_logs')
+            ->leftJoin('onus', 'onu_alarm_logs.onu_id', '=', 'onus.id')
+            ->where('onu_alarm_logs.olt_device_id', $olt->id)
+            ->select('onu_alarm_logs.*', 'onus.pon_port', 'onus.onu_number', 'onus.description as onu_description')
+            ->orderByDesc('onu_alarm_logs.created_at')
+            ->paginate(in_array((int)request()->per_page,[20,50,100,200])?(int)request()->per_page:25);
+
+        return view('admin.network.olt-dashboard', compact('olt', 'alarms'))
+            ->with('showAlarms', true);
+    }
+
+    public function resolveAlarm(Request $request, $alarmId)
+    {
+        $mgmtService = app(OnuManagementService::class);
+        $mgmtService->resolveOnuAlarm((int) $alarmId);
+        return response()->json(['success' => true, 'message' => 'Alarm resolved successfully']);
+    }
+
+    public function provisionLogs(OltDevice $olt)
+    {
+        $provisioningService = app(OnuProvisioningService::class);
+        $logs = $provisioningService->getProvisionLogs($olt->id, 100);
+        return view('admin.network.olt-dashboard', compact('olt', 'logs'))
+            ->with('showLogs', true);
+    }
+
+    public function checkAllOnuPower(OltDevice $olt)
+    {
+        set_time_limit(600);
+        try {
+            $api = OltService::fromDevice($olt);
+            if (!$api->connect()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $api->getLastError() ?: 'Failed to connect to OLT',
+                ]);
+            }
+
+            if ($olt->vendor === 'bdcom' && $olt->connection_type === 'http') {
+                $onus = DB::table('onus')
+                    ->where('olt_device_id', $olt->id)
+                    ->whereNotNull('pon_port')
+                    ->whereNotNull('onu_number')
+                    ->select('id', 'pon_port', 'onu_number')
+                    ->get();
+
+                $total = $onus->count();
+
+                return response()->stream(function () use ($api, $onus, $total) {
+                    $updated = 0;
+                    $failCount = 0;
+                    $current = 0;
+
+                    echo "data: " . json_encode(['type' => 'start', 'total' => $total]) . "\n\n";
+                    ob_flush();
+                    flush();
+
+                    foreach ($onus as $onu) {
+                        $current++;
+
+                        if ($failCount >= 5) {
+                            echo "data: " . json_encode(['type' => 'error', 'message' => 'Too many failures, stopping']) . "\n\n";
+                            ob_flush();
+                            flush();
+                            break;
+                        }
+
+                        $intfName = $onu->pon_port . ':' . $onu->onu_number;
+                        $page = $api->httpGet('onuintfbasicinfo.asp?intfName=' . urlencode($intfName));
+
+                        if (!$page) {
+                            $failCount++;
+                            continue;
+                        }
+                        $failCount = 0;
+
+                        $updateData = ['updated_at' => now()];
+                        $rxPower = null;
+
+                        if (preg_match('/received\s+power\s*\(D?Bm\)\s*:\s*([-\d.]+)/i', $page, $m)) {
+                            $updateData['rx_power'] = $rxPower = (float) $m[1];
+                        }
+                        if (preg_match('/transmitted\s+power\s*\(D?Bm\)\s*:\s*([-\d.]+)/i', $page, $m)) {
+                            $updateData['tx_power'] = (float) $m[1];
+                        }
+                        if (preg_match('/operating\s+temperature\s*\(degree\)\s*:\s*([-\d.]+)/i', $page, $m)) {
+                            $updateData['temperature'] = (float) $m[1];
+                        }
+                        if (preg_match('/supply\s+voltage\s*\(V\)\s*:\s*([-\d.]+)/i', $page, $m)) {
+                            $updateData['voltage'] = (float) $m[1];
+                        }
+                        if (preg_match('/bias\s+current\s*\(mA\)\s*:\s*([-\d.]+)/i', $page, $m)) {
+                            $updateData['tx_bias'] = (float) $m[1];
+                        }
+
+                        if (count($updateData) > 1) {
+                            DB::table('onus')->where('id', $onu->id)->update($updateData);
+                            $updated++;
+                        }
+
+                        if ($current % 5 === 0 || $current === $total) {
+                            echo "data: " . json_encode([
+                                'type' => 'progress',
+                                'current' => $current,
+                                'total' => $total,
+                                'updated' => $updated,
+                                'last_onu' => $intfName,
+                                'last_rx' => $rxPower,
+                            ]) . "\n\n";
+                            ob_flush();
+                            flush();
+                        }
+                    }
+
+                    $api->disconnect();
+
+                    echo "data: " . json_encode([
+                        'type' => 'complete',
+                        'updated' => $updated,
+                        'total' => $total,
+                        'message' => "Power check complete. Updated {$updated} of {$total} ONUs.",
+                    ]) . "\n\n";
+                    ob_flush();
+                    flush();
+                }, 200, [
+                    'Content-Type' => 'text/event-stream',
+                    'Cache-Control' => 'no-cache',
+                    'Connection' => 'keep-alive',
+                    'X-Accel-Buffering' => 'no',
+                ]);
+            }
+
+            $onus = DB::table('onus')
+                ->where('olt_device_id', $olt->id)
+                ->where('status', 'online')
+                ->whereNotNull('serial_number')
+                ->get();
+
+            $updated = 0;
+            foreach ($onus as $onu) {
+                try {
+                    $info = $api->getOnuInfo($onu->serial_number);
+                    if ($info && !empty($info)) {
+                        $updateData = ['updated_at' => now()];
+                        if (isset($info['signal'])) $updateData['rx_power'] = $info['signal'];
+                        if (isset($info['rx_power'])) $updateData['rx_power'] = $info['rx_power'];
+                        if (isset($info['tx_power'])) $updateData['tx_power'] = $info['tx_power'];
+                        if (isset($info['temperature'])) $updateData['temperature'] = $info['temperature'];
+                        if (isset($info['voltage'])) $updateData['voltage'] = $info['voltage'];
+                        if (isset($info['tx_bias'])) $updateData['tx_bias'] = $info['tx_bias'];
+                        if (isset($info['distance'])) $updateData['distance'] = $info['distance'];
+                        if (isset($info['status'])) $updateData['status'] = $info['status'];
+
+                        DB::table('onus')->where('id', $onu->id)->update($updateData);
+                        $updated++;
+                    }
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+
+            $api->disconnect();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Power check complete. Updated {$updated} of {$onus->count()} online ONUs.",
+                'updated' => $updated,
+                'total' => $onus->count(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function onuPickerList(Request $request)
+    {
+        try {
+            $companyId = auth()->check() ? (auth()->user()->company_id ?? null) : null;
+
+            $query = DB::table('onus')
+                ->leftJoin('clients', 'onus.client_id', '=', 'clients.id')
+                ->leftJoin('olt_devices', 'onus.olt_device_id', '=', 'olt_devices.id');
+
+            if ($companyId) {
+                $query->where('onus.company_id', $companyId);
+            }
+
+            if ($request->filled('search')) {
+                $s = '%' . $request->search . '%';
+                $query->where(function($q) use ($s) {
+                    $q->where(DB::raw('onus.serial_number::text'), 'LIKE', $s)
+                      ->orWhere(DB::raw('onus.mac_address::text'), 'LIKE', $s)
+                      ->orWhere(DB::raw('onus.pon_port::text'), 'LIKE', $s)
+                      ->orWhere(DB::raw('onus.model::text'), 'LIKE', $s);
+                });
+            }
+
+            if ($request->filled('unassigned_only') && $request->unassigned_only == '1') {
+                $query->whereNull('onus.client_id');
+            }
+
+            $onus = $query->select(
+                'onus.id', 'onus.serial_number', 'onus.mac_address', 'onus.pon_port',
+                'onus.onu_number', 'onus.model', 'onus.status',
+                'onus.rx_power', 'onus.client_id',
+                'onus.olt_device_id',
+                'clients.name as client_name', 'clients.username as client_username', 'clients.client_id as client_code',
+                'olt_devices.name as olt_name'
+            )
+            ->orderByRaw("CASE WHEN onus.status = 'online' THEN 0 ELSE 1 END")
+            ->orderBy('onus.pon_port')
+            ->orderBy('onus.onu_number')
+            ->limit(200)
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'data'    => $onus,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('onuPickerList error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'DB error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function liveRefresh(OltDevice $olt)
+    {
+        try {
+            $api = OltService::fromDevice($olt);
+            if (!$api->connect()) {
+                return response()->json(['success' => false, 'message' => $api->getLastError() ?: 'Connection failed']);
+            }
+
+            $onus = $api->getAllOnus();
+            $api->disconnect();
+
+            if (empty($onus)) {
+                return response()->json(['success' => false, 'message' => 'No ONUs found']);
+            }
+
+            foreach ($onus as $onuData) {
+                $existing = \DB::table('onus')->where('serial_number', $onuData['serial_number'])->first();
+                $rawStatus  = $onuData['status'] ?? 'unknown';
+                $normalized = OltService::normalizeOnuStatus($rawStatus);
+                $finalStatus = $normalized['status'];
+                $downReason = $onuData['down_reason'] ?? $normalized['down_reason'];
+                if ($finalStatus === 'online') $downReason = null;
+
+                $record = [
+                    'status'      => $finalStatus,
+                    'down_reason' => $downReason,
+                    'rx_power'    => $onuData['rx_power'] ?? null,
+                    'tx_power'    => $onuData['tx_power'] ?? null,
+                    'temperature' => $onuData['temperature'] ?? null,
+                    'voltage'     => $onuData['voltage'] ?? null,
+                    'tx_bias'     => $onuData['tx_bias'] ?? null,
+                    'distance'    => $onuData['distance'] ?? null,
+                    'updated_at'  => now(),
+                ];
+
+                if (!empty($onuData['description'])) {
+                    $record['description'] = $onuData['description'];
+                }
+
+                $matchedClient = \DB::table('clients')
+                    ->where(function ($q) use ($onuData) {
+                        $q->where('onu_serial', $onuData['serial_number']);
+                        if (!empty($onuData['mac_address'])) {
+                            $q->orWhere('onu_mac', $onuData['mac_address']);
+                        }
+                    })->first();
+                if ($matchedClient) {
+                    $record['client_id'] = $matchedClient->id;
+                }
+
+                if ($finalStatus === 'offline' && $downReason) {
+                    $record['last_down_reason'] = $downReason;
+                    $record['last_offline_at']  = now();
+                }
+                if ($finalStatus === 'online' && $existing) {
+                    $record['last_online'] = now();
+                }
+
+                if ($existing) {
+                    \DB::table('onus')->where('id', $existing->id)->update($record);
+                }
+            }
+
+            $allOnus = DB::table('onus')
+                ->where('onus.olt_device_id', $olt->id)
+                ->leftJoin('clients', 'onus.client_id', '=', 'clients.id')
+                ->select(
+                    'onus.id', 'onus.serial_number', 'onus.mac_address', 'onus.pon_port',
+                    'onus.onu_number', 'onus.model', 'onus.status', 'onus.description',
+                    'onus.rx_power', 'onus.tx_power', 'onus.temperature', 'onus.voltage',
+                    'onus.tx_bias', 'onus.distance', 'onus.down_reason', 'onus.client_id',
+                    'clients.name as client_name'
+                )
+                ->orderBy('onus.pon_port')
+                ->orderBy('onus.onu_number')
+                ->get();
+
+            return response()->json(['success' => true, 'onus' => $allOnus]);
+        } catch (\Exception $e) {
+            \Log::error("Live refresh failed: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Live refresh error: ' . $e->getMessage()]);
+        }
+    }
+
+    public function getOnuLiveInfo(int $onuId)
+    {
+        $onu = DB::table('onus')
+            ->leftJoin('clients', 'onus.client_id', '=', 'clients.id')
+            ->where('onus.id', $onuId)
+            ->select('onus.*', 'clients.name as client_name', 'clients.client_id as client_code', 'clients.phone as client_phone')
+            ->first();
+
+        if (!$onu) {
+            return response()->json(['success' => false, 'message' => 'ONU not found']);
+        }
+
+        $olt = OltDevice::find($onu->olt_device_id);
+        if (!$olt) {
+            return response()->json(['success' => false, 'message' => 'OLT not found']);
+        }
+
+        // Build cached data from DB
+        $data = [
+            'onu_id'           => $onu->id,
+            'serial'           => $onu->serial_number,
+            'mac'              => $onu->mac_address,
+            'port'             => $onu->pon_port,
+            'onu_number'       => $onu->onu_number,
+            'model'            => $onu->model,
+            'vendor'           => $onu->vendor ?? null,
+            'status'           => $onu->status,
+            'down_reason'      => $onu->down_reason,
+            'last_down_reason' => $onu->last_down_reason,
+            'last_offline_at'  => $onu->last_offline_at,
+            'rx_power'         => $onu->rx_power,
+            'tx_power'         => $onu->tx_power,
+            'temperature'      => $onu->temperature,
+            'voltage'          => $onu->voltage,
+            'tx_bias'          => $onu->tx_bias,
+            'distance'         => $onu->distance,
+            'client_name'      => $onu->client_name,
+            'client_code'      => $onu->client_code,
+            'client_phone'=> $onu->client_phone,
+            'olt_name'    => $olt->name,
+            'olt_ip'      => $olt->ip_address,
+            'source'      => 'cached',
+            'polled_at'   => $onu->updated_at,
+        ];
+
+        // Try live fetch — BDCOM Telnet uses dedicated poller, others use OltService
+        try {
+            $isBdcomTelnet = strtolower($olt->vendor ?? '') === 'bdcom'
+                          && strtolower($olt->connection_type ?? '') === 'telnet';
+
+            $info = null;
+            if ($isBdcomTelnet) {
+                $poller = new BdcomTelnetPoller($olt);
+                $info   = $poller->getOnuLiveStatus($onuId);
+            } else {
+                $api = OltService::fromDevice($olt);
+                if ($api->connect()) {
+                    $info = $api->getOnuInfo($onu->serial_number);
+                    $api->disconnect();
+                }
+            }
+
+            if ($info) {
+                    $now = now();
+                    $prevStatus          = $data['status'];
+                    $data['source']      = 'live';
+                    $data['polled_at']   = $now;
+                    $data['status']      = (isset($info['status']) && $info['status'] !== 'unknown') ? $info['status'] : $data['status'];
+                    $data['rx_power']    = $info['rx_power']    ?? $info['signal'] ?? $data['rx_power'];
+                    $data['tx_power']    = $info['tx_power']    ?? $data['tx_power'];
+                    $data['temperature'] = $info['temperature'] ?? $data['temperature'];
+                    $data['voltage']     = $info['voltage']     ?? $data['voltage'];
+                    $data['tx_bias']     = $info['tx_bias']     ?? $data['tx_bias'];
+                    $data['distance']    = $info['distance']    ?? $data['distance'];
+                    $data['port']        = $info['port']        ?? $data['port'];
+                    $data['model']       = $info['model']       ?? $data['model'];
+
+                    $updateArr = ['updated_at' => $now, 'status' => $data['status']];
+                    foreach (['rx_power','tx_power','temperature','voltage','tx_bias','distance'] as $f) {
+                        if ($data[$f] !== null) $updateArr[$f] = $data[$f];
+                    }
+
+                    if ($data['status'] === 'online') {
+                        $data['down_reason']  = null;
+                        $updateArr['down_reason'] = null;
+                        if ($prevStatus === 'offline') {
+                            $updateArr['last_online'] = $now;
+                            $ldr = $onu->last_down_reason ?? $onu->down_reason ?? null;
+                            if ($ldr) {
+                                $updateArr['last_down_reason'] = $ldr;
+                                $data['last_down_reason'] = $ldr;
+                            }
+                            $updateArr['last_offline_at'] = $now;
+                            $data['last_offline_at'] = $now->format('Y-m-d H:i:s');
+                        }
+                        if (!empty($info['down_reason'])) {
+                            $updateArr['last_down_reason'] = $info['down_reason'];
+                            $updateArr['last_offline_at']  = $now;
+                            $data['last_down_reason'] = $info['down_reason'];
+                            $data['last_offline_at'] = $now->format('Y-m-d H:i:s');
+                        }
+                    } else {
+                        $newReason = $info['down_reason'] ?? $data['down_reason'];
+                        $data['down_reason']      = $newReason;
+                        $data['last_down_reason'] = $newReason ?? $data['last_down_reason'];
+                        $updateArr['down_reason']      = $newReason;
+                        $updateArr['last_down_reason'] = $data['last_down_reason'];
+                        $updateArr['last_offline_at']  = $now;
+                        $data['last_offline_at'] = $now->format('Y-m-d H:i:s');
+                        if ($prevStatus === 'online') {
+                            $updateArr['last_offline'] = $now;
+                        }
+                    }
+
+                    DB::table('onus')->where('id', $onuId)->update($updateArr);
+
+                    // Sync clients table with latest ONU status and RX power
+                    if ($onu->serial_number || $onu->mac_address) {
+                        DB::table('clients')
+                            ->where(function($q) use ($onu) {
+                                if ($onu->serial_number) {
+                                    $q->where('onu_serial', $onu->serial_number);
+                                }
+                                if ($onu->mac_address) {
+                                    $q->orWhere('onu_mac', $onu->mac_address);
+                                }
+                            })
+                            ->update([
+                                'onu_status'   => $data['status'],
+                                'onu_rx_power' => $data['rx_power'] ?? null,
+                                'updated_at'   => now(),
+                            ]);
+                    }
+                }
+        } catch (\Exception $e) {
+            $data['live_error'] = $e->getMessage();
+        }
+
+        // Compute mW values
+        if ($data['rx_power'] !== null) {
+            $data['rx_power_mw']    = round(pow(10, $data['rx_power'] / 10), 4);
+            $rxP = $data['rx_power'];
+            $data['rx_power_color'] = $rxP >= -15 ? '#28a745' : ($rxP >= -20 ? '#17a2b8' : ($rxP >= -25 ? '#ffc107' : '#dc3545'));
+            $data['rx_quality']     = $rxP >= -15 ? 'Excellent' : ($rxP >= -20 ? 'Good' : ($rxP >= -25 ? 'Fair' : 'Poor'));
+        }
+        if ($data['tx_power'] !== null) {
+            $data['tx_power_mw'] = round(pow(10, $data['tx_power'] / 10), 4);
+        }
+
+        return response()->json(['success' => true, 'data' => $data])
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
+    }
+
+    public function pollDashboard(OltDevice $olt)
+    {
+        try {
+            $api = OltService::fromDevice($olt);
+            if (!$api->connect()) {
+                return response()->json(['success' => false, 'message' => $api->getLastError() ?: 'OLT connect failed']);
+            }
+
+            $data = $api->pollDashboardData();
+            $api->disconnect();
+
+            $now = now();
+
+            DB::table('olt_snmp_stats')->insert([
+                'olt_device_id'  => $olt->id,
+                'company_id'     => $olt->company_id,
+                'cpu_usage'      => $data['cpu_usage'],
+                'memory_usage'   => $data['memory_usage'],
+                'temperature'    => $data['temperature'],
+                'uptime_seconds' => $data['uptime_seconds'],
+                'total_onu'      => $data['total_onu'],
+                'online_onu'     => $data['online_onu'],
+                'offline_onu'    => $data['offline_onu'],
+                'avg_rx_power'   => $data['avg_rx_power'],
+                'polled_at'      => $now,
+                'created_at'     => $now,
+                'updated_at'     => $now,
+            ]);
+
+            // Update ONU optical data (rx_power, temperature, voltage, tx_bias)
+            foreach ($data['optical_data'] ?? [] as $key => $optData) {
+                DB::table('onus')
+                    ->where('olt_device_id', $olt->id)
+                    ->where('pon_port', $optData['port'])
+                    ->where('onu_number', $optData['onu_number'])
+                    ->update([
+                        'rx_power'    => $optData['rx_power'],
+                        'tx_power'    => $optData['tx_power'],
+                        'temperature' => $optData['temperature'],
+                        'voltage'     => $optData['voltage'],
+                        'tx_bias'     => $optData['tx_bias'],
+                        'updated_at'  => $now,
+                    ]);
+            }
+
+            foreach ($data['port_traffic'] as $portNo => $traffic) {
+                DB::table('olt_traffic_stats')->insert([
+                    'olt_device_id' => $olt->id,
+                    'company_id'    => $olt->company_id,
+                    'port_no'       => $portNo,
+                    'in_octets'     => $traffic['in_octets'],
+                    'out_octets'    => $traffic['out_octets'],
+                    'in_rate_bps'   => $traffic['in_rate_bps'],
+                    'out_rate_bps'  => $traffic['out_rate_bps'],
+                    'total_onu'     => $data['total_onu'],
+                    'online_onu'    => $data['online_onu'],
+                    'polled_at'     => $now,
+                    'created_at'    => $now,
+                    'updated_at'    => $now,
+                ]);
+            }
+
+            $oltUpdateData = [
+                'status'         => 'online',
+                'cpu_usage'      => $data['cpu_usage'],
+                'memory_usage'   => $data['memory_usage'],
+                'temperature'    => $data['temperature'],
+                'last_sync'      => $now,
+            ];
+            if (!empty($data['uptime_seconds'])) {
+                $oltUpdateData['uptime_seconds'] = $data['uptime_seconds'];
+            }
+            $olt->update($oltUpdateData);
+
+            return response()->json([
+                'success'     => true,
+                'message'     => 'Dashboard data refreshed successfully.',
+                'cpu'         => $data['cpu_usage'],
+                'temperature' => $data['temperature'],
+                'uptime'      => $data['uptime_seconds'],
+                'total_onu'   => $data['total_onu'],
+                'online_onu'  => $data['online_onu'],
+                'offline_onu' => $data['offline_onu'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+    }
+}

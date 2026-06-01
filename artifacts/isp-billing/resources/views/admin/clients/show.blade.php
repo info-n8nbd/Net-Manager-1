@@ -1,0 +1,3591 @@
+@extends('layouts.admin')
+
+@section('title', 'Client Profile')
+@section('breadcrumb')
+<li class="breadcrumb-item"><a href="{{ route('admin.clients.index') }}">Clients</a></li>
+<li class="breadcrumb-item active">{{ $client->name }}</li>
+@endsection
+
+@push('styles')
+<style>
+:root {
+    --cp-primary: #007bff;
+    --cp-success: #28a745;
+    --cp-danger: #dc3545;
+    --cp-warning: #ffc107;
+    --cp-info: #17a2b8;
+    --cp-dark: #343a40;
+    --cp-light: #f8f9fa;
+    --cp-border: #e9ecef;
+    --cp-text: #495057;
+    --cp-text-light: #8898aa;
+    --cp-radius: 12px;
+    --cp-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --cp-shadow-hover: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+.cp-hero {
+    background: linear-gradient(135deg, #2a5298 0%, #2a5298 100%);
+    border-radius: var(--cp-radius);
+    padding: 18px 22px;
+    color: #fff;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--cp-shadow);
+}
+.cp-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+}
+.cp-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 250px;
+    height: 250px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 50%;
+}
+.cp-hero-content { position: relative; z-index: 1; }
+.cp-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 600;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    flex-shrink: 0;
+}
+.cp-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.cp-hero-name { font-size: 19px; font-weight: 700; margin-bottom: 1px; }
+.cp-hero-meta { font-size: 12px; opacity: 0.85; }
+.cp-hero-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+.cp-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.cp-badge-active { background: #28a745; color: #fff; }
+.cp-badge-inactive { background: #dc3545; color: #fff; }
+.cp-badge-online { background: #17a2b8; color: #fff; }
+.cp-badge-offline { background: rgba(255,255,255,0.2); color: #fff; border: 1.5px solid rgba(255,255,255,0.4); box-shadow: none; }
+.cp-badge-checking { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.75); border: 1.5px solid rgba(255,255,255,0.25); box-shadow: none; }
+.cp-badge-free { background: #ffc107; color: #212529; }
+.cp-badge-manual-hold { background: linear-gradient(135deg, #6f42c1, #9b59b6); color: #fff; animation: manualHoldPulse 2.5s ease-in-out infinite; }
+@keyframes manualHoldPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(111,66,193,0.5); }
+    50%       { box-shadow: 0 0 0 5px rgba(111,66,193,0); }
+}
+.cp-badge-live { background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; box-shadow: 0 0 10px rgba(40,211,100,0.4); }
+@keyframes livePulse {
+    0%   { transform: scale(1);   opacity: 1; box-shadow: 0 0 0 0 rgba(40,211,100,0.6); }
+    50%  { transform: scale(1.3); opacity: 0.8; box-shadow: 0 0 0 5px rgba(40,211,100,0); }
+    100% { transform: scale(1);   opacity: 1; box-shadow: 0 0 0 0 rgba(40,211,100,0); }
+}
+.live-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: #fff;
+    border-radius: 50%;
+    animation: livePulse 1.4s ease-in-out infinite;
+}
+
+.cp-hero-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+.cp-hero-actions .btn {
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+    transition: all 0.2s;
+}
+.cp-hero-actions .btn:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+
+.cp-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: var(--cp-shadow);
+    margin-bottom: 14px;
+    border: 1px solid var(--cp-border);
+    overflow: hidden;
+}
+.cp-card-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--cp-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+}
+.cp-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cp-dark);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+.cp-card-title i {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+.cp-card-body { padding: 12px 16px; }
+.cp-card-header.cp-collapsible { cursor: pointer; user-select: none; }
+.cp-card-header.cp-collapsible:hover { background: #f8f9fc; }
+.cp-collapse-icon { transition: transform 0.25s ease; font-size: 12px; color: var(--cp-text-light); margin-left: 8px; }
+.cp-collapse-icon.collapsed { transform: rotate(-90deg); }
+.cp-card-collapse { transition: max-height 0.3s ease, opacity 0.2s ease; overflow: hidden; }
+.cp-card-collapse.collapsed { max-height: 0 !important; opacity: 0; }
+
+.cp-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+}
+.cp-info-item {
+    display: flex;
+    align-items: flex-start;
+    padding: 6px 12px;
+    border-bottom: 1px solid #f1f3f5;
+    transition: background 0.15s;
+}
+.cp-info-item:hover { background: #f8f9fa; }
+.cp-info-label {
+    font-size: 13px;
+    color: var(--cp-text-light);
+    font-weight: 500;
+    min-width: 120px;
+    flex-shrink: 0;
+}
+.cp-info-value {
+    font-size: 13px;
+    color: var(--cp-dark);
+    font-weight: 500;
+    word-break: break-word;
+}
+.cp-info-value a { color: var(--cp-primary); text-decoration: none; }
+.cp-info-value a:hover { text-decoration: underline; }
+.cp-info-value code {
+    background: #f1f3f5;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--cp-dark);
+}
+
+.cp-conn-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #edf2f7;
+}
+.cp-conn-pill {
+    flex: 1;
+    min-width: 80px;
+    background: none;
+    border: none;
+    border-right: 1px solid #edf2f7;
+    border-radius: 0;
+    padding: 6px 12px;
+    text-align: left;
+    transition: none;
+}
+.cp-conn-pill:last-child { border-right: none; }
+.cp-conn-pill:hover { border-color: transparent; box-shadow: none; }
+.cp-conn-pill-label { font-size: 9px; color: var(--cp-text-light); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+.cp-conn-pill-value { font-size: 13px; font-weight: 700; margin-top: 2px; }
+
+.cp-device-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--cp-border);
+    background: #fff;
+    width: 100%;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    cursor: pointer;
+    color: var(--cp-dark);
+    margin-bottom: 6px;
+}
+.cp-device-btn:hover { border-color: currentColor; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.cp-device-btn i { font-size: 16px; width: 20px; text-align: center; }
+.cp-device-btn.danger { color: var(--cp-danger); }
+.cp-device-btn.warning { color: #e67700; }
+.cp-device-btn.success { color: #0ca678; }
+.cp-device-btn.primary { color: var(--cp-primary); }
+.cp-device-btn.secondary { color: #868e96; }
+.cp-device-btn.info { color: var(--cp-info); }
+
+.cp-bill-item {
+    border: 1px solid var(--cp-border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    transition: box-shadow 0.2s;
+}
+.cp-bill-item:hover { box-shadow: var(--cp-shadow); }
+.cp-bill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--cp-border);
+    font-size: 13px;
+}
+.cp-bill-payment {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 12px;
+}
+.cp-bill-payment:last-child { border-bottom: none; }
+
+.cp-status-timeline {
+    position: relative;
+    padding-left: 24px;
+}
+.cp-status-timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+.cp-timeline-item {
+    position: relative;
+    padding: 10px 0 10px 16px;
+}
+.cp-timeline-dot {
+    position: absolute;
+    left: -20px;
+    top: 14px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #e9ecef;
+}
+.cp-timeline-dot.active { background: var(--cp-success); box-shadow: 0 0 0 2px var(--cp-success); }
+.cp-timeline-dot.inactive { background: var(--cp-danger); box-shadow: 0 0 0 2px var(--cp-danger); }
+
+.cp-fiber-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+.cp-fiber-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 13px;
+}
+.cp-fiber-label { color: var(--cp-text-light); font-weight: 500; }
+.cp-fiber-value { color: var(--cp-dark); font-weight: 600; }
+
+.cp-note-box {
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-top: 8px;
+    font-size: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.cp-note-box i { margin-top: 2px; }
+.cp-note-box.info { background: #e8f4f8; border-left: 3px solid var(--cp-info); }
+.cp-note-box.warning { background: #fff8e1; border-left: 3px solid var(--cp-warning); }
+.cp-note-box.danger { background: #fdf0f0; border-left: 3px solid var(--cp-danger); }
+.cp-note-box.default { background: #f8f9fa; border-left: 3px solid #adb5bd; }
+
+.cp-sidebar { position: sticky; top: 80px; }
+
+@media (max-width: 991px) {
+    .cp-hero { padding: 20px; }
+    .cp-hero-name { font-size: 18px; }
+    .cp-info-grid { grid-template-columns: 1fr; }
+    .cp-fiber-grid { grid-template-columns: 1fr; }
+    .cp-sidebar { position: static; }
+}
+@media (max-width: 575px) {
+    .cp-conn-pills { flex-direction: column; }
+    .cp-hero-actions { flex-direction: column; }
+}
+
+.cp-sticky-bar {
+    position: fixed;
+    top: 0;
+    left: 250px;
+    right: 0;
+    z-index: 1030;
+    background: linear-gradient(135deg, #2a5298 0%, #2a5298 100%);
+    color: #fff;
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+.cp-sticky-bar.visible {
+    transform: translateY(0);
+}
+.cp-sticky-bar .sticky-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.cp-sticky-bar .sticky-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.cp-sticky-bar .sticky-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.cp-sticky-bar .sticky-name {
+    font-size: 15px;
+    font-weight: 700;
+}
+.cp-sticky-bar .sticky-meta {
+    font-size: 11px;
+    opacity: 0.8;
+}
+.cp-sticky-bar .sticky-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.cp-sticky-bar .sticky-stat {
+    text-align: center;
+}
+.cp-sticky-bar .sticky-stat-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    opacity: 0.7;
+    letter-spacing: 0.5px;
+}
+.cp-sticky-bar .sticky-stat-value {
+    font-size: 16px;
+    font-weight: 700;
+}
+.cp-sticky-bar .sticky-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: 10px;
+}
+.cp-sticky-bar .sticky-actions .btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+}
+.cp-sticky-bar .sticky-actions .btn:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+}
+.sidebar-collapse .cp-sticky-bar { left: 4.6rem; }
+@media (max-width: 991px) {
+    .cp-sticky-bar { left: 0; }
+}
+@media (max-width: 767px) {
+    .cp-sticky-bar { left: 0; padding: 8px 12px; }
+    .cp-sticky-bar .sticky-stat { display: none; }
+    .cp-sticky-bar .sticky-actions { display: none; }
+}
+
+.cp-bill-paid { border-left: 4px solid var(--cp-success) !important; }
+.cp-bill-unpaid { border-left: 4px solid var(--cp-danger) !important; }
+.cp-bill-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+</style>
+@endpush
+
+@section('content')
+@php
+    $billing = $client->getBillingData();
+    $clientTotalDue = $billing['due'];
+    $remainingAdvance = $billing['advance'];
+    $diffObj = $client->connection_date ? $client->connection_date->diff(now()) : null;
+    $ageParts = [];
+    if ($diffObj) {
+        if ($diffObj->y > 0) $ageParts[] = $diffObj->y . 'y';
+        if ($diffObj->m > 0) $ageParts[] = $diffObj->m . 'm';
+        if ($diffObj->d > 0) $ageParts[] = $diffObj->d . 'd';
+    }
+    $connectionAge = count($ageParts) > 0 ? implode(' ', $ageParts) : ($diffObj ? 'Today' : 'N/A');
+@endphp
+
+<div class="cp-hero">
+    <div class="cp-hero-content">
+        <div class="d-flex align-items-start flex-wrap" style="gap: 20px;">
+            <div class="cp-avatar">
+                @if($client->profile_picture)
+                    <img src="{{ asset('storage/' . $client->profile_picture) }}" alt="{{ $client->name }}">
+                @else
+                    {{ strtoupper(substr($client->name, 0, 1)) }}
+                @endif
+            </div>
+            <div class="flex-grow-1">
+                <div class="cp-hero-name">{{ $client->name }}</div>
+                <div class="cp-hero-meta">
+                    <span><i class="fas fa-id-badge mr-1"></i>{{ $client->client_id }}</span>
+                    <span class="mx-2">|</span>
+                    <span><i class="fas fa-user mr-1"></i>{{ $client->username ?? '-' }}</span>
+                    @if($client->phone)
+                    <span class="mx-2">|</span>
+                    <span><i class="fas fa-phone mr-1"></i>{{ $client->phone }}</span>
+                    @endif
+                </div>
+                <div class="cp-hero-badges">
+                    <span class="cp-badge {{ $client->status == 'active' ? 'cp-badge-active' : 'cp-badge-inactive' }}">
+                        <i class="fas fa-{{ $client->status == 'active' ? 'check-circle' : 'times-circle' }}"></i>
+                        {{ ucfirst($client->status) }}
+                    </span>
+                    <span id="connectionStatusBadge" class="cp-badge cp-badge-checking">
+                        <i class="fas fa-wifi"></i>
+                        <span id="connectionStatusText">Checking...</span>
+                    </span>
+                    @if($client->is_free)
+                    <span class="cp-badge cp-badge-free"><i class="fas fa-gift"></i>Installation Free</span>
+                    @endif
+                    @if($client->status === 'inactive' && $client->auto_inactive_note && !str_contains($client->auto_inactive_note, 'due payment') && !str_contains($client->auto_inactive_note, 'Auto-expired') && !str_contains($client->auto_inactive_note, 'Inactive for'))
+                    <span class="cp-badge cp-badge-manual-hold" title="{{ $client->auto_inactive_note }}">
+                        <i class="fas fa-hand-paper mr-1"></i>Manual Hold
+                    </span>
+                    @endif
+                </div>
+            </div>
+            <div class="ml-auto text-right d-none d-lg-block" style="min-width: 160px;">
+                <div style="font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px;">Monthly Bill</div>
+                @if($client->is_free)
+                <div style="font-size: 22px; font-weight: 700; opacity: 0.9;">Free</div>
+                @else
+                <div style="font-size: 26px; font-weight: 700;">৳{{ number_format($client->monthly_fee ?? 0) }}</div>
+                @endif
+                <div style="font-size: 11px; opacity: 0.7;">{{ $client->package->name ?? 'N/A' }} @if($client->package && $client->package->bandwidth)<span style="opacity:0.9;">| <i class="fas fa-tachometer-alt" style="font-size:10px;"></i> {{ $client->package->bandwidth }}</span>@endif</div>
+                <div style="margin-top: 6px; font-size: 11px; opacity: 0.8;">
+                    <i class="fas fa-calendar-check mr-1"></i>Age: {{ $connectionAge }}
+                    <span class="mx-1">|</span>
+                    <i class="fas fa-clock mr-1"></i>{{ $client->expire_date ? $client->expire_date->format('d M Y') : 'N/A' }}
+                </div>
+            </div>
+        </div>
+        <div class="cp-hero-actions">
+            @if($__canAction('client_profile', 'edit'))
+            <a href="{{ route('admin.clients.edit', $client) }}" class="btn"><i class="fas fa-edit mr-1"></i>Edit</a>
+            @endif
+            @if($__canAction('client_profile', 'ledger'))
+            <a href="{{ route('admin.corrections.client-ledger', $client) }}" class="btn"><i class="fas fa-book mr-1"></i>Ledger</a>
+            @endif
+            @if($__canAction('client_profile', 'pay'))
+            <button type="button" class="btn" data-toggle="modal" data-target="#billSubmitModal"><i class="fas fa-money-bill-wave mr-1"></i>Pay</button>
+            @endif
+            @if($__canAction('client_profile', 'add_payment'))
+            <button type="button" class="btn" data-toggle="modal" data-target="#addPaymentModal"><i class="fas fa-shopping-cart mr-1"></i>Add. Payments</button>
+            @endif
+            @if($__canAction('client_profile', 'map'))
+            @if(($client->google_map_lat && $client->google_map_lng) || $client->google_map_location)
+            <a href="{{ $client->google_map_lat ? 'https://www.google.com/maps?q='.$client->google_map_lat.','.$client->google_map_lng : $client->google_map_location }}" target="_blank" class="btn"><i class="fas fa-map-marker-alt mr-1"></i>Map</a>
+            @endif
+            @endif
+            @if($__canAction('client_profile', 'delete'))
+            <a href="{{ route('admin.clients.confirm-delete', $client) }}" class="btn" style="border-color: rgba(220,53,69,0.4); color: #ffb3b8;"><i class="fas fa-trash mr-1"></i>Delete</a>
+            @endif
+        </div>
+    </div>
+</div>
+
+<div class="cp-sticky-bar" id="cpStickyBar">
+    <div class="sticky-left">
+        <div class="sticky-avatar">
+            @if($client->profile_picture)
+                <img src="{{ asset('storage/' . $client->profile_picture) }}" alt="{{ $client->name }}">
+            @else
+                {{ strtoupper(substr($client->name, 0, 1)) }}
+            @endif
+        </div>
+        <div>
+            <div class="sticky-name">{{ $client->name }}</div>
+            <div class="sticky-meta">
+                {{ $client->client_id }} | {{ $client->username ?? '-' }}
+                @if($client->phone) | {{ $client->phone }}@endif
+            </div>
+        </div>
+    </div>
+    <div class="sticky-right">
+        <div class="sticky-stat">
+            <div class="sticky-stat-label">Package</div>
+            <div class="sticky-stat-value" style="font-size: 13px;">{{ $client->package->name ?? 'N/A' }}</div>
+        </div>
+        <div class="sticky-stat">
+            <div class="sticky-stat-label">Due</div>
+            @if($client->is_free)
+            <div class="sticky-stat-value" style="color: #17a2b8;">Free</div>
+            @else
+            <div class="sticky-stat-value" style="color: {{ $clientTotalDue > 0 ? '#ff6b6b' : '#69db7c' }};">৳{{ number_format($clientTotalDue) }}</div>
+            @endif
+        </div>
+        <div class="sticky-stat">
+            <div class="sticky-stat-label">Monthly</div>
+            <div class="sticky-stat-value">{{ $client->is_free ? 'Free' : '৳' . number_format($client->monthly_fee ?? 0) }}</div>
+        </div>
+        <div class="sticky-actions">
+            @if($__canAction('client_profile', 'edit'))
+            <a href="{{ route('admin.clients.edit', $client) }}" class="btn" title="Edit"><i class="fas fa-edit"></i></a>
+            @endif
+            @if($__canAction('client_profile', 'pay'))
+            <button type="button" class="btn" data-toggle="modal" data-target="#billSubmitModal" title="Bill Submit"><i class="fas fa-money-bill-wave"></i></button>
+            @endif
+            @if($__canAction('client_profile', 'ledger'))
+            <a href="{{ route('admin.corrections.client-ledger', $client) }}" class="btn" title="Ledger"><i class="fas fa-book"></i></a>
+            @endif
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-lg-8">
+
+        @if($__canAction('client_profile', 'live_monitoring'))
+        <div class="cp-card" id="liveMonitorCard">
+            <div class="cp-card-header" style="flex-wrap: wrap; gap: 8px;">
+                <h3 class="cp-card-title"><i class="fas fa-chart-line" style="background: rgba(40,167,69,0.1); color: var(--cp-success);"></i>Live Monitoring</h3>
+                @if($client->router_brand || $client->mac_address)
+                <div class="d-flex align-items-center" style="gap:10px;background:#f8f9fa;border-radius:8px;padding:4px 12px;border:1px solid #e9ecef;flex-wrap:wrap;">
+                    @if($client->router_brand)
+                    <div class="d-flex align-items-center" style="gap:5px;">
+                        <i class="fas fa-wifi" style="color:var(--cp-info);font-size:13px;"></i>
+                        <span style="font-size:11px;color:#999;font-weight:500;">Router</span>
+                        <span style="font-size:12px;font-weight:700;color:#333;">{{ $client->router_brand }}</span>
+                    </div>
+                    @endif
+                    @if($client->router_brand && $client->mac_address)
+                    <span style="color:#ced4da;font-size:14px;">|</span>
+                    @endif
+                    @if($client->mac_address)
+                    <div class="d-flex align-items-center" style="gap:5px;">
+                        <i class="fas fa-ethernet" style="color:#6c757d;font-size:12px;"></i>
+                        <span style="font-size:11px;color:#999;font-weight:500;">MAC</span>
+                        <code style="font-size:11px;color:#333;background:transparent;padding:0;">{{ $client->mac_address }}</code>
+                    </div>
+                    @endif
+                </div>
+                @endif
+                <div class="d-flex align-items-center ml-auto" style="gap: 10px; flex-wrap: wrap;">
+                    <div class="d-flex align-items-center" style="gap: 6px; background: #f8f9fa; border-radius: 8px; padding: 4px 10px;">
+                        <i class="fas fa-satellite-dish" style="color: var(--cp-info); font-size: 13px;"></i>
+                        <code id="pingIP" style="font-size: 11px;">{{ $client->session_ip ?: ($client->ip_address ?? 'N/A') }}</code>
+                        <button class="btn btn-sm" style="background: var(--cp-info); color: #fff; border-radius: 6px; font-size: 11px; padding: 2px 8px;" data-toggle="modal" data-target="#pingModal">
+                            <i class="fas fa-satellite-dish mr-1"></i>Open Ping Test
+                        </button>
+                        <span style="border-left: 1px solid var(--cp-border); padding-left: 8px; font-size: 10px; color: var(--cp-text-light);">Last Disconnect:<br><strong id="lastDisconnectTime" style="color: #e67700;">{{ $client->last_logout ? \Carbon\Carbon::parse($client->last_logout)->format('d M Y h:i A') : 'Never' }}</strong></span>
+                    </div>
+                    <span id="liveStatus" class="cp-badge cp-badge-checking" style="font-size: 11px;"><i class="fas fa-circle" style="font-size: 8px; opacity:0.5;"></i> Initializing...</span>
+                </div>
+            </div>
+            <div class="cp-card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <canvas id="bandwidthChart" height="60"></canvas>
+                        <div class="d-flex flex-wrap justify-content-around mt-2 text-center" style="gap: 4px;">
+                            <div style="min-width: 60px;">
+                                <div style="font-size: 10px; color: var(--cp-text-light); text-transform: uppercase;">Uptime</div>
+                                <div style="font-size: 13px; font-weight: 700;" id="sessionUptime">--</div>
+                            </div>
+                            <div style="min-width: 60px;">
+                                <div style="font-size: 10px; color: var(--cp-text-light); text-transform: uppercase;"><i class="fas fa-arrow-up text-warning"></i> Upload</div>
+                                <div style="font-size: 13px; font-weight: 700; color: #e67700;" id="currentTxDisplay">0 Kbps</div>
+                            </div>
+                            <div style="min-width: 60px;">
+                                <div style="font-size: 10px; color: var(--cp-text-light); text-transform: uppercase;">Total UL</div>
+                                <div style="font-size: 13px; font-weight: 700; color: #e67700;" id="totalTx">0 KB</div>
+                            </div>
+                            <div style="min-width: 60px;">
+                                <div style="font-size: 10px; color: var(--cp-text-light); text-transform: uppercase;"><i class="fas fa-arrow-down text-success"></i> Download</div>
+                                <div style="font-size: 13px; font-weight: 700; color: var(--cp-success);" id="currentRxDisplay">0 Kbps</div>
+                            </div>
+                            <div style="min-width: 60px;">
+                                <div style="font-size: 10px; color: var(--cp-text-light); text-transform: uppercase;">Total DL</div>
+                                <div style="font-size: 13px; font-weight: 700; color: var(--cp-success);" id="totalRx">0 KB</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
+
+
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-network-wired" style="background: rgba(0,123,255,0.1); color: var(--cp-primary);"></i>OLT / ONU Diagnostics</h3>
+                @if($client->onu_serial || $client->onu_mac || $client->olt_device_id || ($onuRecord ?? null))
+                @if(!$client->onu_id && ($client->onu_serial || $client->onu_mac))
+                <button type="button" class="btn btn-warning ml-auto mr-1" id="fixOnuLinkBtn"
+                    style="font-size:11px;padding:2px 10px;font-weight:600;border-radius:6px;"
+                    data-client-id="{{ $client->id }}"
+                    title="ONU is not linked. Click to auto-fix."
+                    onclick="fixOnuLink(this)">
+                    <i class="fas fa-link" id="fixOnuIcon"></i><span class="d-none d-md-inline ml-1">Fix ONU Link</span>
+                </button>
+                @endif
+                <button type="button" class="btn btn-success {{ $client->onu_id ? 'ml-auto' : '' }} mr-1" id="refreshOnuDiag" style="font-size:10px;padding:0px 7px;font-weight:600;border-radius:5px;line-height:1.5;"
+                    data-onu-id="{{ $onuRecord->id ?? '' }}"
+                    title="Sync live ONU data from OLT"
+                    >
+                    <i class="fas fa-sync-alt" id="refreshOnuIcon"></i><span class="d-none d-md-inline ml-1" style="font-size:10px;">Sync</span>
+                </button>
+                @else
+                <a href="{{ route('admin.clients.edit', $client) }}#olt-section" class="btn btn-sm btn-outline-success ml-auto mr-2" title="Configure OLT/ONU" style="font-size:12px; padding:2px 10px;">
+                    <i class="fas fa-plus mr-1"></i>Configure
+                </a>
+                @endif
+                <i class="fas fa-chevron-down cp-collapse-icon"></i>
+            </div>
+            <div class="cp-card-collapse">
+            <div class="cp-card-body" style="padding:12px 14px 10px;">
+                @if(!$client->onu_serial && !$client->onu_mac && !$client->olt_device_id && !($onuRecord ?? null))
+                <div class="text-center py-4" style="color:#bbb;">
+                    <i class="fas fa-network-wired fa-2x mb-2 d-block" style="color:#ddd;"></i>
+                    <p class="mb-0" style="font-size:13px;">No OLT/ONU configured. <a href="{{ route('admin.clients.edit', $client) }}#olt-section">Configure</a></p>
+                </div>
+                @else
+                @php
+                    $ponPort  = $client->olt_port ?? ($onuRecord->pon_port ?? null);
+                    $onuNum   = $onuRecord->onu_number ?? null;
+                    $rxP      = $onuRecord->rx_power ?? $client->onu_rx_power ?? null;
+                    $rxClr    = '#dc3545';
+                    if ($rxP !== null) { $rxClr = $rxP >= -15 ? '#28a745' : ($rxP >= -20 ? '#17a2b8' : ($rxP >= -25 ? '#e67700' : '#dc3545')); }
+                    $rxQualLabel = null; $rxQualClr = '#adb5bd';
+                    if ($rxP !== null) {
+                        if ($rxP >= -15)      { $rxQualLabel = 'Excellent'; $rxQualClr = '#28a745'; }
+                        elseif ($rxP >= -20)  { $rxQualLabel = 'Good';      $rxQualClr = '#17a2b8'; }
+                        elseif ($rxP >= -25)  { $rxQualLabel = 'Weak';      $rxQualClr = '#e67700'; }
+                        else                  { $rxQualLabel = 'Critical';   $rxQualClr = '#dc3545'; }
+                    }
+                    $tempVal  = $onuRecord->temperature ?? null;
+                    $tempClr  = '#fd7e14';
+                    if ($tempVal !== null) { $tempClr = $tempVal <= 40 ? '#28a745' : ($tempVal <= 60 ? '#fd7e14' : '#dc3545'); }
+                    $isOnline   = ($onuRecord->status ?? null) === 'online';
+                    $hasOnu     = ($onuRecord ?? null) !== null;
+                    $statusClr  = $isOnline ? '#28a745' : ($hasOnu ? '#dc3545' : '#adb5bd');
+                    $statusLbl  = $isOnline ? 'ONLINE' : ($hasOnu ? 'OFFLINE' : '—');
+                    $macVal     = $client->onu_mac ?? $client->onu_serial ?? ($onuRecord->mac_address ?? ($onuRecord->serial_number ?? '—'));
+                    $portVal    = ($ponPort ?? '—') . ($onuNum ? ':' . $onuNum : '');
+                    $vlanVal    = ($onuRecord->vlan ?? null) ?: '—';
+                    $oltName    = ($oltDevice->name ?? null) ?: '—';
+                    $syncAge    = ($onuRecord->updated_at ?? null) ? \Carbon\Carbon::parse($onuRecord->updated_at)->diffForHumans() : null;
+                    $txPow      = $onuRecord->tx_power ?? null;
+                    $txBias     = $onuRecord->tx_bias ?? null;
+                    $distVal    = $onuRecord->distance ?? null;
+                    $voltVal    = $onuRecord->voltage ?? null;
+                    $adrText    = null;
+                    $adrClr     = '#6c757d';
+                    $adrIco     = 'fa-exclamation-triangle';
+                    if ($onuRecord->down_reason ?? null) {
+                        $adrText = strtoupper(str_replace('-', ' ', $onuRecord->down_reason));
+                        $adrClr  = str_contains($adrText,'POWER') ? '#dc3545' : (str_contains($adrText,'WIRE') ? '#fd7e14' : (str_contains($adrText,'LOS') ? '#e83e8c' : '#6c757d'));
+                        $adrIco  = str_contains($adrText,'POWER') ? 'fa-power-off' : (str_contains($adrText,'WIRE') ? 'fa-cut' : (str_contains($adrText,'LOS') ? 'fa-signal' : 'fa-exclamation-triangle'));
+                    }
+                @endphp
+
+                {{-- Row 1: Info pills --}}
+                <div class="cp-conn-pills">
+                    <div id="onu_status_pill" class="cp-conn-pill">
+                        <div class="cp-conn-pill-label"><i class="fas fa-circle mr-1" style="font-size:7px;color:{{ $statusClr }};vertical-align:middle;"></i>Status</div>
+                        <div id="onu_status_val" class="cp-conn-pill-value {{ $isOnline ? 'text-success' : ($hasOnu ? 'text-danger' : 'text-muted') }}" style="font-size:12px;font-weight:800;">{{ $statusLbl }}</div>
+                    </div>
+                    <div class="cp-conn-pill" >
+                        <div class="cp-conn-pill-label"><i class="fas fa-server mr-1" style="color:#007bff;"></i>OLT Device</div>
+                        <div id="onu_olt_name" class="cp-conn-pill-value" style="font-size:12px;color:#007bff;">{{ $oltName }}</div>
+                    </div>
+                    <div class="cp-conn-pill" style="flex:2;min-width:140px;">
+                        <div class="cp-conn-pill-label"><i class="fas fa-microchip mr-1" style="color:#6610f2;"></i>MAC / Serial</div>
+                        <code id="onu_mac_val" style="font-size:11px;font-weight:700;color:#495057;background:none;padding:0;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">{{ $macVal }}</code>
+                    </div>
+                    <div class="cp-conn-pill" >
+                        <div class="cp-conn-pill-label"><i class="fas fa-plug mr-1" style="color:#6f42c1;"></i>PON Port</div>
+                        <code id="onu_port_val" style="font-size:11px;font-weight:700;color:#6f42c1;background:none;padding:0;display:block;margin-top:2px;">{{ $portVal }}</code>
+                    </div>
+                    <div class="cp-conn-pill" >
+                        <div class="cp-conn-pill-label"><i class="fas fa-tag mr-1" style="color:#fd7e14;"></i>VLAN</div>
+                        <div id="onu_vlan_val" class="cp-conn-pill-value" style="font-size:12px;color:#e67700;font-weight:700;">{{ $vlanVal }}</div>
+                    </div>
+                    @if($syncAge)
+                    <div class="cp-conn-pill" >
+                        <div class="cp-conn-pill-label"><i class="fas fa-clock mr-1" style="color:#17a2b8;"></i>Last Sync</div>
+                        <div class="cp-conn-pill-value" style="font-size:11px;color:#17a2b8;font-weight:700;">{{ $syncAge }}</div>
+                    </div>
+                    @endif
+                </div>
+
+                {{-- Down Reason (conditional) --}}
+                @if($adrText)
+                <div id="onu_down_reason_val" class="cp-note-box danger mb-2" style="padding:5px 10px;">
+                    <i class="fas {{ $adrIco }}" style="color:{{ $adrClr }};font-size:11px;margin-top:1px;"></i>
+                    <span style="font-size:11px;font-weight:700;color:{{ $adrClr }};">{{ $adrText }}</span>
+                </div>
+                @else
+                <div id="onu_down_reason_val" style="display:none;"></div>
+                @endif
+
+                {{-- Row 2: Signal Metrics — enterprise data strip --}}
+                <div style="display:flex;border:1px solid #dee2e6;border-left:3px solid #007bff;border-radius:0 6px 6px 0;background:#f8f9fa;overflow:hidden;">
+                    <div style="flex:1;padding:8px 12px 7px;border-right:1px solid #dee2e6;min-width:0;">
+                        <div style="font-size:9.5px;color:#8898aa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-bottom:3px;">
+                            <i class="fas fa-arrow-down" style="font-size:8px;margin-right:3px;color:#dc3545;"></i>RX Power
+                        </div>
+                        <div id="onu_rx_val" style="font-size:15px;font-weight:700;line-height:1;color:{{ $rxClr }};">
+                            @if($rxP !== null)<span>{{ $rxP }}</span><span style="font-size:10px;font-weight:500;color:#8898aa;margin-left:1px;">dBm</span>@else<span style="color:#adb5bd;">—</span>@endif
+                        </div>
+                        @if(isset($rxQualLabel) && $rxQualLabel)<div id="onu_rx_badge" style="margin-top:3px;"><span style="font-size:8px;font-weight:700;color:{{ $rxQualClr }};background:{{ $rxQualClr }}18;padding:1px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;border:1px solid {{ $rxQualClr }}40;">{{ $rxQualLabel }}</span></div>@endif
+                    </div>
+                    <div style="flex:1;padding:8px 12px 7px;border-right:1px solid #dee2e6;min-width:0;">
+                        <div style="font-size:9.5px;color:#8898aa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-bottom:3px;">
+                            <i class="fas fa-arrow-up" style="font-size:8px;margin-right:3px;color:#17a2b8;"></i>TX Power
+                        </div>
+                        <div id="onu_tx_val" style="font-size:15px;font-weight:700;line-height:1;color:#17a2b8;">
+                            @if($txPow !== null)<span>{{ $txPow }}</span><span style="font-size:10px;font-weight:500;color:#8898aa;margin-left:1px;">dBm</span>@else<span style="color:#adb5bd;">—</span>@endif
+                        </div>
+                    </div>
+                    <div style="flex:1;padding:8px 12px 7px;border-right:1px solid #dee2e6;min-width:0;">
+                        <div style="font-size:9.5px;color:#8898aa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-bottom:3px;">
+                            <i class="fas fa-bolt" style="font-size:8px;margin-right:3px;color:#ffc107;"></i>Bias Current
+                        </div>
+                        <div id="onu_txbias_val" style="font-size:15px;font-weight:700;line-height:1;color:#007bff;">
+                            @if($txBias !== null)<span>{{ $txBias }}</span><span style="font-size:10px;font-weight:500;color:#8898aa;margin-left:1px;">mA</span>@else<span style="color:#adb5bd;">—</span>@endif
+                        </div>
+                    </div>
+                    <div style="flex:1;padding:8px 12px 7px;border-right:1px solid #dee2e6;min-width:0;">
+                        <div style="font-size:9.5px;color:#8898aa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-bottom:3px;">
+                            <i class="fas fa-ruler-horizontal" style="font-size:8px;margin-right:3px;color:#6610f2;"></i>Distance
+                        </div>
+                        <div id="onu_distance_val" style="font-size:15px;font-weight:700;line-height:1;color:#495057;">
+                            @if($distVal !== null)<span>{{ $distVal }}</span><span style="font-size:10px;font-weight:500;color:#8898aa;margin-left:1px;">m</span>@else<span style="color:#adb5bd;">—</span>@endif
+                        </div>
+                    </div>
+                    <div style="flex:1;padding:8px 12px 7px;border-right:1px solid #dee2e6;min-width:0;">
+                        <div style="font-size:9.5px;color:#8898aa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-bottom:3px;">
+                            <i class="fas fa-thermometer-half" style="font-size:8px;margin-right:3px;color:#fd7e14;"></i>Temperature
+                        </div>
+                        <div id="onu_temp_val" style="font-size:15px;font-weight:700;line-height:1;color:{{ $tempClr }};">
+                            @if($tempVal !== null)<span>{{ $tempVal }}</span><span style="font-size:10px;font-weight:500;color:#8898aa;margin-left:1px;">°C</span>@else<span style="color:#adb5bd;">—</span>@endif
+                        </div>
+                    </div>
+                    <div style="flex:1;padding:8px 12px 7px;min-width:0;">
+                        <div style="font-size:9.5px;color:#8898aa;font-weight:700;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;margin-bottom:3px;">
+                            <i class="fas fa-plug" style="font-size:8px;margin-right:3px;color:#6f42c1;"></i>Supply Voltage
+                        </div>
+                        <div id="onu_voltage_val" style="font-size:15px;font-weight:700;line-height:1;color:#6f42c1;">
+                            @if($voltVal !== null)<span>{{ $voltVal }}</span><span style="font-size:10px;font-weight:500;color:#8898aa;margin-left:1px;">V</span>@else<span style="color:#adb5bd;">—</span>@endif
+                        </div>
+                    </div>
+                </div>
+
+
+
+                {{-- Footer --}}
+                <div class="text-center pt-2" style="font-size:10px;color:#bbb;">
+                    <span id="onuDiagSource">
+                        @if($onuRecord ?? null)
+                            <i class="fas fa-database mr-1"></i>Last cached data
+                        @else
+                            <i class="fas fa-info-circle mr-1"></i>Static data from client record
+                        @endif
+                    </span>
+                    <span id="onuDiagLoading" style="display:none;"><i class="fas fa-spinner fa-spin mr-1"></i>Fetching live data from OLT...</span>
+                </div>
+                @endif
+            </div>
+            </div>
+
+        </div>
+
+        @if($__canAction('client_profile', 'billing_history'))
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-file-invoice-dollar" style="background: rgba(40,167,69,0.1); color: var(--cp-success);"></i>Billing History</h3>
+                <i class="fas fa-chevron-down cp-collapse-icon collapsed"></i>
+            </div>
+            <div class="cp-card-collapse collapsed">
+            <div class="cp-card-body">
+                @php
+                    $historyData = $client->getBillingData();
+                    $bills = $historyData['bills'];
+                    $billDetails = $historyData['bill_details'];
+                    $totalBills = $historyData['total_bills'];
+                    $totalPayments = $historyData['total_payments'];
+                    $totalDue = $historyData['due'];
+                    $remainingAdv = $historyData['advance'];
+                    $advancePayments = $historyData['advance_payments'] ?? collect();
+                @endphp
+                <div class="cp-conn-pills" style="margin-bottom: 16px;">
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Total Bills</div>
+                        <div class="cp-conn-pill-value">৳{{ number_format($totalBills ?? 0) }}</div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Total Paid</div>
+                        <div class="cp-conn-pill-value" style="color: var(--cp-success);">৳{{ number_format($totalPayments ?? 0) }}</div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Due</div>
+                        <div class="cp-conn-pill-value" style="color: var(--cp-danger);">৳{{ number_format($totalDue ?? 0) }}</div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Last Payment</div>
+                        @php $lastPay = $client->payments->sortByDesc('created_at')->first(); @endphp
+                        <div class="cp-conn-pill-value">{{ $lastPay ? $lastPay->created_at->format('d M Y') : 'N/A' }}</div>
+                    </div>
+                    @if($remainingAdv > 0)
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Advance</div>
+                        <div class="cp-conn-pill-value" style="color: var(--cp-success);">৳{{ number_format($remainingAdv ?? 0) }}</div>
+                    </div>
+                    @endif
+                </div>
+
+                @if($bills->count() > 0)
+                    @foreach($bills as $bill)
+                    @php
+                        $detail = $billDetails[$bill->id] ?? null;
+                        $billDue = $detail ? $detail['effective_due'] : ($bill->total_amount - $bill->paid_amount);
+                        $advAlloc = $detail && $detail['advance_allocated'] > 0
+                            ? (float) $detail['advance_allocated']
+                            : (float) ($bill->advance_used ?? 0);
+                        $isPaid = $detail ? $detail['is_paid'] : ($bill->status == 'paid');
+                    @endphp
+                    <div class="cp-bill-item {{ $isPaid ? 'cp-bill-paid' : 'cp-bill-unpaid' }}">
+                        <div class="cp-bill-header">
+                            <div>
+                                <i class="fas fa-file-invoice mr-1" style="color: var(--cp-primary);"></i>
+                                <strong>{{ $bill->bill_month }}</strong>
+                                <span style="color: var(--cp-text-light); margin-left: 8px;">৳{{ number_format($bill->total_amount ?? 0) }}</span>
+                                <span style="color: var(--cp-text-light); font-size: 11px; margin-left: 8px;">{{ $bill->created_at->format('d M Y h:i A') }}</span>
+                            </div>
+                            <div class="d-flex align-items-center" style="gap: 6px;">
+                                @if($isPaid)
+                                <span class="cp-bill-status" style="background: rgba(40,167,69,0.15); color: var(--cp-success);">Paid</span>
+                                @else
+                                <span class="cp-bill-status" style="background: rgba(220,53,69,0.1); color: var(--cp-danger);">Unpaid</span>
+                                @endif
+                                @if(auth()->user()->hasAnyRole(['Super Admin', 'Administrator', 'Admin Support']))
+                                @if($__canAction('client_profile', 'edit_bill'))
+                                <a href="{{ route('admin.billing.edit', $bill) }}" class="btn btn-xs btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a>
+                                <a href="{{ route('admin.corrections.bill', $bill) }}" class="btn btn-xs btn-outline-warning" title="Correction"><i class="fas fa-balance-scale"></i></a>
+                                @endif
+                                @if($__canAction('client_profile', 'delete_bill'))
+                                <form action="{{ route('admin.billing.destroy', $bill) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this bill?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                                </form>
+                                @endif
+                                @endif
+                            </div>
+                        </div>
+                        @foreach($bill->payments as $payment)
+                        <div class="cp-bill-payment">
+                            <div>
+                                <i class="fas fa-check-circle mr-1" style="color: var(--cp-success);"></i>
+                                {{ $payment->payment_date?->format('d M Y') ?? $payment->created_at->format('d M Y') }} {{ $payment->created_at->format('h:i A') }}
+                                <span style="color: var(--cp-text-light);">{{ $payment->paymentMethod?->name ?? 'Cash' }}</span>
+                                @if($payment->collectedBy)
+                                <span style="color: var(--cp-text-light);">by {{ $payment->collectedBy->name }}</span>
+                                @endif
+                            </div>
+                            <div class="d-flex align-items-center" style="gap: 6px;">
+                                <strong style="color: var(--cp-success);">৳{{ number_format($payment->amount ?? 0) }}</strong>
+                                @if(auth()->user()->hasAnyRole(['Super Admin', 'Administrator', 'Admin Support']))
+                                @if($__canAction('client_profile', 'edit_payment'))
+                                <a href="{{ route('admin.payments.edit', $payment) }}" class="btn btn-xs btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a>
+                                @endif
+                                @if($__canAction('client_profile', 'delete_payment'))
+                                <form action="{{ route('admin.payments.destroy', $payment) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this payment?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                                </form>
+                                @endif
+                                @endif
+                            </div>
+                        </div>
+                        @if($payment->transaction_id || $payment->money_receipt_no || $payment->remarks)
+                        <div style="padding: 2px 16px 6px 32px; font-size: 11px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                            @if($payment->money_receipt_no)<span style="background: rgba(108,117,125,0.12); color: #495057; padding: 1px 8px; border-radius: 4px;"><i class="fas fa-receipt"></i> {{ $payment->money_receipt_no }}</span>@endif
+                            @if($payment->transaction_id)<span style="background: rgba(23,162,184,0.15); color: var(--cp-info); padding: 1px 8px; border-radius: 4px;"><i class="fas fa-hashtag"></i> {{ $payment->transaction_id }}</span>@endif
+                            @php
+                                $senderNum = null;
+                                if ($payment->remarks && preg_match('/Sender:\s*([\d\-\+]+)/', $payment->remarks, $m)) {
+                                    $senderNum = $m[1];
+                                }
+                            @endphp
+                            @if($senderNum)<span style="background: rgba(255,193,7,0.15); color: #856404; padding: 1px 8px; border-radius: 4px;"><i class="fas fa-mobile-alt"></i> {{ $senderNum }}</span>@endif
+                            @if($payment->remarks)<span style="color: var(--cp-text-light);"><i class="fas fa-info-circle mr-1"></i>{{ $payment->remarks }}</span>@endif
+                        </div>
+                        @endif
+                        @endforeach
+                        @if($advAlloc > 0)
+                        @php
+                            $advAppliedAt = $detail['advance_applied_at'] ?? $bill->advance_applied_at ?? null;
+                            if (is_string($advAppliedAt)) $advAppliedAt = \Carbon\Carbon::parse($advAppliedAt);
+                        @endphp
+                        <div class="cp-bill-payment" style="background: #f0f9ff;">
+                            <div>
+                                <i class="fas fa-wallet mr-1" style="color: var(--cp-info);"></i>
+                                Advance Applied
+                                @if($advAppliedAt)
+                                <span style="color: var(--cp-text-light); margin-left: 6px;">({{ $advAppliedAt->format('d M Y h:i A') }})</span>
+                                @endif
+                            </div>
+                            <strong style="color: var(--cp-info);">৳{{ number_format($advAlloc ?? 0) }}</strong>
+                        </div>
+                        @endif
+                        @if($bill->payments->count() == 0 && $advAlloc == 0)
+                        <div class="cp-bill-payment" style="color: var(--cp-danger);"><i class="fas fa-exclamation-circle mr-1"></i>No payment yet</div>
+                        @endif
+                    </div>
+                    @endforeach
+                @else
+                <div style="text-align: center; padding: 30px; color: var(--cp-text-light);">
+                    <i class="fas fa-file-invoice fa-2x mb-2" style="opacity: 0.4;"></i>
+                    <p style="margin: 0; font-size: 14px;">No bills generated yet</p>
+                </div>
+                @endif
+
+                @if($advancePayments->count() > 0)
+                <div class="cp-bill-item" style="border-left: 4px solid var(--cp-info) !important; margin-top: 16px;">
+                    <div class="cp-bill-header">
+                        <div><i class="fas fa-wallet mr-1" style="color: var(--cp-info);"></i><strong>Advance Payments</strong> <span style="color: var(--cp-text-light);">(Not linked to any bill)</span></div>
+                        <span class="cp-bill-status" style="background: rgba(23,162,184,0.15); color: var(--cp-info);">{{ $advancePayments->count() }} payment(s)</span>
+                    </div>
+                    @foreach($advancePayments as $payment)
+                    @php $advNotes = $payment->notes ?? $payment->remarks ?? null; @endphp
+                    <div class="cp-bill-payment">
+                        <div>
+                            <i class="fas fa-check-circle mr-1" style="color: var(--cp-info);"></i>
+                            {{ $payment->payment_date?->format('d M Y') ?? $payment->created_at->format('d M Y') }} {{ $payment->created_at->format('h:i A') }}
+                            <span style="color: var(--cp-text-light);">{{ $payment->paymentMethod?->name ?? 'Cash' }}</span>
+                            @if($payment->collectedBy) <span style="color: var(--cp-text-light);">by {{ $payment->collectedBy->name }}</span>@endif
+                        </div>
+                        <div class="d-flex align-items-center" style="gap: 6px;">
+                            <strong style="color: var(--cp-info);">৳{{ number_format($payment->amount ?? 0) }}</strong>
+                            @if(auth()->user()->hasAnyRole(['Super Admin', 'Administrator', 'Admin Support']))
+                            @if($__canAction('client_profile', 'edit_payment'))
+                            <a href="{{ route('admin.payments.edit', $payment) }}" class="btn btn-xs btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a>
+                            @endif
+                            @if($__canAction('client_profile', 'delete_payment'))
+                            <form action="{{ route('admin.payments.destroy', $payment) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this payment?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn btn-xs btn-outline-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                            </form>
+                            @endif
+                            @endif
+                        </div>
+                    </div>
+                    @if($payment->transaction_id || $payment->money_receipt_no || $payment->remarks)
+                    <div style="padding: 2px 16px 6px 32px; font-size: 11px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                        @if($payment->money_receipt_no)<span style="background: rgba(108,117,125,0.12); color: #495057; padding: 1px 8px; border-radius: 4px;"><i class="fas fa-receipt"></i> {{ $payment->money_receipt_no }}</span>@endif
+                        @if($payment->transaction_id)<span style="background: rgba(23,162,184,0.15); color: var(--cp-info); padding: 1px 8px; border-radius: 4px;"><i class="fas fa-hashtag"></i> {{ $payment->transaction_id }}</span>@endif
+                        @php
+                            $advSenderNum = null;
+                            if ($advNotes && preg_match('/Sender:\s*([\d\-\+]+)/', $advNotes, $advM)) {
+                                $advSenderNum = $advM[1];
+                            }
+                        @endphp
+                        @if($advSenderNum)<span style="background: rgba(255,193,7,0.15); color: #856404; padding: 1px 8px; border-radius: 4px;"><i class="fas fa-mobile-alt"></i> {{ $advSenderNum }}</span>@endif
+                        @if($payment->remarks)<span style="color: var(--cp-text-light);"><i class="fas fa-info-circle mr-1"></i>{{ $payment->remarks }}</span>@endif
+                    </div>
+                    @endif
+                    @endforeach
+                </div>
+                @endif
+            </div>
+            </div>
+        </div>
+        @endif
+
+        @if($__canAction('client_profile', 'status_history'))
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-history" style="background: rgba(255,193,7,0.15); color: var(--cp-warning);"></i>Status History</h3>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <a href="{{ route('admin.clients.status-history', $client) }}" style="font-size: 12px; color: var(--cp-primary); font-weight: 600; text-decoration: none;">View All <i class="fas fa-arrow-right" style="font-size: 10px;"></i></a>
+                    <i class="fas fa-chevron-down cp-collapse-icon collapsed"></i>
+                </div>
+            </div>
+            <div class="cp-card-collapse collapsed">
+            <div class="cp-card-body">
+                @php
+                    $statusLogs = $client->statusLogs()->with('changedBy')->orderBy('created_at', 'desc')->take(5)->get();
+                @endphp
+                @if($statusLogs->count() > 0)
+                <div class="cp-status-timeline">
+                    @foreach($statusLogs as $log)
+                    @php
+                        $isActive = $log->new_status === 'active';
+                        $isInactive = $log->new_status === 'inactive';
+                        $isPackageChange = !$isActive && !$isInactive;
+                    @endphp
+                    <div class="cp-timeline-item">
+                        <div class="cp-timeline-dot {{ $isActive ? 'active' : ($isInactive ? 'inactive' : '') }}" @if($isPackageChange) style="background: var(--cp-info);" @endif></div>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                @if($isPackageChange)
+                                <span style="font-size: 13px; font-weight: 700; color: var(--cp-info);"><i class="fas fa-exchange-alt" style="font-size: 11px;"></i> {{ $log->old_status }} → {{ $log->new_status }}</span>
+                                @else
+                                <span style="font-size: 13px; font-weight: 700; color: {{ $isActive ? 'var(--cp-success)' : 'var(--cp-danger)' }};">{{ ucfirst($log->new_status) }}</span>
+                                @endif
+                                @if($log->reason)
+                                <span style="font-size: 12px; color: var(--cp-text-light); margin-left: 8px;">{{ $log->reason }}</span>
+                                @endif
+                                <div style="font-size: 11px; color: var(--cp-text-light); margin-top: 2px;">
+                                    {{ $log->created_at->format('d M Y, h:i A') }}
+                                    <span style="margin-left: 6px;">
+                                        @if(($log->source ?? 'manual') === 'auto')
+                                            <span style="background: rgba(23,162,184,0.15); color: var(--cp-info); padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;">System</span>
+                                        @else
+                                            by {{ $log->changedBy->name ?? 'Unknown' }}
+                                        @endif
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                @else
+                <div style="text-align: center; padding: 30px; color: var(--cp-text-light);">
+                    <i class="fas fa-history fa-2x mb-2" style="opacity: 0.4;"></i>
+                    <p style="margin: 0; font-size: 14px;">No status changes recorded</p>
+                </div>
+                @endif
+            </div>
+            </div>
+        </div>
+        @endif
+
+        @if($__canAction('client_profile', 'personal_contact'))
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-user" style="background: rgba(0,123,255,0.1); color: var(--cp-primary);"></i>Personal & Contact</h3>
+                <i class="fas fa-chevron-down cp-collapse-icon collapsed"></i>
+            </div>
+            <div class="cp-card-collapse collapsed">
+            <div class="cp-info-grid">
+                @php
+                    $clientNameParts = explode(' ', $client->name, 2);
+                @endphp
+                <div class="cp-info-item"><span class="cp-info-label">First Name</span><span class="cp-info-value">{{ $clientNameParts[0] ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Last Name</span><span class="cp-info-value">{{ $clientNameParts[1] ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Mobile</span><span class="cp-info-value"><a href="tel:{{ $client->phone }}">{{ $client->phone }}</a> </span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Father's Name</span><span class="cp-info-value">{{ $client->father_husband_name ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Alt. Mobile</span><span class="cp-info-value">{{ $client->alt_phone ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Mother's Name</span><span class="cp-info-value">{{ $client->mother_name ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Email</span><span class="cp-info-value">{{ $client->email ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Date of Birth</span><span class="cp-info-value">{{ $client->date_of_birth ? $client->date_of_birth->format('d M Y') : '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Occupation</span><span class="cp-info-value">{{ $client->occupation ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Gender</span><span class="cp-info-value">{{ $client->gender ? ucfirst($client->gender) : '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">NID Number</span><span class="cp-info-value">{{ $client->nid ?? '—' }}</span></div>
+                <div class="cp-info-item">
+                    <span class="cp-info-label">Referral Partner</span>
+                    <span class="cp-info-value">
+                        @if($client->agent)
+                            <span style="background: rgba(0,123,255,0.1); color: var(--cp-primary); padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                                <i class="fas fa-user-tie mr-1"></i>{{ $client->agent->name }}
+                            </span>
+                        @else
+                            <span style="color: var(--cp-text-light);">—</span>
+                        @endif
+                    </span>
+                </div>
+                @if($client->custom_status)
+                <div class="cp-info-item"><span class="cp-info-label">Custom Status</span><span class="cp-info-value"><span class="badge badge-secondary">{{ $client->custom_status }}</span></span></div>
+                @endif
+                @if($client->effective_to)
+                <div class="cp-info-item"><span class="cp-info-label">Effective To</span><span class="cp-info-value">{{ $client->effective_to->format('d M Y') }}</span></div>
+                @endif
+                @if($client->non_effective_from)
+                <div class="cp-info-item"><span class="cp-info-label">Non Effective From</span><span class="cp-info-value">{{ $client->non_effective_from->format('d M Y') }}</span></div>
+                @endif
+                <div class="cp-info-item"><span class="cp-info-label">Division</span><span class="cp-info-value">{{ $client->district->division ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">District</span><span class="cp-info-value">{{ $client->district->name ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Thana/Upazila</span><span class="cp-info-value">{{ $client->upazila->name ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Zone</span><span class="cp-info-value">{{ $client->zone->name ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Sub Zone</span><span class="cp-info-value">{{ $client->area->name ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">TJ Box</span><span class="cp-info-value">{{ $client->box->name ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Full Address</span><span class="cp-info-value">{{ $client->address ?? '—' }}</span></div>
+                <div class="cp-info-item"><span class="cp-info-label">Landmark</span><span class="cp-info-value">{{ $client->nearby_landmark ?? '—' }}</span></div>
+                <div class="cp-info-item">
+                    <span class="cp-info-label">Location</span>
+                    <span class="cp-info-value">
+                        @if($client->google_map_lat && $client->google_map_lng)
+                            <a href="https://www.google.com/maps?q={{ $client->google_map_lat }},{{ $client->google_map_lng }}" target="_blank" style="background: rgba(0,123,255,0.1); color: var(--cp-primary); padding: 3px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                                <i class="fas fa-map-marker-alt"></i> View on Map
+                            </a>
+                        @elseif($client->google_map_location)
+                            <a href="{{ $client->google_map_location }}" target="_blank" style="background: rgba(0,123,255,0.1); color: var(--cp-primary); padding: 3px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">
+                                <i class="fas fa-map-marker-alt"></i> View on Map
+                            </a>
+                        @else
+                            <span style="color: var(--cp-text-light);">No location set</span>
+                        @endif
+                    </span>
+                </div>
+            </div>
+            @if($client->nid_front_image || $client->nid_back_image)
+            <div style="border-top: 1px solid var(--cp-border); padding: 12px 16px;">
+                <div style="font-size: 12px; color: var(--cp-text-light); font-weight: 700; text-transform: uppercase; margin-bottom: 10px;">
+                    <i class="fas fa-id-card mr-1"></i> NID Documents
+                </div>
+                <div class="row">
+                    @if($client->nid_front_image)
+                    <div class="col-6">
+                        <div style="font-size: 11px; color: var(--cp-text-light); font-weight: 600; margin-bottom: 4px;">FRONT SIDE</div>
+                        <a href="{{ asset('storage/' . $client->nid_front_image) }}" target="_blank">
+                            <img src="{{ asset('storage/' . $client->nid_front_image) }}" class="img-fluid" style="border-radius: 8px; border: 1px solid var(--cp-border); max-height: 140px;">
+                        </a>
+                    </div>
+                    @endif
+                    @if($client->nid_back_image)
+                    <div class="col-6">
+                        <div style="font-size: 11px; color: var(--cp-text-light); font-weight: 600; margin-bottom: 4px;">BACK SIDE</div>
+                        <a href="{{ asset('storage/' . $client->nid_back_image) }}" target="_blank">
+                            <img src="{{ asset('storage/' . $client->nid_back_image) }}" class="img-fluid" style="border-radius: 8px; border: 1px solid var(--cp-border); max-height: 140px;">
+                        </a>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+            </div>
+        </div>
+        @endif
+
+        @if($__canAction('client_profile', 'connection_details'))
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-network-wired" style="background: rgba(23,162,184,0.1); color: var(--cp-info);"></i>Connection Details</h3>
+                <i class="fas fa-chevron-down cp-collapse-icon collapsed"></i>
+            </div>
+            <div class="cp-card-collapse collapsed">
+            <div class="cp-card-body">
+                <div class="cp-conn-pills">
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Package</div>
+                        <div class="cp-conn-pill-value" style="color: var(--cp-primary);">{{ $client->package->name ?? 'N/A' }}</div>
+                    </div>
+                    @if($client->package && $client->package->bandwidth)
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Bandwidth</div>
+                        <div class="cp-conn-pill-value" style="color: var(--cp-info);"><i class="fas fa-tachometer-alt" style="font-size: 11px;"></i> {{ $client->package->bandwidth }}</div>
+                    </div>
+                    @endif
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Type</div>
+                        <div class="cp-conn-pill-value">{{ strtoupper($client->connection_type ?? 'PPPoE') }}</div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Install Date</div>
+                        <div class="cp-conn-pill-value">{{ $client->connection_date ? $client->connection_date->format('d M Y') : 'N/A' }}</div>
+                    </div>
+                    <div class="cp-conn-pill" style="border-color:#3498db;">
+                        <div class="cp-conn-pill-label" style="color:#3498db;">Bill Generate Date</div>
+                        <div class="cp-conn-pill-value" title="Bill is auto-generated on this day every month">{{ $client->billing_date ?? 1 }} of every month</div>
+                    </div>
+                    @if($client->billing_starts_at)
+                    <div class="cp-conn-pill" style="border-color:#e67e22;">
+                        <div class="cp-conn-pill-label" style="color:#e67e22;">First Bill From</div>
+                        <div class="cp-conn-pill-value">{{ $client->billing_starts_at->format('M Y') }}</div>
+                    </div>
+                    @endif
+                    <div class="cp-conn-pill" style="border-color:#e74c3c;">
+                        <div class="cp-conn-pill-label" style="color:#e74c3c;">Auto-Inactive Date</div>
+                        @php
+                            $showAiDay = min($client->payment_deadline ?? 15, 28);
+                            $showNow = \Carbon\Carbon::now('Asia/Dhaka');
+                            $showAiDate = $showNow->day <= $showAiDay
+                                ? \Carbon\Carbon::create($showNow->year, $showNow->month, $showAiDay, 0, 0, 0, 'Asia/Dhaka')
+                                : \Carbon\Carbon::create($showNow->year, $showNow->month, $showAiDay, 0, 0, 0, 'Asia/Dhaka')->addMonthNoOverflow();
+                            $showAiFinal = $client->temp_deadline_date
+                                ? \Carbon\Carbon::parse($client->temp_deadline_date, 'Asia/Dhaka')
+                                : $showAiDate;
+                        @endphp
+                        <div class="cp-conn-pill-value" title="Client auto-inactivated on this day if bill unpaid">{{ $showAiFinal->format('d-M-Y') }} <small style="opacity:0.7;">(day {{ $client->payment_deadline ?? 15 }})</small></div>
+                    </div>
+                </div>
+                <div class="cp-info-grid">
+                    <div class="cp-info-item"><span class="cp-info-label">Username</span><span class="cp-info-value"><code>{{ $client->username }}</code></span></div>
+                    <div class="cp-info-item"><span class="cp-info-label">ONU MAC</span><span class="cp-info-value"><code>{{ $client->onu_mac ?? '—' }}</code></span></div>
+                    <div class="cp-info-item">
+                        <span class="cp-info-label">Password</span>
+                        <span class="cp-info-value">
+                            <code id="cp-password-masked">••••••••</code>
+                            <code id="cp-password-plain" style="display:none;">{{ $client->pppoe_password ?? '—' }}</code>
+                            <button type="button" class="btn btn-xs btn-outline-secondary ml-1 toggle-cp-password" style="padding:1px 6px;font-size:11px;" title="Show/Hide Password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </span>
+                    </div>
+                    <div class="cp-info-item"><span class="cp-info-label">ONU Model</span><span class="cp-info-value">{{ $client->onu_model ?? '—' }}</span></div>
+                    <div class="cp-info-item"><span class="cp-info-label">MAC Address</span><span class="cp-info-value"><code>{{ $client->mac_address ?? '—' }}</code></span></div>
+                    <div class="cp-info-item"><span class="cp-info-label">OLT Port</span><span class="cp-info-value">{{ $client->olt_port ?? '—' }}</span></div>
+                    <div class="cp-info-item"><span class="cp-info-label">IP Address</span><span class="cp-info-value"><code>{{ $client->session_ip ?: ($client->ip_address ?? 'Dynamic') }}</code></span></div>
+                    <div class="cp-info-item"><span class="cp-info-label">RX Power</span><span class="cp-info-value">{{ $client->onu_rx_power ? $client->onu_rx_power . ' dBm' : '—' }}</span></div>
+                    <div class="cp-info-item"><span class="cp-info-label">ONU Serial</span><span class="cp-info-value"><code>{{ $client->onu_serial ?? '—' }}</code></span></div>
+                    <div class="cp-info-item">
+                        <span class="cp-info-label">Router Brand</span>
+                        <span class="cp-info-value">
+                            @if($client->router_brand)
+                                <i class="fas fa-wifi mr-1" style="color: var(--cp-info);"></i>{{ $client->router_brand }}
+                            @else
+                                <span style="color: var(--cp-text-light);">{{ $client->mac_address ? 'Unknown' : '—' }}</span>
+                            @endif
+                        </span>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        @endif
+
+        @if($__canAction('client_profile', 'installation_details'))
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-tools" style="background: rgba(0,123,255,0.1); color: var(--cp-primary);"></i>Installation Details</h3>
+                <i class="fas fa-chevron-down cp-collapse-icon collapsed"></i>
+            </div>
+            <div class="cp-card-collapse collapsed">
+            <div class="cp-card-body">
+                <div class="cp-conn-pills">
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Install Charge</div>
+                        <div class="cp-conn-pill-value">
+                            @if($client->is_free)
+                                <span class="badge badge-success">INST FREE</span>
+                            @elseif($client->signup_fee_paid)
+                                <span style="color:var(--cp-primary);">৳{{ number_format($client->installation_charge ?? 0) }}</span>
+                                <span class="badge badge-success" style="font-size:10px;margin-left:3px;">Paid</span>
+                            @else
+                                <span style="color:var(--cp-primary);">৳{{ number_format($client->installation_charge ?? 0) }}</span>
+                                @if(($client->installation_charge ?? 0) > 0)
+                                <span class="badge badge-danger" style="font-size:10px;margin-left:3px;">Due</span>
+                                @endif
+                            @endif
+                            @if(!$client->signup_fee_paid)
+                            <button type="button" class="btn btn-xs btn-outline-primary ml-1" style="font-size:9px;padding:1px 5px;" onclick="openSetInstallChargeModal()" title="Set Installation Charge"><i class="fas fa-edit"></i></button>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Cable Length</div>
+                        <div class="cp-conn-pill-value">{{ $client->cable_length_meters ? intval($client->cable_length_meters) . ' m' : '—' }}</div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">ONU Source</div>
+                        <div class="cp-conn-pill-value">{{ $client->onu_required ? 'Company' : 'Client' }}</div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Fiber Source</div>
+                        <div class="cp-conn-pill-value">{{ ($client->fiber_required ?? true) ? 'Company' : 'Client' }}</div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Router Source</div>
+                        <div class="cp-conn-pill-value">{{ $client->router_required ? 'Company' : 'Client' }}</div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Cable Type</div>
+                        <div class="cp-conn-pill-value">{{ $client->connection_medium == 'fiber' ? 'Fiber' : 'UTP' }}</div>
+                    </div>
+                    <div class="cp-conn-pill">
+                        <div class="cp-conn-pill-label">Technician</div>
+                        <div class="cp-conn-pill-value">
+                            @php
+                                $techNames = [];
+                                if ($client->assignedTo) { $techNames[] = $client->assignedTo->name; }
+                                if ($client->application && $client->application->technician_assigned_area) {
+                                    $techIds = array_map('intval', explode(',', $client->application->technician_assigned_area));
+                                    $extraTechs = \App\Models\User::whereIn('id', $techIds)->whereNotIn('id', [$client->assigned_to])->pluck('name')->toArray();
+                                    $techNames = array_merge($techNames, $extraTechs);
+                                }
+                            @endphp
+                            {{ count($techNames) > 0 ? implode(', ', $techNames) : '—' }}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="font-size: 13px; font-weight: 700; color: var(--cp-dark); margin-bottom: 10px;"><i class="fas fa-project-diagram mr-1" style="color: var(--cp-primary);"></i>Fiber & ONU Info</div>
+                <div class="cp-fiber-grid">
+                    <div class="cp-fiber-item"><span class="cp-fiber-label">Fiber Brand</span><span class="cp-fiber-value">{{ $client->fiber_vendor ?: '—' }}</span></div>
+                    <div class="cp-fiber-item"><span class="cp-fiber-label">Fiber Code</span><span class="cp-fiber-value">{{ $client->fiber_code ?: '—' }}</span></div>
+                    <div class="cp-fiber-item"><span class="cp-fiber-label">Core Type</span><span class="cp-fiber-value">{{ $client->fiber_core_type ?: '—' }}</span></div>
+                    <div class="cp-fiber-item"><span class="cp-fiber-label">Fiber Color</span>@php $__fcm=["Blue"=>"#0057B8","Orange"=>"#FF8C00","Green"=>"#28a745","Brown"=>"#8B4513","Slate"=>"#708090","Gray"=>"#808080","White"=>"#e9ecef","Red"=>"#dc3545","Black"=>"#222222","Yellow"=>"#ffc107","Violet"=>"#6f42c1","Rose"=>"#e83e8c","Aqua"=>"#20c997"]; $__fch=$__fcm[$client->fiber_color]??null; @endphp<span class="cp-fiber-value">@if($__fch)<span style="display:inline-block;width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,0.2);vertical-align:middle;margin-right:3px;background:{{$__fch}};"></span>@endif{{ $client->fiber_color ?: '—' }}</span></div>
+                    <div class="cp-fiber-item"><span class="cp-fiber-label">Splitter No</span><span class="cp-fiber-value">{{ $client->splitter_number ?: '—' }}</span></div>
+                    <div class="cp-fiber-item"><span class="cp-fiber-label">Splitter Color</span>@php $__scm=["Blue"=>"#0057B8","Orange"=>"#FF8C00","Green"=>"#28a745","Brown"=>"#8B4513","Slate"=>"#708090","Gray"=>"#808080","White"=>"#e9ecef","Red"=>"#dc3545","Black"=>"#222222","Yellow"=>"#ffc107","Violet"=>"#6f42c1","Rose"=>"#e83e8c","Aqua"=>"#20c997"]; $__sch=$__scm[$client->splitter_color]??null; @endphp<span class="cp-fiber-value">@if($__sch)<span style="display:inline-block;width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,0.2);vertical-align:middle;margin-right:3px;background:{{$__sch}};"></span>@endif{{ $client->splitter_color ?: '—' }}</span></div>
+                    <div class="cp-fiber-item"><span class="cp-fiber-label">ONU Brand</span><span class="cp-fiber-value">{{ $client->onu_brand ?: '—' }}</span></div>
+                    <div class="cp-fiber-item"><span class="cp-fiber-label">ONU MAC/Serial</span><span class="cp-fiber-value">{{ $client->onu_mac ?: '—' }}</span></div>
+                </div>
+
+                @if($client->remarks)
+                <div class="cp-note-box default">
+                    <i class="fas fa-comment-alt" style="color: #868e96;"></i>
+                    <div><div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--cp-text-light); margin-bottom: 2px;">Note</div>{{ $client->remarks }}</div>
+                </div>
+                @endif
+                <div class="cp-note-box warning">
+                    <i class="fas fa-sticky-note" style="color: var(--cp-warning);"></i>
+                    <div><div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--cp-text-light); margin-bottom: 2px;">Technician Note</div>{{ $client->technician_note ?: '—' }}</div>
+                </div>
+                @if($client->auto_inactive_note)
+                <div class="cp-note-box danger">
+                    <i class="fas fa-exclamation-triangle" style="color: var(--cp-danger);"></i>
+                    <div><div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--cp-text-light); margin-bottom: 2px;">System Note</div>{{ $client->auto_inactive_note }}</div>
+                </div>
+                @endif
+
+                @if($client->serviceCharges && $client->serviceCharges->count() > 0)
+                <div style="font-size: 13px; font-weight: 700; color: var(--cp-dark); margin: 15px 0 10px;"><i class="fas fa-receipt mr-1" style="color: var(--cp-primary);"></i>Service Charges</div>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0" style="font-size: 12px;">
+                        <thead style="background: #f4f6f9;">
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th class="text-right">Amount</th>
+                                <th>Payment</th>
+                                <th>Transaction ID</th>
+                                <th>Sender No.</th>
+                                <th>Receipt No.</th>
+                                <th>Note</th>
+                                <th>Paid By</th>
+                            </tr>
+                        </thead>
+                        @php
+                            $visibleCharges = $client->serviceCharges
+                                ->filter(fn($sc) => !($sc->charge_type === 'Installation Charge' && is_null($sc->paid_by)))
+                                ->sortByDesc('created_at');
+                        @endphp
+                        <tbody>
+                            @foreach($visibleCharges as $sc)
+                            <tr>
+                                <td>{{ $sc->charge_date ? $sc->charge_date->format('d-m-Y') : $sc->created_at->format('d-m-Y') }}</td>
+                                <td><span class="badge badge-info">{{ $sc->charge_type }}</span></td>
+                                <td class="text-right font-weight-bold">৳{{ number_format($sc->amount) }}</td>
+                                <td>{{ ucfirst($sc->payment_method ?? 'Cash') }}</td>
+                                <td>{{ $sc->transaction_id ?: '—' }}</td>
+                                <td>{{ $sc->sender_number ?: '—' }}</td>
+                                <td>{{ $sc->money_receipt_no ?: '—' }}</td>
+                                <td>{{ $sc->description ?: '—' }}</td>
+                                <td>{{ $sc->paidByUser->name ?? '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot style="background: #f4f6f9;">
+                            <tr>
+                                <td colspan="2" class="text-right font-weight-bold">Total:</td>
+                                <td class="text-right font-weight-bold" style="color: var(--cp-primary);">৳{{ number_format($visibleCharges->sum('amount')) }}</td>
+                                <td colspan="6"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                @endif
+
+            </div>
+            </div>
+        </div>
+        @endif
+
+        @if(isset($clientSales) && $clientSales->count() > 0)
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-shopping-cart" style="background: rgba(40,167,69,0.1); color: var(--cp-success);"></i>Purchase History (Store Sales)</h3>
+                <div class="d-flex align-items-center">
+                    <span class="badge badge-info mr-2">{{ $clientSales->count() }} Sales</span>
+                    @if($clientSales->sum('due') > 0)<span class="badge badge-danger mr-2">Due: ৳{{ number_format($clientSales->sum('due'), 2) }}</span>@endif
+                    <i class="fas fa-chevron-down cp-collapse-icon collapsed"></i>
+                </div>
+            </div>
+            <div class="cp-card-collapse collapsed">
+            <div class="cp-card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0" style="font-size: 12px;">
+                        <thead style="background: #f4f6f9;">
+                            <tr>
+                                <th>Invoice</th>
+                                <th>Date</th>
+                                <th>Items</th>
+                                <th class="text-right">Total</th>
+                                <th class="text-right">Paid</th>
+                                <th class="text-right">Due</th>
+                                <th>Payment</th>
+                                <th>Status</th>
+                                <th>Sold By</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($clientSales as $cs)
+                            <tr>
+                                <td><a href="{{ route('admin.sales.show', $cs) }}" class="font-weight-bold">{{ $cs->invoice_number }}</a></td>
+                                <td>{{ $cs->sale_date->format('d-m-Y') }}</td>
+                                <td>
+                                    @foreach($cs->items as $si)
+                                        <span class="badge badge-light">{{ $si->product_name }}@if($si->brand || $si->model) <small>({{ implode(' ', array_filter([$si->brand, $si->model])) }})</small>@endif x{{ $si->quantity }}</span>
+                                    @endforeach
+                                </td>
+                                <td class="text-right font-weight-bold">৳{{ number_format($cs->total, 2) }}</td>
+                                <td class="text-right text-success">৳{{ number_format($cs->paid, 2) }}</td>
+                                <td class="text-right {{ $cs->due > 0 ? 'text-danger font-weight-bold' : '' }}">৳{{ number_format($cs->due, 2) }}</td>
+                                <td>
+                                    <small>{{ ucfirst($cs->payment_method ?? 'cash') }}</small>
+                                    @if($cs->payment_reference)<br><small class="text-muted"><i class="fas fa-hashtag"></i> {{ $cs->payment_reference }}</small>@endif
+                                </td>
+                                <td>
+                                    @if($cs->status === 'paid')<span class="badge badge-success">Paid</span>
+                                    @elseif($cs->status === 'partial')<span class="badge badge-warning">Partial</span>
+                                    @else<span class="badge badge-danger">Unpaid</span>@endif
+                                </td>
+                                <td><small>{{ $cs->creator->name ?? '—' }}</small></td>
+                                <td><a href="{{ route('admin.sales.show', $cs) }}" class="btn btn-info btn-xs"><i class="fas fa-eye"></i></a></td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot style="background: #f4f6f9;">
+                            <tr>
+                                <td colspan="3" class="text-right font-weight-bold">Total:</td>
+                                <td class="text-right font-weight-bold" style="color: var(--cp-primary);">৳{{ number_format($clientSales->sum('total'), 2) }}</td>
+                                <td class="text-right font-weight-bold text-success">৳{{ number_format($clientSales->sum('paid'), 2) }}</td>
+                                <td class="text-right font-weight-bold text-danger">৳{{ number_format($clientSales->sum('due'), 2) }}</td>
+                                <td colspan="4"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            </div>
+        </div>
+        @endif
+
+        @if($__canAction('client_profile', 'assigned_products'))
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-boxes" style="background: rgba(108,99,255,0.1); color: #6c63ff;"></i>Assigned Products / Fiber / Cable</h3>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span class="badge badge-primary badge-pill" style="font-size: 11px;">{{ $assignedProducts->count() + $fiberUsages->count() + $fiberOutLogs->count() }}</span>
+                    <i class="fas fa-chevron-down cp-collapse-icon collapsed"></i>
+                </div>
+            </div>
+            <div class="cp-card-collapse collapsed">
+            <div class="cp-card-body">
+                @if($assignedProducts->count() > 0)
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0" style="font-size: 12px;">
+                        <thead style="background: #f8f9fa;">
+                            <tr>
+                                <th>#</th>
+                                <th>Product</th>
+                                <th>Serial/MAC</th>
+                                <th class="text-center">Qty</th>
+                                <th>Charge</th>
+                                <th>Date</th>
+                                <th>Note</th>
+                                <th>Installed By</th>
+                                <th>Assigned By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($assignedProducts as $idx => $prod)
+                            <tr>
+                                <td>{{ $idx + 1 }}</td>
+                                <td>
+                                    <strong>{{ $prod->category }}</strong>
+                                    @if($prod->sub_category) <span class="text-muted">- {{ $prod->sub_category }}</span> @endif
+                                    @if($prod->brand) <br><small class="text-muted">{{ $prod->brand }} {{ $prod->model }}</small> @endif
+                                </td>
+                                <td>
+                                    @if($prod->serial_number)
+                                        <code class="text-primary">{{ $prod->serial_number }}</code>
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
+                                </td>
+                                <td class="text-center"><span class="badge badge-warning badge-pill">{{ $prod->quantity ?? 1 }}</span></td>
+                                <td>
+                                    @php $ch = $chargeMap[$prod->id] ?? null; @endphp
+                                    @if($ch)
+                                        @if($ch['type'] === 'monthly_rental')
+                                            <span class="badge badge-info" style="font-size:10px;">Rental</span>
+                                            <div class="text-primary font-weight-bold" style="font-size:11px;">৳{{ number_format($ch['amount']) }}/mo</div>
+                                        @elseif($ch['type'] === 'one_time_sale')
+                                            <span class="badge badge-success" style="font-size:10px;">Sold</span>
+                                            <div class="text-success font-weight-bold" style="font-size:11px;">৳{{ number_format($ch['amount']) }}</div>
+                                            <span class="badge badge-{{ $ch['status']==='paid'?'success':($ch['status']==='waived'?'secondary':'danger') }}" style="font-size:9px;">{{ ucfirst($ch['status']) }}</span>
+                                        @elseif($ch['type'] === 'refundable_deposit')
+                                            <span class="badge badge-warning" style="font-size:10px;">Deposit</span>
+                                            <div class="text-warning font-weight-bold" style="font-size:11px;">৳{{ number_format($ch['amount']) }}</div>
+                                            <span class="badge badge-{{ $ch['status']==='paid'?'success':($ch['status']==='waived'?'secondary':'danger') }}" style="font-size:9px;">{{ ucfirst($ch['status']) }}</span>
+                                        @endif
+                                    @else
+                                        <span class="badge badge-light text-muted" style="font-size:10px;">Free</span>
+                                    @endif
+                                </td>
+                                <td><small>{{ $prod->updated_at ? $prod->updated_at->format('d M Y') : '—' }}</small></td>
+                                <td><small class="text-muted">{{ $prod->notes ?: '—' }}</small></td>
+                                <td>
+                                    <small>{{ ($installedByMap[$prod->id] ?? null) ?: '—' }}</small>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary ml-1" style="font-size:9px;padding:1px 5px;" onclick="openInstalledByModal({{ $prod->id }})" title="Set Installed By"><i class="fas fa-edit"></i></button>
+                                </td>
+                                <td><small>{{ ($assignedByMap[$prod->id] ?? null) ?: '—' }}</small></td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @else
+                <div style="text-align: center; padding: 30px; color: var(--cp-text-light);">
+                    <i class="fas fa-box-open fa-2x mb-2" style="opacity: 0.4;"></i>
+                    <p style="margin: 0; font-size: 14px;">No products assigned to this client</p>
+                </div>
+                @endif
+
+                @if($fiberUsages->count() > 0 || $fiberOutLogs->count() > 0)
+                <div style="margin-top: 14px; border-top: 1px solid #eee; padding-top: 12px;">
+                    <h6 style="font-size: 12px; font-weight: 700; color: var(--cp-text-light); text-transform: uppercase; margin-bottom: 8px;">
+                        <i class="fas fa-project-diagram mr-1"></i> Fiber / Cable Usage
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0" style="font-size: 12px;">
+                            <thead style="background: #f8f9fa;">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Fiber Code</th>
+                                    <th>Type</th>
+                                    <th>Core</th>
+                                    <th class="text-center">Used (m)</th>
+                                    <th>Date</th>
+                                    <th>Note</th>
+                                    <th>Installed By</th>
+                                    <th>Assigned By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $fiberRowIdx = 0; $totalFiberMeter = 0; @endphp
+                                @foreach($fiberUsages as $fUsage)
+                                @php $fiberRowIdx++; $totalFiberMeter += $fUsage->used_meter; @endphp
+                                <tr>
+                                    <td>{{ $fiberRowIdx }}</td>
+                                    <td><code class="text-primary">{{ $fUsage->fiberStock->fiber_code ?? '—' }}</code></td>
+                                    <td>{{ $fUsage->fiberStock->fiber_type ?? '—' }}</td>
+                                    <td>{{ $fUsage->fiberStock->core ?? '—' }}</td>
+                                    <td class="text-center"><span class="badge badge-info badge-pill">{{ $fUsage->used_meter }} m</span></td>
+                                    <td><small>{{ $fUsage->used_date ? $fUsage->used_date->format('d M Y') : '—' }}</small></td>
+                                    <td><small class="text-muted">{{ $fUsage->note ?: '—' }}</small></td>
+                                    <td><small>{{ $fUsage->technician->name ?? '—' }}</small></td>
+                                    <td><small>—</small></td>
+                                </tr>
+                                @endforeach
+                                @foreach($fiberOutLogs as $fLog)
+                                @php $fiberRowIdx++; $totalFiberMeter += $fLog->meter; @endphp
+                                <tr>
+                                    <td>{{ $fiberRowIdx }}</td>
+                                    <td><code class="text-primary">{{ $fLog->fiber_code ?? '—' }}</code></td>
+                                    <td>{{ $fLog->fiber_type ?? '—' }}</td>
+                                    <td>{{ $fLog->core ?? '—' }}</td>
+                                    <td class="text-center"><span class="badge badge-info badge-pill">{{ $fLog->meter }} m</span></td>
+                                    <td><small>{{ $fLog->date ? \Carbon\Carbon::parse($fLog->date)->format('d M Y') : '—' }}</small></td>
+                                    <td><small class="text-muted">{{ $fLog->note ?: '—' }}</small></td>
+                                    <td><small>{{ $fLog->technician_name ?: '—' }}</small></td>
+                                    <td><small>{{ $fLog->assigned_by_name ?: '—' }}</small></td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot style="background: #f8f9fa; font-weight: 700;">
+                                <tr>
+                                    <td colspan="4" class="text-right">Total Used:</td>
+                                    <td class="text-center"><span class="badge badge-warning badge-pill">{{ $totalFiberMeter }} m</span></td>
+                                    <td colspan="4"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                @endif
+
+                @if($outLogs->count() > 0)
+                <div style="margin-top: 14px; border-top: 1px solid #eee; padding-top: 12px;">
+                    <h6 style="font-size: 12px; font-weight: 700; color: var(--cp-text-light); text-transform: uppercase; margin-bottom: 8px;">
+                        <i class="fas fa-clipboard-list mr-1"></i> Out History
+                    </h6>
+                    @foreach($outLogs as $log)
+                    <div style="padding: 8px 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 6px; font-size: 12px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge badge-info badge-pill" style="font-size: 10px;">{{ $log->quantity }} item(s)</span>
+                                <span class="badge badge-secondary" style="font-size: 10px;">{{ $log->reason }}</span>
+                                @if($log->technician_name)
+                                <span class="text-muted ml-1" style="font-size: 10px;"><i class="fas fa-hard-hat mr-1"></i>{{ $log->technician_name }}</span>
+                                @endif
+                                @if($log->assigned_by_name)
+                                <span class="text-muted ml-1" style="font-size: 10px;"><i class="fas fa-user mr-1"></i>{{ $log->assigned_by_name }}</span>
+                                @endif
+                            </div>
+                            <small class="text-muted">{{ \Carbon\Carbon::parse($log->out_date)->format('d M Y') }}</small>
+                        </div>
+                        @if($log->remarks)
+                        <div style="margin-top: 4px; font-size: 11px; color: var(--cp-text-light);">
+                            <i class="fas fa-sticky-note mr-1"></i>{{ $log->remarks }}
+                        </div>
+                        @endif
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+            </div>
+            </div>
+        </div>
+        @endif
+
+        {{-- ===== Connection History Card ===== --}}
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-exchange-alt" style="background: rgba(23,162,184,0.1); color: #17a2b8;"></i>Connection History</h3>
+                <div class="d-flex align-items-center" style="gap:6px;">
+                    @if(isset($connectionTimeline))
+                    <span class="badge badge-info badge-pill" style="font-size:11px;">{{ $connectionTimeline->count() }}</span>
+                    @endif
+                    @if($__canAction('client_profile', 'edit'))
+                    <button type="button" class="btn btn-sm btn-outline-info" style="font-size:11px;padding:2px 9px;" onclick="$('#changeConnTypeModal').modal('show')">
+                        <i class="fas fa-exchange-alt mr-1"></i>Change Type
+                    </button>
+                    @endif
+                    <i class="fas fa-chevron-down cp-collapse-icon collapsed"></i>
+                </div>
+            </div>
+            <div class="cp-card-collapse collapsed">
+            <div class="cp-card-body">
+                {{-- Current connection info pills --}}
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                    <div style="background:rgba(23,162,184,0.04);border:1px solid var(--cp-border);border-radius:8px;padding:8px 14px;font-size:12px;">
+                        <div style="font-size:10px;color:#888;text-transform:uppercase;font-weight:700;margin-bottom:2px;">Current Type</div>
+                        @if(($client->connection_medium ?? '') === 'fiber')
+                            <span class="badge badge-success"><i class="fas fa-project-diagram mr-1"></i>Fiber</span>
+                        @else
+                            <span class="badge badge-secondary"><i class="fas fa-ethernet mr-1"></i>UTP (Cable)</span>
+                        @endif
+                    </div>
+                    @if($client->onu_monthly_charge > 0)
+                    <div style="background:#fff8f0;border:1px solid #ffd9a8;border-radius:8px;padding:8px 14px;font-size:12px;">
+                        <div style="font-size:10px;color:#888;text-transform:uppercase;font-weight:700;margin-bottom:2px;">ONU Monthly Rental</div>
+                        <strong style="color:#e67700;">৳{{ number_format($client->onu_monthly_charge) }}/mo</strong>
+                    </div>
+                    @endif
+                </div>
+
+                @if(isset($connectionTimeline) && $connectionTimeline->count() > 0)
+                <div style="position:relative;padding-left:20px;border-left:2px solid #d0e8f7;">
+                    @foreach($connectionTimeline as $event)
+                    @php
+                        $meta = json_decode($event->metadata ?? '{}', true) ?? [];
+                        $fromLabel = $meta['from_label'] ?? 'Unknown';
+                        $toLabel   = $meta['to_label'] ?? 'Unknown';
+                        $charge    = (float)($meta['charge'] ?? 0);
+                        $pStatus   = $meta['payment_status'] ?? 'free';
+                        $changedBy = $meta['changed_by'] ?? '—';
+                    @endphp
+                    <div style="position:relative;margin-bottom:16px;">
+                        <div style="position:absolute;left:-26px;top:2px;width:12px;height:12px;border-radius:50%;background:#17a2b8;border:2px solid #fff;box-shadow:0 0 0 2px #17a2b8;"></div>
+                        <div style="background:#f8fdff;border:1px solid #d0e8f7;border-radius:8px;padding:10px 14px;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span style="font-size:13px;font-weight:700;color:#2c3e50;">
+                                        <i class="fas fa-arrow-right text-info mr-1"></i>{{ $event->title }}
+                                    </span>
+                                </div>
+                                <small class="text-muted" style="font-size:11px;white-space:nowrap;margin-left:8px;">{{ \Carbon\Carbon::parse($event->created_at)->format('d M Y, h:i A') }}</small>
+                            </div>
+                            @if($event->description && $event->description !== 'Connection type changed from ' . $fromLabel . ' to ' . $toLabel . '.')
+                            <div style="font-size:12px;color:#555;margin-top:4px;"><i class="fas fa-comment-dots mr-1 text-muted"></i>{{ $event->description }}</div>
+                            @endif
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+                                @if($charge > 0)
+                                <span class="badge badge-{{ $pStatus==='paid'?'success':($pStatus==='waived'?'secondary':'danger') }}" style="font-size:10px;">
+                                    <i class="fas fa-money-bill-wave mr-1"></i>৳{{ number_format($charge) }} — {{ ucfirst($pStatus) }}
+                                </span>
+                                @else
+                                <span class="badge badge-light text-muted" style="font-size:10px;">No Upgrade Charge</span>
+                                @endif
+                                @if($changedBy && $changedBy !== '—')
+                                <span class="badge badge-light text-muted" style="font-size:10px;"><i class="fas fa-user mr-1"></i>{{ $changedBy }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                @else
+                <div style="text-align:center;padding:20px;color:#aaa;">
+                    <i class="fas fa-history fa-2x mb-2 d-block" style="color:#ddd;"></i>
+                    <p style="margin:0;font-size:13px;">No connection type changes recorded yet.</p>
+                    <p style="margin:4px 0 0;font-size:11px;color:#bbb;">Use "Change Type" to record a UTP ↔ Fiber upgrade with charge details.</p>
+                </div>
+                @endif
+            </div>
+            </div>
+        </div>
+
+        @if($__canAction('client_profile', 'ticket_history'))
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h3 class="cp-card-title"><i class="fas fa-ticket-alt" style="background: rgba(111,66,193,0.1); color: #6f42c1;"></i>Ticket History</h3>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-chevron-down cp-collapse-icon collapsed"></i>
+                </div>
+            </div>
+            <div class="cp-card-collapse collapsed" style="max-height: 0;">
+            <div class="cp-card-body" style="padding: 0;">
+                @php
+                    $clientTickets = \App\Models\Ticket::with(['category', 'technician', 'technicianAssignments.technician'])
+                        ->where('client_id', $client->id)
+                        ->orderBy('created_at', 'desc')
+                        ->take(10)
+                        ->get();
+                    $ticketPriorityColors = ['low' => '#17a2b8', 'medium' => '#007bff', 'high' => '#ffc107', 'urgent' => '#dc3545'];
+                    $ticketStatusColors = ['open' => 'warning', 'in_progress' => 'info', 'resolved' => 'success', 'closed' => 'secondary'];
+                @endphp
+                @if($clientTickets->count() > 0)
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f8f9fc; border-bottom: 2px solid #e9ecef;">
+                                <th style="padding: 10px 12px; font-weight: 700; color: #495057; white-space: nowrap;">Ticket</th>
+                                <th style="padding: 10px 12px; font-weight: 700; color: #495057;">Subject</th>
+                                <th style="padding: 10px 12px; font-weight: 700; color: #495057; text-align: center;">Priority</th>
+                                <th style="padding: 10px 12px; font-weight: 700; color: #495057; text-align: center;">Status</th>
+                                <th style="padding: 10px 12px; font-weight: 700; color: #495057;">Assigned To</th>
+                                <th style="padding: 10px 12px; font-weight: 700; color: #495057; white-space: nowrap;">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($clientTickets as $cTicket)
+                            <tr style="border-bottom: 1px solid #f0f0f0; transition: background 0.15s;" onmouseover="this.style.background='#f8f9fc'" onmouseout="this.style.background='transparent'">
+                                <td style="padding: 10px 12px; white-space: nowrap;">
+                                    <a href="{{ route('admin.support.tickets.show', $cTicket) }}" style="color: #6f42c1; font-weight: 600; text-decoration: none;">
+                                        #{{ $cTicket->ticket_no }}
+                                    </a>
+                                </td>
+                                <td style="padding: 10px 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ $cTicket->subject }}">
+                                    {{ Str::limit($cTicket->subject, 30) }}
+                                    @if($cTicket->category)
+                                    <div style="font-size: 11px; color: #999;">{{ $cTicket->category->name }}</div>
+                                    @endif
+                                </td>
+                                <td style="padding: 10px 12px; text-align: center;">
+                                    <span style="display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: {{ $ticketPriorityColors[$cTicket->priority] ?? '#6c757d' }}20; color: {{ $ticketPriorityColors[$cTicket->priority] ?? '#6c757d' }};">
+                                        {{ ucfirst($cTicket->priority) }}
+                                    </span>
+                                </td>
+                                <td style="padding: 10px 12px; text-align: center;">
+                                    <span class="badge badge-{{ $ticketStatusColors[$cTicket->status] ?? 'secondary' }}" style="font-size: 11px;">
+                                        {{ ucfirst(str_replace('_', ' ', $cTicket->status)) }}
+                                    </span>
+                                </td>
+                                <td style="padding: 10px 12px; font-size: 12px;">
+                                    @php
+                                        $assignees = $cTicket->technicianAssignments->pluck('technician.name')->filter()->toArray();
+                                        if (empty($assignees) && $cTicket->technician) {
+                                            $assignees = [$cTicket->technician->name];
+                                        }
+                                    @endphp
+                                    @if(!empty($assignees))
+                                        {{ implode(', ', array_slice($assignees, 0, 2)) }}
+                                        @if(count($assignees) > 2)
+                                        <span style="color: #999;">+{{ count($assignees) - 2 }}</span>
+                                        @endif
+                                    @else
+                                        <span style="color: #ccc;">Unassigned</span>
+                                    @endif
+                                </td>
+                                <td style="padding: 10px 12px; font-size: 12px; color: #666; white-space: nowrap;">
+                                    {{ $cTicket->created_at->format('d M Y') }}
+                                    <div style="font-size: 10px; color: #999;">{{ $cTicket->created_at->format('h:i A') }}</div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                @php $totalClientTickets = \App\Models\Ticket::where('client_id', $client->id)->count(); @endphp
+                @if($totalClientTickets > 10)
+                <div style="text-align: center; padding: 10px; border-top: 1px solid #f0f0f0;">
+                    <a href="{{ route('admin.support.tickets', ['client_id' => $client->id]) }}" style="font-size: 12px; color: #6f42c1; font-weight: 600; text-decoration: none;">
+                        View All {{ $totalClientTickets }} Tickets <i class="fas fa-arrow-right" style="font-size: 10px;"></i>
+                    </a>
+                </div>
+                @endif
+                @else
+                <div style="text-align: center; padding: 30px; color: var(--cp-text-light);">
+                    <i class="fas fa-ticket-alt fa-2x mb-2" style="opacity: 0.4;"></i>
+                    <p style="margin: 0; font-size: 14px;">No tickets found for this client</p>
+                </div>
+                @endif
+            </div>
+            </div>
+        </div>
+        @endif
+
+    </div>
+
+    <div class="col-lg-4">
+        <div class="cp-sidebar">
+
+            @if($__canAction('client_profile', 'sync_client') || $__canAction('client_profile', 'activate_client') || $__canAction('client_profile', 'device_control') || $__canAction('client_profile', 'send_sms'))
+            <div class="cp-card">
+                <div class="cp-card-header">
+                    <h3 class="cp-card-title"><i class="fas fa-gamepad" style="background: rgba(40,167,69,0.1); color: var(--cp-success);"></i>Device Control</h3>
+                </div>
+                <div class="cp-card-body" style="padding: 14px;">
+                    @if($__canAction('client_profile', 'sync_client'))
+                    <form action="{{ route('admin.clients.sync', $client) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="cp-device-btn info">
+                            <i class="fas fa-sync"></i> Sync Status
+                        </button>
+                    </form>
+                    @endif
+                    @if($__canAction('client_profile', 'device_control'))
+                    @if($client->connection_status == 'online')
+                    <form action="{{ route('admin.clients.disconnect', $client) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="cp-device-btn warning" onclick="return confirm('Disconnect this client?')">
+                            <i class="fas fa-power-off"></i> Disconnect Session
+                        </button>
+                    </form>
+                    @endif
+                    @if($client->onu_serial)
+                    <button type="button" class="cp-device-btn secondary" id="btn-reboot-onu" onclick="rebootOnuAction()">
+                        <i class="fas fa-redo" id="reboot-onu-icon"></i> <span id="reboot-onu-text">Reboot ONU</span>
+                    </button>
+                    @endif
+                    @endif
+                    @if($__canAction('client_profile', 'activate_client'))
+                    @if($client->status == 'active')
+                    <form action="{{ route('admin.clients.disable', $client) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="cp-device-btn danger" onclick="return confirm('Disable this client?')">
+                            <i class="fas fa-ban"></i> Disable Client
+                        </button>
+                    </form>
+                    @else
+                    <form action="{{ route('admin.clients.enable', $client) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="cp-device-btn success">
+                            <i class="fas fa-check-circle"></i> Enable Client
+                        </button>
+                    </form>
+                    @endif
+                    @endif
+                    @if($__canAction('client_profile', 'send_sms'))
+                    @if($client->phone)
+                    <button type="button" class="cp-device-btn primary" data-toggle="modal" data-target="#quickSmsModal">
+                        <i class="fas fa-sms"></i> Send SMS
+                    </button>
+                    @endif
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            @if($__canAction('client_profile', 'billing_summary'))
+            <div class="cp-card">
+                <div class="cp-card-header">
+                    <h3 class="cp-card-title"><i class="fas fa-money-bill-wave" style="background: rgba(40,167,69,0.1); color: var(--cp-success);"></i>Billing Summary</h3>
+                </div>
+                <div class="cp-card-body" style="padding: 0;">
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 13px; color: var(--cp-text-light);">Monthly Bill</span>
+                        <span style="font-size: 15px; font-weight: 700; color: var(--cp-primary);">৳{{ $client->is_free ? '0.00' : number_format($client->monthly_fee ?? 0, 2) }}</span>
+                    </div>
+                    @if($client->is_free)
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center; background: #e8f4f8;">
+                        <span style="font-size: 13px; font-weight: 600; color: var(--cp-info);"><i class="fas fa-gift mr-1"></i>Monthly Due</span>
+                        <span style="background: #17a2b8; color: #fff; padding: 2px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;">FREE</span>
+                    </div>
+                    @else
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center; {{ $clientTotalDue > 0 ? 'background: #fff5f5;' : 'background: #f0faf4;' }}">
+                        <span style="font-size: 13px; font-weight: 600; color: {{ $clientTotalDue > 0 ? 'var(--cp-danger)' : 'var(--cp-success)' }};">Monthly Due</span>
+                        <span style="font-size: 18px; font-weight: 700; color: {{ $clientTotalDue > 0 ? 'var(--cp-danger)' : 'var(--cp-success)' }};">৳{{ number_format($clientTotalDue ?? 0, 2) }}</span>
+                    </div>
+                    @endif
+                    @if($remainingAdvance > 0)
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center; background: #f0faf4;">
+                        <span style="font-size: 13px; font-weight: 600; color: var(--cp-success);">Advance Balance</span>
+                        <span style="font-size: 15px; font-weight: 700; color: var(--cp-success);">৳{{ number_format($remainingAdvance ?? 0, 2) }}</span>
+                    </div>
+                    @endif
+                    @if($client->billing_starts_at && $client->billing_starts_at->isFuture())
+                    <div style="padding: 12px 20px; border-bottom: 1px solid #f1f3f5; background: #fff8e1; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-clock" style="color: #e67e22; font-size: 16px;"></i>
+                        <div>
+                            <div style="font-size: 12px; font-weight: 700; color: #e67e22;">Billing starts: {{ $client->billing_starts_at->format('F Y') }}</div>
+                            <div style="font-size: 11px; color: #888;">Payment collected now → saved as <strong>Advance</strong> and auto-applied when first bill is generated.</div>
+                        </div>
+                    </div>
+                    @endif
+                    @php
+                        $installCharge = (float)$client->installation_charge ?: (float)$client->signup_fee ?: 0;
+                        $installTotalPaid = (float) \App\Models\ClientServiceCharge::where('client_id', $client->id)
+                            ->where('charge_type', 'Installation Charge')
+                            ->whereNotNull('paid_by')
+                            ->where('amount', '>', 0)
+                            ->sum('amount');
+                        $installFullyPaid = $installTotalPaid >= $installCharge && $installCharge > 0;
+                        $installRemaining = max(0, $installCharge - $installTotalPaid);
+                    @endphp
+                    @if($installCharge > 0)
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #f1f3f5; {{ $installFullyPaid ? 'background: #f0faf4;' : 'background: #fff5f5;' }}">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 13px; font-weight: 600; color: {{ $installFullyPaid ? 'var(--cp-success)' : 'var(--cp-danger)' }};">
+                                <i class="fas fa-tools mr-1" style="font-size: 11px;"></i>Installation Charge
+                            </span>
+                            <span style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 15px; font-weight: 700; color: {{ $installFullyPaid ? 'var(--cp-success)' : 'var(--cp-danger)' }};">৳{{ number_format($installCharge, 2) }}</span>
+                                @if($installFullyPaid)
+                                <span style="background: #28a745; color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">PAID</span>
+                                @endif
+                            </span>
+                        </div>
+                        @if($installTotalPaid > 0 && !$installFullyPaid)
+                        <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px;">
+                            <span style="color: var(--cp-success);"><i class="fas fa-check-circle mr-1"></i>Paid: ৳{{ number_format($installTotalPaid, 2) }}</span>
+                            <span style="color: var(--cp-danger); font-weight: 600;">Due: ৳{{ number_format($installRemaining, 2) }}</span>
+                        </div>
+                        <div style="background: #e9ecef; border-radius: 4px; height: 6px; margin-top: 6px; overflow: hidden;">
+                            <div style="background: #28a745; height: 100%; width: {{ min(100, round(($installTotalPaid / $installCharge) * 100)) }}%; border-radius: 4px;"></div>
+                        </div>
+                        @endif
+                    </div>
+                    @else
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #f1f3f5; background: #f0faf4;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 13px; font-weight: 600; color: var(--cp-success);">
+                                <i class="fas fa-tools mr-1" style="font-size: 11px;"></i>Installation Charge
+                            </span>
+                            <span style="background: #6c757d; color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 700;">FREE</span>
+                        </div>
+                    </div>
+                    @endif
+                    @if($client->is_free)
+                    <div style="padding: 14px 20px; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center; background: #e8f4f8;">
+                        <span style="font-size: 13px; color: var(--cp-info); font-weight: 600;"><i class="fas fa-gift mr-1"></i>Installation Free</span>
+                        @if($client->free_reason)
+                        <span style="font-size: 12px; color: var(--cp-text-light);">{{ $client->free_reason }}</span>
+                        @endif
+                    </div>
+                    @endif
+                </div>
+                <div style="padding: 14px;">
+                    @if($__canAction('client_profile', 'bill_submit') && !$client->is_free)
+                    <button type="button" class="cp-device-btn success" data-toggle="modal" data-target="#billSubmitModal" style="margin-bottom: 4px;">
+                        <i class="fas fa-money-bill-wave"></i>
+                        Bill Submit
+                        @if($clientTotalDue > 0)
+                        <span style="margin-left: auto; background: rgba(255,255,255,0.9); color: var(--cp-success); padding: 2px 8px; border-radius: 6px; font-size: 11px;">৳{{ number_format($clientTotalDue ?? 0) }}</span>
+                        @endif
+                    </button>
+                    @endif
+                    @if($__canAction('client_profile', 'generate_bill'))
+                    <button type="button" class="cp-device-btn secondary" data-toggle="modal" data-target="#generateBillModal" style="margin-bottom: 4px;">
+                        <i class="fas fa-file-invoice"></i> Generate Bill
+                    </button>
+                    @endif
+                    @if($__canAction('client_profile', 'pay_installation'))
+                    @if($installCharge > 0 && !$installFullyPaid)
+                    <button type="button" class="cp-device-btn warning" data-toggle="modal" data-target="#payInstallModal" style="margin-bottom: 4px;">
+                        <i class="fas fa-tools"></i>
+                        Pay Installation Charge
+                        <span style="margin-left: auto; background: rgba(255,255,255,0.9); color: var(--cp-warning); padding: 2px 8px; border-radius: 6px; font-size: 11px;">৳{{ number_format($installRemaining) }}</span>
+                    </button>
+                    @elseif($installCharge > 0 && $installFullyPaid)
+                    <form action="{{ route('admin.clients.unpay-installation-charge', $client) }}" method="POST" style="display: inline; width: 100%;" onsubmit="return confirm('Mark installation charge as due again?');">
+                        @csrf
+                        <button type="submit" class="cp-device-btn secondary" style="margin-bottom: 4px; width: 100%; opacity: 0.7;">
+                            <i class="fas fa-undo"></i>
+                            Undo Installation Payment
+                        </button>
+                    </form>
+                    @endif
+                    @endif
+                    @if($__canAction('client_profile', 'extend_deadline'))
+                    <button type="button" class="cp-device-btn secondary" id="profileDeadlineBtn" style="margin-bottom: 0;">
+                        <i class="fas fa-calendar-plus"></i>
+                        Extend Deadline
+                        @if($client->temp_deadline_date)
+                        <span style="margin-left: auto; background: rgba(255,193,7,0.2); color: #e67700; padding: 2px 8px; border-radius: 6px; font-size: 11px;">{{ \Carbon\Carbon::parse($client->temp_deadline_date)->format('d M Y') }}</span>
+                        @endif
+                    </button>
+                    @endif
+                </div>
+            </div>
+            @endif
+
+            @if($__canAction('client_profile', 'remarks'))
+            <div class="cp-card">
+                <div class="cp-card-header">
+                    <h3 class="cp-card-title"><i class="fas fa-sticky-note" style="background: rgba(108,117,125,0.1); color: #6c757d;"></i>Remarks</h3>
+                    <a href="javascript:void(0)" id="editRemarksBtn" style="font-size: 12px; color: var(--cp-primary); font-weight: 600; text-decoration: none;"><i class="fas fa-edit" style="font-size: 10px;"></i> Edit</a>
+                </div>
+                <div class="cp-card-body">
+                    <div id="remarksDisplay">
+                        @if($client->remarks)
+                        <p style="font-size: 13px; color: var(--cp-text-dark); margin: 0; white-space: pre-wrap;">{{ $client->remarks }}</p>
+                        @else
+                        <p style="font-size: 13px; color: var(--cp-text-light); margin: 0; font-style: italic;">No remarks added</p>
+                        @endif
+                    </div>
+                    <div id="remarksEditForm" style="display: none;">
+                        <textarea id="remarksInput" class="form-control" rows="3" style="font-size: 13px; border-radius: 8px; resize: vertical;">{{ $client->remarks }}</textarea>
+                        <div style="margin-top: 8px; text-align: right;">
+                            <button type="button" class="btn btn-sm btn-light" id="cancelRemarksBtn" style="border-radius: 6px; font-size: 12px;">Cancel</button>
+                            <button type="button" class="btn btn-sm btn-primary" id="saveRemarksBtn" style="border-radius: 6px; font-size: 12px;"><i class="fas fa-save mr-1"></i>Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+        </div>
+    </div>
+</div>
+
+@php
+    $modalData = $client->getBillingSummary();
+    $modalDue = $modalData['due'];
+    $modalRemainAdv = $modalData['advance'];
+@endphp
+@if($__canAction('client_profile', 'pay_installation'))
+@if(isset($installCharge) && $installCharge > 0 && !$installFullyPaid)
+<div class="modal fade" id="payInstallModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #e67700 0%, #d9480f 100%); color: #fff; border-radius: 12px 12px 0 0; padding: 14px 20px;">
+                <h5 class="modal-title" style="font-weight: 700;"><i class="fas fa-tools mr-2"></i>Pay Installation Charge</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form action="{{ route('admin.clients.pay-installation-charge', $client) }}" method="POST" id="installChargeForm">
+                @csrf
+                <div class="modal-body" style="padding: 20px;">
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong style="font-size: 14px;">{{ $client->name }}</strong>
+                                <div style="font-size: 12px; color: var(--cp-text-light);">{{ $client->client_id }}</div>
+                            </div>
+                            <div class="text-right">
+                                <div style="font-size: 12px; color: var(--cp-text-light);">Remaining Due</div>
+                                <strong style="font-size: 18px; color: var(--cp-danger);">৳{{ number_format($installRemaining, 2) }}</strong>
+                                @if($installTotalPaid > 0)
+                                <div style="font-size: 11px; color: var(--cp-success);">Paid: ৳{{ number_format($installTotalPaid, 2) }} / ৳{{ number_format($installCharge, 2) }}</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-money-bill mr-1"></i>Amount (৳)</label>
+                        <input type="number" name="amount" id="ic_amount" class="form-control form-control-lg text-center" required min="1" step="0.01" value="{{ max(1, $installRemaining) }}" onchange="checkIcAmountDiff()" onkeyup="checkIcAmountDiff()" style="border-radius: 10px; font-weight: 700; font-size: 20px;">
+                        <small class="text-muted">Enter amount collected from client</small>
+                        <small id="ic_amount_warning" class="text-warning mt-1" style="display: none;"><i class="fas fa-exclamation-triangle mr-1"></i>Amount differs from charge - Note required!</small>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-credit-card mr-1"></i>Payment Method</label>
+                        <select name="payment_method_id" class="form-control" required id="ic_payment_method" onchange="toggleIcPaymentFields()" style="border-radius: 8px;">
+                            @foreach(auth()->user()->allowedPaymentMethods() as $method)
+                            <option value="{{ $method->id }}" data-name="{{ strtolower($method->name) }}">{{ $method->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div id="ic_online_payment_fields" style="display: none;">
+                        <div class="form-group">
+                            <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-hashtag mr-1"></i>Transaction ID <span class="text-danger">*</span></label>
+                            <input type="text" name="transaction_id" id="ic_trx_id" class="form-control" placeholder="Enter transaction ID" style="border-radius: 8px;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-phone mr-1"></i><span id="ic_number_label">bKash Number</span> <span class="text-danger">*</span></label>
+                            <input type="text" name="sender_number" id="ic_sender_number" class="form-control" placeholder="" style="border-radius: 8px;">
+                        </div>
+                    </div>
+                    <div class="form-group" id="ic_cash_receipt_field" style="display: none;">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-receipt mr-1"></i>Money Receipt No.</label>
+                        <input type="text" name="money_receipt_no" id="ic_money_receipt" class="form-control" placeholder="Enter money receipt number" style="border-radius: 8px;">
+                    </div>
+                    <div class="form-group" id="ic_reason_group" style="display: none;">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-comment-alt mr-1"></i>Reason <span class="text-danger">*</span></label>
+                        @if(!empty($paymentReasons))
+                        <select class="form-control mb-2" style="border-radius: 8px;" onchange="if(this.value){document.getElementById('ic_reason').value=this.value;}">
+                            <option value="">-- Select reason --</option>
+                            @foreach($paymentReasons as $reason)
+                            <option value="{{ $reason }}">{{ $reason }}</option>
+                            @endforeach
+                        </select>
+                        @endif
+                        <input type="text" name="notes_reason" id="ic_reason" class="form-control" placeholder="Why is the amount different?" style="border-radius: 8px;">
+                        <small class="text-muted" style="font-size: 11px;">Required when amount differs from charge</small>
+                    </div>
+                    <div class="form-group" id="ic_notes_group">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-sticky-note mr-1"></i>Notes</label>
+                        <textarea name="notes" id="ic_notes" class="form-control" rows="2" placeholder="Payment notes..." style="border-radius: 8px;"></textarea>
+                    </div>
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="ic_send_sms" name="send_sms" value="1" checked>
+                        <label class="custom-control-label" for="ic_send_sms" style="font-size: 13px;"><i class="fas fa-sms mr-1"></i>Send SMS notification</label>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #f1f3f5;">
+                    <button type="button" class="btn btn-light" data-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                    <button type="submit" class="btn btn-warning text-white" style="border-radius: 8px; font-weight: 600;">
+                        <i class="fas fa-check mr-1"></i> Submit Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+@endif
+
+@if($__canAction('client_profile', 'bill_submit'))
+<div class="modal fade" id="billSubmitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: #fff; border-radius: 12px 12px 0 0; padding: 14px 20px;">
+                <h5 class="modal-title" style="font-weight: 700;"><i class="fas fa-money-bill-wave mr-2"></i>Bill Submit</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form action="{{ route('admin.clients.quick-payment', $client) }}" method="POST" id="billSubmitForm">
+                @csrf
+                <input type="hidden" name="redirect_to" value="{{ url()->previous() }}">
+                <div class="modal-body" style="padding: 20px;">
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong style="font-size: 14px;">{{ $client->name }}</strong>
+                                <div style="font-size: 12px; color: var(--cp-text-light);">{{ $client->client_id }}</div>
+                            </div>
+                            <div class="text-right">
+                                <div style="font-size: 12px; color: var(--cp-text-light);">Due</div>
+                                <strong style="font-size: 18px; color: {{ $modalDue > 0 ? 'var(--cp-danger)' : 'var(--cp-success)' }};">৳{{ number_format($modalDue ?? 0, 2) }}</strong>
+                                @if($modalRemainAdv > 0)
+                                <div style="font-size: 12px; color: var(--cp-success);">Advance: ৳{{ number_format($modalRemainAdv ?? 0, 2) }}</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-money-bill mr-1"></i>Amount (৳)</label>
+                        <input type="number" name="amount" id="bs_amount" class="form-control form-control-lg text-center" required min="1" step="0.01" value="{{ max(1, $modalDue) }}" onchange="checkBsAmountDiff()" onkeyup="checkBsAmountDiff()" style="border-radius: 10px; font-weight: 700; font-size: 20px;">
+                        <small class="text-muted">Enter amount collected from client</small>
+                        <small id="bs_amount_warning" class="text-warning mt-1" style="display: none;"><i class="fas fa-exclamation-triangle mr-1"></i>Amount differs from due - Note required!</small>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-credit-card mr-1"></i>Payment Method</label>
+                        <select name="payment_method_id" class="form-control" required id="bs_payment_method" onchange="toggleOnlinePaymentFields()" style="border-radius: 8px;">
+                            @foreach(auth()->user()->allowedPaymentMethods() as $method)
+                            <option value="{{ $method->id }}" data-name="{{ strtolower($method->name) }}">{{ $method->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div id="bs_online_payment_fields" style="display: none;">
+                        <div class="form-group">
+                            <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-hashtag mr-1"></i>Transaction ID <span class="text-danger">*</span></label>
+                            <input type="text" name="transaction_id" id="bs_trx_id" class="form-control" placeholder="Enter transaction ID" style="border-radius: 8px;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-phone mr-1"></i><span id="bs_number_label">bKash Number</span> <span class="text-danger">*</span></label>
+                            <input type="text" name="sender_number" id="bs_sender_number" class="form-control" placeholder="" style="border-radius: 8px;">
+                        </div>
+                    </div>
+                    <div class="form-group" id="bs_cash_receipt_field" style="display: none;">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-receipt mr-1"></i>Money Receipt No.</label>
+                        <input type="text" name="money_receipt_no" id="bs_money_receipt" class="form-control" placeholder="Enter money receipt number" style="border-radius: 8px;">
+                    </div>
+                    <div class="form-group" id="bs_reason_group" style="display: none;">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-comment-alt mr-1"></i>Reason <span class="text-danger">*</span></label>
+                        @if(!empty($paymentReasons))
+                        <select class="form-control mb-2" style="border-radius: 8px;" onchange="if(this.value){document.getElementById('bs_reason').value=this.value;}">
+                            <option value="">-- Select reason --</option>
+                            @foreach($paymentReasons as $reason)
+                            <option value="{{ $reason }}">{{ $reason }}</option>
+                            @endforeach
+                        </select>
+                        @endif
+                        <input type="text" name="notes_reason" id="bs_reason" class="form-control" placeholder="Why is the amount different from due?" style="border-radius: 8px;">
+                        <small class="text-muted" style="font-size: 11px;">Required when amount differs from due</small>
+                    </div>
+                    <div class="form-group" id="bs_notes_group">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-sticky-note mr-1"></i>Notes</label>
+                        <textarea name="notes" id="bs_notes" class="form-control" rows="2" placeholder="Payment notes..." style="border-radius: 8px;"></textarea>
+                    </div>
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="bs_send_sms" name="send_sms" value="1" checked>
+                        <label class="custom-control-label" for="bs_send_sms" style="font-size: 13px;"><i class="fas fa-sms mr-1"></i>Send SMS notification</label>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #f1f3f5;">
+                    <button type="button" class="btn btn-light" data-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                    <button type="submit" class="btn btn-success" style="border-radius: 8px;"><i class="fas fa-check mr-1"></i>Submit Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+@if($__canAction('client_profile', 'add_payment'))
+<div class="modal fade" id="addPaymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%); color: #fff; border-radius: 12px 12px 0 0; padding: 14px 20px;">
+                <h5 class="modal-title" style="font-weight: 700;"><i class="fas fa-shopping-cart mr-2"></i>Additional Payment</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form action="{{ route('admin.clients.additional-payments.store', $client) }}" method="POST" id="addPaymentForm">
+                @csrf
+                <input type="hidden" name="redirect_to" value="{{ route('admin.clients.show', $client) }}">
+                <div class="modal-body" style="padding: 20px;">
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong style="font-size: 14px;">{{ $client->name }}</strong>
+                                <div style="font-size: 12px; color: #888;">{{ $client->client_id }} | {{ $client->phone }}</div>
+                            </div>
+                            <div class="text-right">
+                                <div style="font-size: 12px; color: #888;">Package</div>
+                                <strong style="font-size: 14px; color: #333;">{{ $client->package->name ?? 'N/A' }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-tag mr-1"></i>Payment Type <span class="text-danger">*</span></label>
+                                <select name="payment_type" class="form-control" required style="border-radius: 8px;">
+                                    <option value="">Select Type</option>
+                                    @foreach($addPaymentTypes as $key => $label)
+                                    <option value="{{ $key }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-money-bill mr-1"></i>Amount (৳) <span class="text-danger">*</span></label>
+                                <input type="number" name="amount" class="form-control" step="0.01" min="0.01" required placeholder="0.00" style="border-radius: 8px;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-calendar mr-1"></i>Payment Date <span class="text-danger">*</span></label>
+                                <input type="date" name="payment_date" class="form-control" value="{{ date('Y-m-d') }}" required style="border-radius: 8px;">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-credit-card mr-1"></i>Payment Method <span class="text-danger">*</span></label>
+                                <select name="payment_method_id" class="form-control" required id="ap_payment_method" style="border-radius: 8px;">
+                                    @foreach($addPaymentMethods as $method)
+                                    <option value="{{ $method->id }}" data-name="{{ strtolower($method->name) }}">{{ $method->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" id="ap_cash_receipt_field" style="display: none;">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-receipt mr-1"></i>Money Receipt No.</label>
+                        <input type="text" name="money_receipt_no" class="form-control" placeholder="Enter money receipt number" style="border-radius: 8px;">
+                    </div>
+                    <div id="ap_online_fields" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-hashtag mr-1"></i>Transaction ID <span class="text-danger">*</span></label>
+                                    <input type="text" name="transaction_id" id="ap_trx_id" class="form-control" placeholder="Enter transaction ID" style="border-radius: 8px;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-phone mr-1"></i><span id="ap_number_label">Account Number</span> <span class="text-danger">*</span></label>
+                                    <input type="text" name="sender_number" id="ap_sender_number" class="form-control" placeholder="Enter account number" style="border-radius: 8px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-info-circle mr-1"></i>Description</label>
+                        <input type="text" name="description" class="form-control" placeholder="e.g., TP-Link Router, ONU Device" style="border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-sticky-note mr-1"></i>Remarks</label>
+                        <textarea name="remarks" class="form-control" rows="2" placeholder="Additional notes..." style="border-radius: 8px;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #f1f3f5;">
+                    <a href="{{ route('admin.clients.additional-payments.index', $client) }}" class="btn btn-outline-info btn-sm" style="border-radius: 8px;"><i class="fas fa-list mr-1"></i>View All</a>
+                    <button type="button" class="btn btn-light" data-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="border-radius: 8px; background: #6f42c1; border-color: #6f42c1;"><i class="fas fa-save mr-1"></i>Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+@if($__canAction('client_profile', 'send_sms'))
+@if($client->phone)
+<div class="modal fade" id="quickSmsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+            <form action="{{ route('admin.sms.individual.send') }}" method="POST" id="quickSmsForm">
+                @csrf
+                <input type="hidden" name="client_id" value="{{ $client->id }}">
+                <input type="hidden" name="redirect_to" value="{{ route('admin.clients.show', $client) }}">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--cp-primary) 0%, #2a5298 100%); color: #fff; border-radius: 12px 12px 0 0; padding: 14px 20px;">
+                    <h5 class="modal-title" style="font-weight: 700;"><i class="fas fa-sms mr-2"></i>Send SMS to {{ $client->name }}</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body" style="padding: 20px;">
+                    <div style="font-size: 12px; color: var(--cp-text-light); margin-bottom: 12px;">Phone: <strong>{{ $client->phone }}</strong></div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;">Message <span class="text-danger">*</span></label>
+                        <textarea name="message" class="form-control" rows="4" required id="quickSmsMessage" placeholder="Type your message..." style="border-radius: 8px;"></textarea>
+                        <small class="text-muted">Characters: <span id="quickSmsCharCount">0</span> | SMS parts: <span id="quickSmsParts">1</span></small>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;">Quick Templates</label>
+                        <select class="form-control form-control-sm" id="quickSmsTemplate" style="border-radius: 8px;">
+                            <option value="">-- Select Template --</option>
+                            <option value="Dear {{ $client->name }}, your bill for this month is BDT {{ number_format($client->monthly_fee ?? 0) }}. Please pay: https://softynex.me/payment Thank you!">Monthly Bill Reminder</option>
+                            <option value="Dear {{ $client->name }}, your internet service has been restored. Thank you for your payment!">Service Restored</option>
+                            <option value="Dear {{ $client->name }}, your internet service will be suspended. Pay now: https://softynex.me/payment">Suspension Warning</option>
+                            <option value="Dear {{ $client->name }}, your due amount is BDT {{ number_format($client->due_amount ?? 0) }}. Pay online: https://softynex.me/payment - SOFTYNEX">Due Payment Reminder</option>
+                        </select>
+                    </div>
+                    <div style="margin-top:6px;">
+                        <button type="button" class="btn btn-sm btn-outline-primary" style="border-radius:6px;font-size:12px;" onclick="appendPayLink()">
+                            <i class="fas fa-link mr-1"></i>Add Payment Link
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #f1f3f5;">
+                    <button type="button" class="btn btn-light" data-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="border-radius: 8px;"><i class="fas fa-paper-plane mr-1"></i>Send SMS</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+@endif
+
+@if($__canAction('client_profile', 'extend_deadline'))
+<div class="modal fade" id="profileDeadlineModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #343a40 0%, #495057 100%); color: #fff; border-radius: 12px 12px 0 0; padding: 14px 20px;">
+                <h5 class="modal-title" style="font-weight: 700;"><i class="fas fa-calendar-plus mr-2"></i>Extend Deadline</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form id="profileDeadlineForm">
+                @csrf
+                <div class="modal-body" style="padding: 20px;">
+                    <div style="margin-bottom: 16px;">
+                        <strong>Client:</strong> <span style="color: var(--cp-primary);">{{ $client->name }}</span>
+                        <span class="ml-2 cp-badge {{ $client->status == 'active' ? 'cp-badge-active' : 'cp-badge-inactive' }}">{{ ucfirst($client->status) }}</span>
+                    </div>
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div><i class="fas fa-clock mr-1" style="color: var(--cp-text-light);"></i><span style="font-size: 13px;">Current Expire:</span>
+                                <strong style="margin-left: 4px;">{{ $client->expire_date ? \Carbon\Carbon::parse($client->expire_date)->format('d M Y') : 'N/A' }}</strong>
+                            </div>
+                        </div>
+                        @if($client->temp_deadline_date)
+                        <div style="margin-top: 8px;" id="profileExtendedInfo">
+                            <i class="fas fa-calendar-check mr-1" style="color: var(--cp-success);"></i><strong>Extended To:</strong>
+                            <strong style="color: var(--cp-success); margin-left: 4px;">{{ \Carbon\Carbon::parse($client->temp_deadline_date)->format('d M Y') }}</strong>
+                            <button type="button" class="btn btn-sm btn-outline-danger ml-2 profile-clear-deadline-btn" style="padding: 1px 8px; font-size: 11px; border-radius: 6px;">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                        @endif
+                    </div>
+                    @if($client->status == 'inactive')
+                    <div style="background: #fff8e1; border-left: 3px solid var(--cp-warning); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 16px; font-size: 13px;">
+                        <i class="fas fa-bolt mr-1" style="color: var(--cp-warning);"></i>This client is <strong>inactive</strong>. Extending deadline will <strong>auto-activate</strong> the connection.
+                    </div>
+                    @endif
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;">New Deadline Date</label>
+                        <input type="date" class="form-control" id="pDeadlineDate" name="deadline_date" required min="{{ date('Y-m-d') }}" style="border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;">Reason</label>
+                        <select class="form-control mb-2" id="pDeadlineReasonPreset" style="border-radius: 8px;">
+                            <option value="">-- Select reason --</option>
+                            @foreach($deadlineReasons as $r)
+                            <option value="{{ $r }}">{{ $r }}</option>
+                            @endforeach
+                        </select>
+                        <input type="text" class="form-control" id="pDeadlineReason" name="reason" placeholder="Enter reason..." required style="border-radius: 8px;">
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #f1f3f5;">
+                    <button type="button" class="btn btn-light" data-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                    <button type="submit" class="btn btn-dark" id="pSubmitDeadlineBtn" style="border-radius: 8px;"><i class="fas fa-calendar-check mr-1"></i>Extend Deadline</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+<div class="modal fade" id="pingModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 560px;">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="padding: 10px 16px; border-bottom: 1px solid #f1f3f5;">
+                <h6 class="modal-title" style="font-weight: 700; font-size: 13px;"><i class="fas fa-satellite-dish mr-2" style="color: var(--cp-info);"></i>Ping Test — <code id="pingModalIP" style="font-size: 12px;">{{ $client->session_ip ?: ($client->ip_address ?? 'N/A') }}</code></h6>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body" style="padding: 12px 16px;">
+                <div class="d-flex align-items-center mb-2" style="gap: 6px;">
+                    <div class="input-group input-group-sm" style="max-width: 90px;">
+                        <div class="input-group-prepend"><span class="input-group-text" style="font-size: 10px; padding: 2px 6px; border-radius: 6px 0 0 6px;">Count</span></div>
+                        <input type="number" id="pingCount" class="form-control" value="20" min="1" max="50" style="font-size: 11px; padding: 2px 6px; border-radius: 0 6px 6px 0;">
+                    </div>
+                    <button class="btn btn-sm" style="background: var(--cp-success); color: #fff; border-radius: 6px; font-size: 11px; padding: 3px 8px;" onclick="doPing('client')" id="btnClientPing"><i class="fas fa-desktop mr-1"></i>Client Side</button>
+                    <button class="btn btn-sm" style="background: var(--cp-primary); color: #fff; border-radius: 6px; font-size: 11px; padding: 3px 8px;" onclick="doPing('mikrotik')" id="btnMikrotikPing"><i class="fas fa-server mr-1"></i>MikroTik Side</button>
+                    <span id="pingSpinner" class="ml-auto" style="display:none;"><i class="fas fa-circle-notch fa-spin" style="color: var(--cp-info);"></i></span>
+                </div>
+                <pre id="pingTerminal" style="background: #1e1e2e; color: #cdd6f4; font-family: 'SF Mono','Cascadia Code','Courier New',monospace; font-size: 11px; padding: 10px 12px; margin: 0; min-height: 180px; max-height: 280px; overflow-y: auto; line-height: 1.5; white-space: pre; border-radius: 8px;"></pre>
+                <div class="d-flex mt-2 pt-2" style="gap: 16px; border-top: 1px solid #f1f3f5;" id="pingSummaryRow">
+                    <div class="text-center"><div style="font-size: 9px; color: var(--cp-text-light); text-transform: uppercase;">MIN</div><strong id="pingMin" style="font-size: 14px; color: var(--cp-success);">--</strong><small style="color: var(--cp-text-light);"> ms</small></div>
+                    <div class="text-center"><div style="font-size: 9px; color: var(--cp-text-light); text-transform: uppercase;">AVG</div><strong id="pingAvg" style="font-size: 14px; color: var(--cp-primary);">--</strong><small style="color: var(--cp-text-light);"> ms</small></div>
+                    <div class="text-center"><div style="font-size: 9px; color: var(--cp-text-light); text-transform: uppercase;">MAX</div><strong id="pingMax" style="font-size: 14px; color: var(--cp-warning);">--</strong><small style="color: var(--cp-text-light);"> ms</small></div>
+                    <div class="text-center"><div style="font-size: 9px; color: var(--cp-text-light); text-transform: uppercase;">LOSS</div><strong id="pingLoss" style="font-size: 14px; color: var(--cp-success);">0</strong><small style="color: var(--cp-text-light);"> %</small></div>
+                    <div class="text-center ml-auto"><div style="font-size: 9px; color: var(--cp-text-light); text-transform: uppercase;">METHOD</div><strong id="pingMethod" style="font-size: 12px; color: var(--cp-info);">--</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Generate Bill Modal --}}
+<div class="modal fade" id="generateBillModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 380px;">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid #f1f3f5;">
+                <h6 class="modal-title" style="font-weight: 700; font-size: 13px;">
+                    <i class="fas fa-file-invoice mr-2" style="color: #6c757d;"></i>Generate Bill — {{ $client->name }}
+                </h6>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form action="{{ route('admin.clients.generate-bill', $client) }}" method="POST">
+                @csrf
+                <div class="modal-body" style="padding: 16px;">
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label style="font-size: 12px; font-weight: 600;">Month</label>
+                            <select name="billing_month" class="form-control form-control-sm" required>
+                                @foreach(['January','February','March','April','May','June','July','August','September','October','November','December'] as $mi => $mn)
+                                <option value="{{ $mi+1 }}" {{ now()->month == $mi+1 ? 'selected' : '' }}>{{ $mn }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group col-6">
+                            <label style="font-size: 12px; font-weight: 600;">Year</label>
+                            <select name="billing_year" class="form-control form-control-sm" required>
+                                @for($y = now()->year + 1; $y >= 2020; $y--)
+                                <option value="{{ $y }}" {{ now()->year == $y ? 'selected' : '' }}>{{ $y }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0" style="font-size: 11px;"><i class="fas fa-info-circle mr-1"></i>Defaults to current month. Change only if generating for a different period.</p>
+                </div>
+                <div class="modal-footer" style="padding: 10px 16px; border-top: 1px solid #f1f3f5; gap: 8px;">
+                    <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-dark"><i class="fas fa-file-invoice mr-1"></i> Generate Bill</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- ONU Live Info Popup Modal --}}
+<div class="modal fade" id="clientOnuModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1a1a2e,#16213e); color:#fff;">
+                <h5 class="modal-title"><i class="fas fa-broadcast-tower mr-2"></i>ONU Live Info</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body p-3" id="clientOnuModalBody">
+                <div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i></div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{{-- Installed By Modal --}}
+<div class="modal fade" id="installedByModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content" style="border-radius:10px;">
+            <div class="modal-header py-2" style="background:linear-gradient(135deg,#6c63ff,#4f46e5);color:#fff;border-radius:10px 10px 0 0;">
+                <h5 class="modal-title" style="font-size:13px;font-weight:700;"><i class="fas fa-user-check mr-2"></i>Set Installed By</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="installedByForm" method="POST">
+                @csrf
+                @method('PATCH')
+                <div class="modal-body" style="padding:16px;">
+                    <div class="form-group mb-0">
+                        <label style="font-size:12px;font-weight:600;">Select Technician / Staff</label>
+                        <select name="technician_id" class="form-control form-control-sm" required>
+                            <option value="">— Select —</option>
+                            @php
+                                $techUsers = \App\Models\User::whereHas('roles', function($q){ $q->whereIn('name', ['Field Technician','technician','staff','admin','super-admin','manager']); })->select('id','name')->orderBy('name')->get();
+                            @endphp
+                            @foreach($techUsers as $tu)
+                            <option value="{{ $tu->id }}">{{ $tu->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer py-2" style="padding:8px 16px;border-top:1px solid #f1f3f5;">
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-check mr-1"></i>Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function openInstalledByModal(instrumentId) {
+    document.getElementById('installedByForm').action = '/admin/inventory/instruments/' + instrumentId + '/set-installed-by';
+    jQuery('#installedByModal').modal('show');
+}
+</script>
+
+{{-- Set Installation Charge Modal --}}
+<div class="modal fade" id="setInstallChargeModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);color:#fff;border-radius:12px 12px 0 0;padding:14px 20px;">
+                <h5 class="modal-title" style="font-size:13px;font-weight:700;"><i class="fas fa-tools mr-2"></i>Set Installation Charge</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form action="{{ route('admin.clients.set-installation-charge', $client) }}" method="POST">
+                @csrf
+                <div class="modal-body" style="padding:20px;">
+                    <div class="form-group mb-2">
+                        <label style="font-size:12px;font-weight:600;">Installation Charge (৳)</label>
+                        <input type="number" name="installation_charge" id="installChargeInput" class="form-control form-control-sm" min="0" step="1" value="{{ $client->installation_charge ?? 0 }}" placeholder="e.g. 1000" style="border-radius:8px;">
+                        <small class="text-muted">0 দিলে Free হিসেবে থাকবে</small>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label style="font-size:12px;font-weight:600;">Cable Length (m)</label>
+                        <input type="number" name="cable_length_meters" class="form-control form-control-sm" min="0" step="1" value="{{ $client->cable_length_meters ?? 0 }}" placeholder="e.g. 50" style="border-radius:8px;">
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding:12px 20px;border-top:1px solid #f1f3f5;">
+                    <button type="button" class="btn btn-sm btn-light" data-dismiss="modal" style="border-radius:8px;">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-primary" style="border-radius:8px;font-weight:600;"><i class="fas fa-save mr-1"></i> Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function rebootOnuAction() {
+    var btn = document.getElementById('btn-reboot-onu');
+    var icon = document.getElementById('reboot-onu-icon');
+    var text = document.getElementById('reboot-onu-text');
+    smartConfirm({message:'Reboot ONU?',confirmText:'Reboot'}, function() {
+    btn.disabled = true;
+    btn.classList.remove('secondary', 'success', 'danger');
+    btn.classList.add('secondary');
+    icon.className = 'fas fa-spinner fa-spin';
+    text.textContent = 'ONU Rebooting...';
+    $.ajax({
+        url: '{{ route("admin.clients.reboot-onu", $client) }}',
+        type: 'POST',
+        data: { _token: '{{ csrf_token() }}' },
+        dataType: 'json',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        timeout: 30000,
+        success: function(res) {
+            if (res.success) {
+                icon.className = 'fas fa-check-circle';
+                text.textContent = 'Successfully Rebooted';
+                btn.classList.remove('secondary');
+                btn.classList.add('success');
+            } else {
+                icon.className = 'fas fa-times-circle';
+                text.textContent = res.message || 'Reboot Failed';
+                btn.classList.remove('secondary');
+                btn.classList.add('danger');
+            }
+            setTimeout(function() {
+                icon.className = 'fas fa-redo';
+                text.textContent = 'Reboot ONU';
+                btn.classList.remove('success', 'danger');
+                btn.classList.add('secondary');
+                btn.disabled = false;
+            }, 5000);
+        },
+        error: function() {
+            icon.className = 'fas fa-times-circle';
+            text.textContent = 'Reboot Failed';
+            btn.classList.remove('secondary');
+            btn.classList.add('danger');
+            setTimeout(function() {
+                icon.className = 'fas fa-redo';
+                text.textContent = 'Reboot ONU';
+                btn.classList.remove('danger');
+                btn.classList.add('secondary');
+                btn.disabled = false;
+            }, 5000);
+        }
+    });
+    }); // end smartConfirm
+}
+$(document).on('click', '.cp-card-header:has(.cp-collapse-icon)', function(e) {
+    if ($(e.target).closest('a, button').length) return;
+    var $card = $(this).closest('.cp-card');
+    var $icon = $(this).find('.cp-collapse-icon');
+    var $body = $card.find('.cp-card-collapse').first();
+    if ($body.hasClass('collapsed')) {
+        $body.css('max-height', $body[0].scrollHeight + 'px').removeClass('collapsed');
+        $icon.removeClass('collapsed');
+        setTimeout(function() { $body.css('max-height', 'none'); }, 300);
+    } else {
+        $body.css('max-height', $body[0].scrollHeight + 'px');
+        requestAnimationFrame(function() { $body.css('max-height', '0').addClass('collapsed'); });
+        $icon.addClass('collapsed');
+    }
+});
+
+$(document).on('click', '.toggle-cp-password', function() {
+    var masked = $('#cp-password-masked');
+    var plain = $('#cp-password-plain');
+    var icon = $(this).find('i');
+    if (masked.is(':visible')) {
+        masked.hide();
+        plain.show();
+        icon.removeClass('fa-eye').addClass('fa-eye-slash');
+    } else {
+        plain.hide();
+        masked.show();
+        icon.removeClass('fa-eye-slash').addClass('fa-eye');
+    }
+});
+
+const clientId = {{ $client->id }};
+const bsDueAmount = {{ $modalDue }};
+let bandwidthChart = null;
+let bandwidthData = { labels: [], rx: [], tx: [] };
+let bandwidthInterval = null;
+const maxDataPoints = 30;
+let heroOfflineCount = 0;  // consecutive offline count before updating hero badge
+
+function toggleOnlinePaymentFields() {
+    var sel = document.getElementById('bs_payment_method');
+    var opt = sel.options[sel.selectedIndex];
+    var name = (opt.getAttribute('data-name') || '').toLowerCase();
+    var displayName = opt.textContent.trim();
+    var isCash = name.indexOf('cash') !== -1;
+    var isOnline = !isCash;
+    var fields = document.getElementById('bs_online_payment_fields');
+    var trxId = document.getElementById('bs_trx_id');
+    var senderNum = document.getElementById('bs_sender_number');
+    fields.style.display = isOnline ? 'block' : 'none';
+    trxId.required = isOnline;
+    senderNum.required = isOnline;
+    if (isOnline) {
+        document.getElementById('bs_number_label').textContent = displayName + ' Number';
+        senderNum.placeholder = 'Enter ' + displayName + ' number';
+    }
+    if (!isOnline) { trxId.value = ''; senderNum.value = ''; }
+    var cashField = document.getElementById('bs_cash_receipt_field');
+    if (cashField) {
+        cashField.style.display = isCash ? 'block' : 'none';
+        if (!isCash) document.getElementById('bs_money_receipt').value = '';
+    }
+}
+
+function checkBsAmountDiff() {
+    var amount = parseFloat(document.getElementById('bs_amount').value) || 0;
+    var isDifferent = Math.abs(amount - bsDueAmount) > 0.01;
+    document.getElementById('bs_amount_warning').style.display = isDifferent ? 'block' : 'none';
+    var rg = document.getElementById('bs_reason_group');
+    var ri = document.getElementById('bs_reason');
+    if (rg) { rg.style.display = isDifferent ? 'block' : 'none'; }
+    if (ri) { ri.required = isDifferent; if (!isDifferent) ri.value = ''; }
+    return isDifferent;
+}
+
+const icChargeAmount = {{ $installRemaining ?? 0 }};
+
+function toggleIcPaymentFields() {
+    var sel = document.getElementById('ic_payment_method');
+    if (!sel) return;
+    var opt = sel.options[sel.selectedIndex];
+    var name = (opt.getAttribute('data-name') || '').toLowerCase();
+    var displayName = opt.textContent.trim();
+    var isCash = name.indexOf('cash') !== -1;
+    var isOnline = !isCash;
+    var fields = document.getElementById('ic_online_payment_fields');
+    var trxId = document.getElementById('ic_trx_id');
+    var senderNum = document.getElementById('ic_sender_number');
+    if (fields) {
+        fields.style.display = isOnline ? 'block' : 'none';
+        trxId.required = isOnline;
+        senderNum.required = isOnline;
+        if (isOnline) {
+            document.getElementById('ic_number_label').textContent = displayName + ' Number';
+            senderNum.placeholder = 'Enter ' + displayName + ' number';
+        }
+        if (!isOnline) { trxId.value = ''; senderNum.value = ''; }
+    }
+    var cashField = document.getElementById('ic_cash_receipt_field');
+    if (cashField) {
+        cashField.style.display = isCash ? 'block' : 'none';
+        if (!isCash) document.getElementById('ic_money_receipt').value = '';
+    }
+}
+
+function checkIcAmountDiff() {
+    var el = document.getElementById('ic_amount');
+    if (!el) return false;
+    var amount = parseFloat(el.value) || 0;
+    var isDifferent = Math.abs(amount - icChargeAmount) > 0.01;
+    document.getElementById('ic_amount_warning').style.display = isDifferent ? 'block' : 'none';
+    var rg = document.getElementById('ic_reason_group');
+    var ri = document.getElementById('ic_reason');
+    if (rg) { rg.style.display = isDifferent ? 'block' : 'none'; }
+    if (ri) { ri.required = isDifferent; if (!isDifferent) ri.value = ''; }
+    return isDifferent;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    try { initBandwidthChart(); } catch(e) {}
+    try { startLiveMonitoring(); } catch(e) {}
+    try { refreshPing(); } catch(e) {}
+    var billSubmitForm = document.getElementById('billSubmitForm');
+    if (billSubmitForm) {
+        billSubmitForm.addEventListener('submit', function(e) {
+            checkBsAmountDiff();
+        });
+    }
+    var installChargeForm = document.getElementById('installChargeForm');
+    if (installChargeForm) {
+        installChargeForm.addEventListener('submit', function(e) {
+            checkIcAmountDiff();
+        });
+    }
+    try { checkBsAmountDiff(); } catch(e) {}
+    try { toggleOnlinePaymentFields(); } catch(e) {}
+    try { checkIcAmountDiff(); } catch(e) {}
+    try { toggleIcPaymentFields(); } catch(e) {}
+
+    var apMethod = document.getElementById('ap_payment_method');
+    if (apMethod) {
+        function toggleApPaymentFields() {
+            var opt = apMethod.options[apMethod.selectedIndex];
+            var name = (opt.getAttribute('data-name') || '').toLowerCase();
+            var displayName = opt.textContent.trim();
+            var isCash = name.indexOf('cash') !== -1;
+            var isOnline = !isCash;
+            var cashField = document.getElementById('ap_cash_receipt_field');
+            var onlineFields = document.getElementById('ap_online_fields');
+            var trxId = document.getElementById('ap_trx_id');
+            var senderNum = document.getElementById('ap_sender_number');
+            if (cashField) {
+                cashField.style.display = isCash ? 'block' : 'none';
+                if (!isCash) cashField.querySelector('input').value = '';
+            }
+            if (onlineFields) {
+                onlineFields.style.display = isOnline ? 'block' : 'none';
+                trxId.required = isOnline;
+                senderNum.required = isOnline;
+                if (isOnline) {
+                    document.getElementById('ap_number_label').textContent = displayName + ' Number';
+                    senderNum.placeholder = 'Enter ' + displayName + ' number';
+                } else {
+                    trxId.value = '';
+                    senderNum.value = '';
+                }
+            }
+        }
+        apMethod.addEventListener('change', toggleApPaymentFields);
+        toggleApPaymentFields();
+    }
+});
+
+function initBandwidthChart() {
+    const ctx = document.getElementById('bandwidthChart').getContext('2d');
+    bandwidthChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: bandwidthData.labels,
+            datasets: [
+                {
+                    label: 'Download (Mbps)',
+                    data: bandwidthData.rx,
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    borderWidth: 2,
+                },
+                {
+                    label: 'Upload (Mbps)',
+                    data: bandwidthData.tx,
+                    borderColor: '#ffc107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    borderWidth: 2,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            animation: { duration: 300 },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Mbps', font: { size: 11 } }, grid: { color: '#f1f3f5' } },
+                x: { title: { display: false }, grid: { display: false } }
+            },
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+function startLiveMonitoring() {
+    fetchBandwidth();
+    bandwidthInterval = setInterval(fetchBandwidth, 3000);
+}
+
+function fetchBandwidth() {
+    fetch(`/admin/clients/${clientId}/live-bandwidth`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data) {
+                updateBandwidthUI(data);
+            } else if (data.no_router) {
+                // Router not reachable — stop polling, show warning (not error)
+                if (bandwidthInterval) { clearInterval(bandwidthInterval); bandwidthInterval = null; }
+                updateLiveStatus(null, 'No Router');
+            } else {
+                updateLiveStatus(false, data.message || 'Offline');
+            }
+        })
+        .catch(err => { updateLiveStatus(false, 'Error'); });
+}
+
+function updateBandwidthUI(data) {
+    const bw = data.data;
+    const isOnline = bw.online;
+    updateLiveStatus(isOnline, isOnline ? 'Live' : 'Offline');
+    document.getElementById('currentRxDisplay').textContent = formatSpeed(bw.rx_rate || 0);
+    document.getElementById('currentTxDisplay').textContent = formatSpeed(bw.tx_rate || 0);
+    document.getElementById('sessionUptime').textContent = bw.uptime || '--';
+    if (bw.last_disconnect) {
+        document.getElementById('lastDisconnectTime').textContent = bw.last_disconnect;
+    }
+    document.getElementById('totalRx').textContent = formatBytes(bw.rx_bytes || 0);
+    document.getElementById('totalTx').textContent = formatBytes(bw.tx_bytes || 0);
+    bandwidthData.labels.push(data.timestamp || new Date().toLocaleTimeString());
+    bandwidthData.rx.push(bw.rx_rate || 0);
+    bandwidthData.tx.push(bw.tx_rate || 0);
+    if (bandwidthData.labels.length > maxDataPoints) { bandwidthData.labels.shift(); bandwidthData.rx.shift(); bandwidthData.tx.shift(); }
+    bandwidthChart.update('none');
+}
+
+var pingEventSource = null;
+function doPing(source) {
+    if (pingEventSource) { pingEventSource.close(); pingEventSource = null; }
+    var terminal = document.getElementById('pingTerminal');
+    var btnClient = document.getElementById('btnClientPing');
+    var btnMikrotik = document.getElementById('btnMikrotikPing');
+    var spinner = document.getElementById('pingSpinner');
+    var count = parseInt(document.getElementById('pingCount').value) || 20;
+    var label = source === 'client' ? 'Client Side' : 'MikroTik Side';
+    btnClient.disabled = true; btnMikrotik.disabled = true; spinner.style.display = '';
+    terminal.textContent = '';
+    document.getElementById('pingMin').textContent = '--';
+    document.getElementById('pingAvg').textContent = '--';
+    document.getElementById('pingMax').textContent = '--';
+    document.getElementById('pingLoss').textContent = '--';
+    document.getElementById('pingMethod').textContent = '--';
+    var url = '/admin/clients/' + clientId + '/ping-stream?source=' + source + '&count=' + count;
+    pingEventSource = new EventSource(url);
+    pingEventSource.addEventListener('start', function(e) {
+        var d = JSON.parse(e.data);
+        terminal.textContent = 'Pinging ' + d.ip + ' [' + label + '] with ' + d.count + ' packets:\n\n';
+        if (d.ip) { document.getElementById('pingIP').textContent = d.ip; document.getElementById('pingModalIP').textContent = d.ip; }
+    });
+    pingEventSource.addEventListener('reply', function(e) {
+        var r = JSON.parse(e.data);
+        var seq = String(r.seq || '?').padStart(2, ' ');
+        if (r.status === 'reply') {
+            var port = r.port ? ':' + r.port : '';
+            var ttl = r.ttl ? '  TTL=' + r.ttl : '';
+            terminal.textContent += '  ' + seq + '  Reply from ' + (r.ip || '') + port + ':  bytes=32  time=' + r.time + 'ms' + ttl + '\n';
+        } else {
+            terminal.textContent += '  ' + seq + '  Request timed out.\n';
+        }
+        terminal.scrollTop = terminal.scrollHeight;
+    });
+    pingEventSource.addEventListener('done', function(e) {
+        var d = JSON.parse(e.data);
+        var mLabel = d.method === 'tcp' ? 'TCP' : (d.method === 'mikrotik-api' ? 'MikroTik API' : 'ICMP');
+        terminal.textContent += '\nPing statistics for ' + d.ip + ':\n';
+        terminal.textContent += '  Packets: Sent = ' + d.sent + ', Received = ' + d.received + ', Lost = ' + d.lost + ' (' + d.packet_loss + '% loss)\n';
+        if (d.min !== null && d.avg !== null && d.max !== null) {
+            terminal.textContent += 'Round trip times:\n';
+            terminal.textContent += '  Min = ' + d.min + 'ms,  Max = ' + d.max + 'ms,  Avg = ' + d.avg + 'ms\n';
+        }
+        terminal.scrollTop = terminal.scrollHeight;
+        document.getElementById('pingMin').textContent = d.min !== null ? d.min : '--';
+        document.getElementById('pingAvg').textContent = d.avg !== null ? d.avg : '--';
+        document.getElementById('pingMax').textContent = d.max !== null ? d.max : '--';
+        var lossEl = document.getElementById('pingLoss');
+        lossEl.textContent = d.packet_loss;
+        lossEl.style.color = d.packet_loss == 0 ? 'var(--cp-success)' : (d.packet_loss < 50 ? 'var(--cp-warning)' : 'var(--cp-danger)');
+        document.getElementById('pingMethod').textContent = mLabel;
+        spinner.style.display = 'none'; btnClient.disabled = false; btnMikrotik.disabled = false;
+        pingEventSource.close(); pingEventSource = null;
+    });
+    pingEventSource.addEventListener('error', function(e) {
+        try { var d = JSON.parse(e.data); terminal.textContent += '\nError: ' + d.message + '\n'; } catch(ex) {}
+        spinner.style.display = 'none'; btnClient.disabled = false; btnMikrotik.disabled = false;
+        pingEventSource.close(); pingEventSource = null;
+    });
+    pingEventSource.onerror = function() {
+        spinner.style.display = 'none'; btnClient.disabled = false; btnMikrotik.disabled = false;
+        if (pingEventSource) { pingEventSource.close(); pingEventSource = null; }
+    };
+}
+$('#pingModal').on('hidden.bs.modal', function() {
+    if (pingEventSource) { pingEventSource.close(); pingEventSource = null; }
+});
+
+function updateLiveStatus(isOnline, text) {
+    const liveStatus = document.getElementById('liveStatus');
+    if (isOnline === null) {
+        // No router configured / unreachable — orange warning
+        liveStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="font-size: 9px; color: #e67e22;"></i> ${text}`;
+        liveStatus.className = 'cp-badge';
+        liveStatus.style.background = 'rgba(230,126,34,0.12)';
+        liveStatus.style.color = '#e67e22';
+        liveStatus.title = 'MikroTik router is not reachable from server. Configure a router in Network > Devices.';
+    } else if (isOnline) {
+        liveStatus.innerHTML = `<span class="live-dot"></span> ${text}`;
+        liveStatus.className = 'cp-badge cp-badge-live';
+        liveStatus.style.background = '';
+        liveStatus.style.color = '';
+        liveStatus.title = '';
+    } else {
+        liveStatus.innerHTML = `<i class="fas fa-circle" style="font-size: 8px; color: var(--cp-danger);"></i> ${text}`;
+        liveStatus.className = 'cp-badge cp-badge-offline';
+        liveStatus.style.background = 'rgba(220,53,69,0.1)';
+        liveStatus.style.color = 'var(--cp-danger)';
+        liveStatus.title = '';
+    }
+    const connBadge = document.getElementById('connectionStatusBadge');
+    const connText = document.getElementById('connectionStatusText');
+    if (connBadge && connText && isOnline !== null) {
+        if (isOnline === true) {
+            heroOfflineCount = 0;
+            connBadge.className = 'cp-badge cp-badge-online';
+            connText.textContent = 'Online';
+        } else {
+            heroOfflineCount++;
+            // Only mark hero badge Offline after 2 consecutive offline results
+            // This prevents a brief flash when the wrong MikroTik device is tried first
+            if (heroOfflineCount >= 2) {
+                connBadge.className = 'cp-badge cp-badge-offline';
+                connText.textContent = 'Offline';
+            }
+        }
+    }
+}
+
+function formatSpeed(mbps) {
+    mbps = parseFloat(mbps) || 0;
+    if (mbps === 0) return '0 Kbps';
+    var kbps = mbps * 1000;
+    if (kbps < 1000) return parseFloat(kbps.toFixed(0)) + ' Kbps';
+    return parseFloat(mbps.toFixed(2)) + ' Mbps';
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0 || isNaN(bytes)) return '0 KB';
+    var k = 1024;
+    var sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    if (i < 0) i = 0;
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+window.addEventListener('beforeunload', function() { if (bandwidthInterval) clearInterval(bandwidthInterval); });
+
+function appendPayLink() {
+    var ta = document.getElementById('quickSmsMessage');
+    if (ta) {
+        if (ta.value && !ta.value.endsWith(' ')) ta.value += ' ';
+        ta.value += 'https://softynex.me/payment';
+        ta.dispatchEvent(new Event('input'));
+    }
+}
+var quickSmsMsg = document.getElementById('quickSmsMessage');
+if (quickSmsMsg) {
+    quickSmsMsg.addEventListener('input', function() {
+        var len = this.value.length;
+        document.getElementById('quickSmsCharCount').textContent = len;
+        document.getElementById('quickSmsParts').textContent = len <= 160 ? 1 : Math.ceil(len / 153);
+    });
+    var quickTpl = document.getElementById('quickSmsTemplate');
+    if (quickTpl) {
+        quickTpl.addEventListener('change', function() {
+            if (this.value) { quickSmsMsg.value = this.value; quickSmsMsg.dispatchEvent(new Event('input')); }
+        });
+    }
+}
+
+$('#profileDeadlineBtn').on('click', function() {
+    $('#pDeadlineDate').val('');
+    $('#pDeadlineReason').val('');
+    $('#pDeadlineReasonPreset').val('');
+    $('#profileDeadlineModal').modal('show');
+});
+
+$('#pDeadlineReasonPreset').on('change', function() {
+    var val = $(this).val();
+    if (val) { $('#pDeadlineReason').val(val); }
+});
+
+$('#profileDeadlineForm').on('submit', function(e) {
+    e.preventDefault();
+    var btn = $('#pSubmitDeadlineBtn');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Applying...');
+    $.ajax({
+        url: '{{ route("admin.clients.temp-deadline", $client) }}',
+        method: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            deadline_date: $('#pDeadlineDate').val(),
+            reason: $('#pDeadlineReason').val()
+        },
+        success: function(data) {
+            $('#profileDeadlineModal').modal('hide');
+            if (data.success) { toastr.success(data.message || 'Deadline extended!'); location.reload(); }
+            else { toastr.error(data.message || 'Failed'); btn.prop('disabled', false).html('<i class="fas fa-calendar-check mr-1"></i> Extend Deadline'); }
+        },
+        error: function(xhr) {
+            var msg = 'Failed to extend deadline';
+            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            if (xhr.responseJSON && xhr.responseJSON.errors) msg = Object.values(xhr.responseJSON.errors).flat().join(', ');
+            toastr.error(msg);
+            btn.prop('disabled', false).html('<i class="fas fa-calendar-check mr-1"></i> Extend Deadline');
+        }
+    });
+});
+
+var cpHero = document.querySelector('.cp-hero');
+var cpStickyBar = document.getElementById('cpStickyBar');
+if (cpHero && cpStickyBar) {
+    var stickyShown = false;
+    function checkStickyBar() {
+        var heroBottom = cpHero.getBoundingClientRect().bottom;
+        if (heroBottom < 0 && !stickyShown) {
+            cpStickyBar.classList.add('visible');
+            stickyShown = true;
+        } else if (heroBottom >= 0 && stickyShown) {
+            cpStickyBar.classList.remove('visible');
+            stickyShown = false;
+        }
+    }
+    window.addEventListener('scroll', checkStickyBar, { passive: true });
+    checkStickyBar();
+}
+
+$(document).on('click', '.profile-clear-deadline-btn', function(e) {
+    e.preventDefault();
+    smartConfirm({message:'Clear the extended deadline?',confirmText:'Clear'}, function() {
+        $.ajax({
+            url: '{{ route("admin.clients.clear-temp-deadline", $client) }}',
+            method: 'POST',
+            data: { _token: $('meta[name="csrf-token"]').attr('content') },
+            success: function(data) { $('#profileDeadlineModal').modal('hide'); toastr.success(data.message || 'Deadline cleared'); location.reload(); },
+            error: function() { toastr.error('Failed to clear deadline'); }
+        });
+    });
+});
+
+(function() {
+    $.ajax({
+        url: '{{ route("admin.api.instant-sync-status") }}',
+        type: 'POST',
+        data: { client_id: {{ $client->id }} },
+        headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+        timeout: 30000,
+        success: function(res) {
+            if (res.success) {
+                var statuses = res.client_statuses || {};
+                var s = statuses[{{ $client->id }}];
+                if (s) {
+                    var badge = $('#connectionStatusBadge');
+                    var text = $('#connectionStatusText');
+                    if (s.status === 'online') {
+                        // Instant-sync confirmed online — update immediately
+                        heroOfflineCount = 0;
+                        badge.removeClass('cp-badge-offline cp-badge-checking').addClass('cp-badge-online');
+                        text.text('Online');
+                    }
+                    // If instant-sync says offline: do NOT update badge here.
+                    // instant-sync scans all MikroTik devices; if it fails to reach
+                    // the client's assigned device it incorrectly reports offline.
+                    // Live monitoring (which uses the assigned device directly) will
+                    // confirm the real status via the debounce mechanism.
+                }
+            }
+        }
+    });
+})();
+
+$('#editRemarksBtn').on('click', function() {
+    $('#remarksDisplay').hide();
+    $('#remarksEditForm').show();
+    $(this).hide();
+});
+$('#cancelRemarksBtn').on('click', function() {
+    $('#remarksEditForm').hide();
+    $('#remarksDisplay').show();
+    $('#editRemarksBtn').show();
+});
+$('#saveRemarksBtn').on('click', function() {
+    var btn = $(this);
+    var remarks = $('#remarksInput').val().trim();
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Saving...');
+    $.ajax({
+        url: '/admin/clients/{{ $client->id }}/update-remarks',
+        method: 'POST',
+        data: { _token: '{{ csrf_token() }}', remarks: remarks },
+        success: function(data) {
+            if (data.success) {
+                var html = remarks
+                    ? '<p style="font-size: 13px; color: var(--cp-text-dark); margin: 0; white-space: pre-wrap;">' + $('<span>').text(remarks).html() + '</p>'
+                    : '<p style="font-size: 13px; color: var(--cp-text-light); margin: 0; font-style: italic;">No remarks added</p>';
+                $('#remarksDisplay').html(html).show();
+                $('#remarksEditForm').hide();
+                $('#editRemarksBtn').show();
+                toastr.success(data.message);
+            } else {
+                toastr.error(data.message || 'Failed to update remarks.');
+            }
+        },
+        error: function() { toastr.error('Failed to update remarks.'); },
+        complete: function() { btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i>Save'); }
+    });
+});
+
+$('#refreshOnuDiag').on('click', function() {
+    var onuId = $(this).data('onu-id');
+    if (!onuId) {
+        toastr.warning('No ONU record linked. Please assign an ONU first.');
+        return;
+    }
+    // Show loading state on button
+    var $btn = $(this);
+    var $icon = $('#refreshOnuIcon');
+    $btn.prop('disabled', true);
+    $icon.addClass('fa-spin');
+    $('#onuDiagSource').html('<i class="fas fa-spinner fa-spin text-info mr-1"></i><small class="text-muted">Syncing live data from OLT...</small>').show();
+    // Run live sync
+    _onuAutoSyncRunning = false;
+    $.ajax({
+        url: '/admin/network/onu/' + onuId + '/live-info?_t=' + Date.now(),
+        type: 'GET',
+        cache: false,
+        timeout: 90000,
+        success: function(res) {
+            $btn.prop('disabled', false);
+            $icon.removeClass('fa-spin');
+            if (!res.success || !res.data) {
+                toastr.error('OLT sync failed — no data returned.');
+                return;
+            }
+            var d = res.data;
+            if (d.port) $('#onu_port_val').text(d.port + (d.onu_number ? ':' + d.onu_number : ''));
+            if (d.mac || d.serial) $('#onu_mac_val').text(d.mac || d.serial || '—');
+            if (d.temperature !== null && d.temperature !== undefined) $('#onu_temp_val').text(d.temperature + ' °C');
+            if (d.voltage !== null && d.voltage !== undefined) $('#onu_voltage_val').text(d.voltage + ' V');
+            if (d.tx_bias !== null && d.tx_bias !== undefined) $('#onu_txbias_val').text(d.tx_bias + ' mA');
+            if (d.distance !== null && d.distance !== undefined) $('#onu_distance_val').text(d.distance + ' m');
+            if (d.status) {
+                if (d.status === 'online') {
+                    $('#onu_status_val').html('<span style="font-size:13px;font-weight:700;color:#28a745;white-space:nowrap;"><i class="fas fa-wifi" style="font-size:11px;margin-right:3px;"></i>ONLINE</span>').removeClass('text-danger text-muted').addClass('text-success').css('color','#28a745');
+                    
+                    $('#onu_down_reason_val').html('<span class="text-muted" style="font-size:12px;">—</span>');
+                } else {
+                    $('#onu_status_val').html('<span style="font-size:13px;font-weight:700;color:#dc3545;white-space:nowrap;"><i class="fas fa-wifi" style="font-size:11px;margin-right:3px;"></i>OFFLINE</span>').removeClass('text-success text-muted').addClass('text-danger').css('color','#dc3545');
+                    
+                    var dr = d.down_reason ? d.down_reason.toUpperCase().replace(/-/g,' ') : 'OFFLINE';
+                    var drColor = dr.includes('POWER') ? '#dc3545' : (dr.includes('WIRE') ? '#fd7e14' : (dr.includes('LOS') ? '#e83e8c' : '#6c757d'));
+                    var drIcon = dr.includes('POWER') ? 'fa-power-off' : (dr.includes('WIRE') ? 'fa-cut' : (dr.includes('LOS') ? 'fa-signal' : 'fa-exclamation-triangle'));
+                    $('#onu_down_reason_val').html('<span style="color:' + drColor + ';font-size:12px;font-weight:600;"><i class="fas ' + drIcon + ' mr-1"></i>' + dr + '</span>');
+                }
+            }
+            if (d.rx_power !== null && d.rx_power !== undefined) {
+                var rxColor = d.rx_power >= -15 ? '#28a745' : (d.rx_power >= -20 ? '#17a2b8' : (d.rx_power >= -25 ? '#ffc107' : '#dc3545'));
+                $('#onu_rx_val').html('<span style="color:' + rxColor + '; font-weight:600;">' + parseFloat(d.rx_power).toFixed(2) + ' dBm</span>');
+            }
+            if (d.tx_power !== null && d.tx_power !== undefined) {
+                $('#onu_tx_val').html('<span class="text-primary">' + parseFloat(d.tx_power).toFixed(2) + ' dBm</span>');
+            }
+            var srcLabel = '<i class="fas fa-check-circle text-success mr-1"></i><small>Live OLT data — ' + (new Date().toLocaleTimeString()) + '</small>';
+            $('#onuDiagSource').html(srcLabel).show();
+            toastr.success('ONU data synced successfully!');
+        },
+        error: function() {
+            $btn.prop('disabled', false);
+            $icon.removeClass('fa-spin');
+            $('#onuDiagSource').html('<i class="fas fa-exclamation-triangle text-warning mr-1"></i><small class="text-muted">OLT sync failed.</small>').show();
+            toastr.error('OLT sync failed. Please try again.');
+        }
+    });
+});
+
+function showClientOnuModal(onuId) {
+    $('#clientOnuModal').modal('show');
+    $('#clientOnuModalBody').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i><p class="mt-2 text-muted">Syncing live data from OLT...</p></div>');
+    $.ajax({
+        url: '/admin/network/onu/' + onuId + '/live-info?_t=' + Date.now(),
+        type: 'GET',
+        cache: false,
+        timeout: 40000,
+        success: function(res) {
+            if (res.success && res.data) {
+                var d = res.data;
+                // Update inline table too
+                if (d.port) $('#onu_port_val').text(d.port + (d.onu_number ? ':' + d.onu_number : ''));
+            if (d.mac || d.serial) $('#onu_mac_val').text(d.mac || d.serial || '—');
+                if (d.distance !== null && d.distance !== undefined) $('#onu_distance_val').text(d.distance + ' m');
+                if (d.temperature !== null && d.temperature !== undefined) $('#onu_temp_val').text(d.temperature + ' °C');
+                if (d.voltage !== null && d.voltage !== undefined) $('#onu_voltage_val').text(d.voltage + ' V');
+                if (d.tx_bias !== null && d.tx_bias !== undefined) $('#onu_txbias_val').text(d.tx_bias + ' mA');
+                if (d.status) {
+                    if (d.status === 'online') {
+                        $('#onu_status_val').html('<span style="font-size:13px;font-weight:700;color:#28a745;white-space:nowrap;"><i class="fas fa-wifi" style="font-size:11px;margin-right:3px;"></i>ONLINE</span>').removeClass('text-danger text-muted').addClass('text-success').css('color','#28a745');
+                    
+                        $('#onu_down_reason_val').html('<span class="text-muted" style="font-size:12px;">—</span>');
+                    } else {
+                        $('#onu_status_val').html('<span style="font-size:13px;font-weight:700;color:#dc3545;white-space:nowrap;"><i class="fas fa-wifi" style="font-size:11px;margin-right:3px;"></i>OFFLINE</span>').removeClass('text-success text-muted').addClass('text-danger').css('color','#dc3545');
+                    
+                        var dr = d.down_reason ? d.down_reason.toUpperCase().replace(/-/g,' ') : 'OFFLINE';
+                        var drColor = dr.includes('POWER') ? '#dc3545' : (dr.includes('WIRE') ? '#fd7e14' : (dr.includes('LOS') ? '#e83e8c' : '#6c757d'));
+                        var drIcon = dr.includes('POWER') ? 'fa-power-off' : (dr.includes('WIRE') ? 'fa-cut' : (dr.includes('LOS') ? 'fa-signal' : 'fa-exclamation-triangle'));
+                        $('#onu_down_reason_val').html('<span style="color:' + drColor + ';font-size:12px;font-weight:600;"><i class="fas ' + drIcon + ' mr-1"></i>' + dr + '</span>');
+                    }
+                }
+                if (d.tx_power !== null && d.tx_power !== undefined) {
+                    $('#onu_tx_val').html('<span class="text-primary">' + parseFloat(d.tx_power).toFixed(2) + ' dBm</span>');
+                }
+                if (d.rx_power !== null && d.rx_power !== undefined) {
+                    var rxColor = d.rx_power >= -15 ? '#28a745' : (d.rx_power >= -20 ? '#17a2b8' : (d.rx_power >= -25 ? '#ffc107' : '#dc3545'));
+                    $('#onu_rx_val').html('<span style="color:' + rxColor + '; font-weight:600;">' + parseFloat(d.rx_power).toFixed(2) + ' dBm</span>');
+                }
+                var srcLabel = d.source === 'live'
+                    ? '<i class="fas fa-check-circle text-success mr-1"></i>Live data from OLT'
+                    : '<i class="fas fa-database text-info mr-1"></i>Cached data';
+                $('#onuDiagSource').html(srcLabel).show();
+                $('#onuDiagLoading').hide();
+
+                // Render modal
+                renderClientOnuModal(d);
+                if (d.source === 'live') toastr.success('Live ONU data synced from OLT!');
+                else toastr.info('Showing cached data');
+            } else {
+                $('#clientOnuModalBody').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle mr-2"></i>' + (res.message || 'Failed') + '</div>');
+            }
+        },
+        error: function() {
+            $('#clientOnuModalBody').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle mr-2"></i>Could not connect to OLT.</div>');
+        }
+    });
+}
+
+// ====== AUTO SYNC every 5 seconds (silent, no modal) ======
+var _onuAutoSyncRunning = false;
+function silentOnuSync() {
+    var onuId = $('#refreshOnuDiag').data('onu-id');
+    if (!onuId || _onuAutoSyncRunning) return;
+    _onuAutoSyncRunning = true;
+
+    $.ajax({
+        url: '/admin/network/onu/' + onuId + '/live-info?_t=' + Date.now(),
+        type: 'GET',
+        cache: false,
+        timeout: 90000,
+        success: function(res) {
+            _onuAutoSyncRunning = false;
+            if (!res.success || !res.data) return;
+            var d = res.data;
+
+            // Update inline table values silently
+            if (d.port) $('#onu_port_val').text(d.port + (d.onu_number ? ':' + d.onu_number : ''));
+            if (d.mac || d.serial) $('#onu_mac_val').text(d.mac || d.serial || '—');
+            if (d.temperature !== null && d.temperature !== undefined) $('#onu_temp_val').text(d.temperature + ' °C');
+            if (d.voltage !== null && d.voltage !== undefined) $('#onu_voltage_val').text(d.voltage + ' V');
+            if (d.tx_bias !== null && d.tx_bias !== undefined) $('#onu_txbias_val').text(d.tx_bias + ' mA');
+            if (d.distance !== null && d.distance !== undefined) $('#onu_distance_val').text(d.distance + ' m');
+
+            // Status + down reason
+            if (d.status) {
+                if (d.status === 'online') {
+                    $('#onu_status_val').html('<span style="font-size:13px;font-weight:700;color:#28a745;white-space:nowrap;"><i class="fas fa-wifi" style="font-size:11px;margin-right:3px;"></i>ONLINE</span>').removeClass('text-danger text-muted').addClass('text-success').css('color','#28a745');
+                    
+                    $('#onu_down_reason_val').html('<span class="text-muted" style="font-size:12px;">—</span>');
+                } else {
+                    $('#onu_status_val').html('<span style="font-size:13px;font-weight:700;color:#dc3545;white-space:nowrap;"><i class="fas fa-wifi" style="font-size:11px;margin-right:3px;"></i>OFFLINE</span>').removeClass('text-success text-muted').addClass('text-danger').css('color','#dc3545');
+                    
+                    var dr = d.down_reason ? d.down_reason.toUpperCase().replace(/-/g,' ') : 'OFFLINE';
+                    var drColor = dr.includes('POWER') ? '#dc3545' : (dr.includes('WIRE') ? '#fd7e14' : (dr.includes('LOS') ? '#e83e8c' : '#6c757d'));
+                    var drIcon = dr.includes('POWER') ? 'fa-power-off' : (dr.includes('WIRE') ? 'fa-cut' : (dr.includes('LOS') ? 'fa-signal' : 'fa-exclamation-triangle'));
+                    $('#onu_down_reason_val').html('<span style="color:' + drColor + ';font-size:12px;font-weight:600;"><i class="fas ' + drIcon + ' mr-1"></i>' + dr + '</span>');
+                }
+            }
+            // RX Power
+            if (d.rx_power !== null && d.rx_power !== undefined) {
+                var rxColor = d.rx_power >= -15 ? '#28a745' : (d.rx_power >= -20 ? '#17a2b8' : (d.rx_power >= -25 ? '#ffc107' : '#dc3545'));
+                $('#onu_rx_val').html('<span style="color:' + rxColor + '; font-weight:600;">' + parseFloat(d.rx_power).toFixed(2) + ' dBm</span>');
+            }
+
+            // TX Power
+            if (d.tx_power !== null && d.tx_power !== undefined) {
+                $('#onu_tx_val').html('<span class="text-primary">' + parseFloat(d.tx_power).toFixed(2) + ' dBm</span>');
+            }
+
+            // Source label
+            var srcLabel = '<i class="fas fa-check-circle text-success mr-1"></i><small>Live OLT data — ' + (new Date().toLocaleTimeString()) + '</small>';
+            $('#onuDiagSource').html(srcLabel).show();
+            $('#onuDiagLoading').hide();
+        },
+        error: function() {
+            _onuAutoSyncRunning = false;
+            $('#onuDiagSource').html('<i class="fas fa-exclamation-triangle text-warning mr-1"></i><small class="text-muted">OLT sync failed — retrying...</small>').show();
+        }
+    });
+}
+
+$(document).ready(function() {
+    // Auto-sync disabled — manual sync only via ONU Sync button
+});
+
+function renderClientOnuModal(d) {
+    var rxColor = '#6c757d';
+    var rxQuality = 'N/A';
+    if (d.rx_power !== null && d.rx_power !== undefined) {
+        rxColor = d.rx_power >= -15 ? '#28a745' : (d.rx_power >= -20 ? '#17a2b8' : (d.rx_power >= -25 ? '#ffc107' : '#dc3545'));
+        rxQuality = d.rx_power >= -15 ? 'Excellent' : (d.rx_power >= -20 ? 'Good' : (d.rx_power >= -25 ? 'Fair' : 'Poor'));
+    }
+    var statusBadge = d.status === 'online'
+        ? '<span class="badge badge-success" style="font-size:14px;padding:5px 14px;">ONLINE</span>'
+        : '<span class="badge badge-danger" style="font-size:14px;padding:5px 14px;">OFFLINE</span>';
+    var srcBadge = d.source === 'live'
+        ? '<span class="badge badge-success ml-2"><i class="fas fa-bolt mr-1"></i>Live</span>'
+        : '<span class="badge badge-secondary ml-2"><i class="fas fa-database mr-1"></i>Cached</span>';
+
+    var html = '<div style="font-size:13px;">';
+    html += '<div class="d-flex justify-content-between align-items-center mb-3">';
+    html += '<div>' + statusBadge + srcBadge + '</div>';
+    html += '<small class="text-muted">OLT: <strong>' + (d.olt_name || '—') + '</strong></small></div>';
+
+    if (d.rx_power !== null && d.rx_power !== undefined) {
+        var pct = Math.min(Math.max(((d.rx_power + 30) / 20) * 100, 0), 100);
+        html += '<div class="mb-3 p-3" style="background:#f8f9fa;border-radius:8px;border-left:5px solid ' + rxColor + ';">';
+        html += '<div class="d-flex justify-content-between align-items-center mb-1">';
+        html += '<strong style="color:' + rxColor + ';font-size:16px;">RX Power: ' + parseFloat(d.rx_power).toFixed(2) + ' dBm</strong>';
+        html += '<span class="badge" style="background:' + rxColor + ';color:#fff;font-size:13px;padding:5px 10px;">' + rxQuality + '</span></div>';
+        html += '<div class="progress mb-1" style="height:10px;"><div class="progress-bar" style="width:' + pct + '%;background:' + rxColor + ';"></div></div>';
+        html += '</div>';
+    }
+
+    html += '<table class="table table-sm table-bordered mb-2"><tbody>';
+    html += '<tr><td style="width:42%;font-weight:700;background:#f0f0f0;">MAC Address</td><td><code style="font-size:13px;">' + (d.mac || '—') + '</code></td></tr>';
+    html += '<tr><td style="font-weight:700;background:#f0f0f0;">Serial Number</td><td><code>' + (d.serial || '—') + '</code></td></tr>';
+    html += '<tr><td style="font-weight:700;background:#f0f0f0;">Port / ONU#</td><td><strong class="text-success">' + (d.port || '—') + '</strong> / ' + (d.onu_number || '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:700;background:#f0f0f0;">Model / Vendor</td><td>' + (d.model || '—') + (d.vendor ? ' / ' + d.vendor : '') + '</td></tr>';
+    html += '<tr><td style="font-weight:700;background:#f0f0f0;">TX Power</td><td>' + (d.tx_power !== null && d.tx_power !== undefined ? '<span class="text-primary">' + parseFloat(d.tx_power).toFixed(2) + ' dBm</span>' : '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:700;background:#f0f0f0;">Temperature</td><td>' + (d.temperature !== null && d.temperature !== undefined ? d.temperature + ' °C' : '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:700;background:#f0f0f0;">Voltage</td><td>' + (d.voltage !== null && d.voltage !== undefined ? d.voltage + ' V' : '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:700;background:#f0f0f0;">TX Bias</td><td>' + (d.tx_bias !== null && d.tx_bias !== undefined ? d.tx_bias + ' mA' : '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:700;background:#f0f0f0;">Distance</td><td>' + (d.distance !== null && d.distance !== undefined ? '<strong>' + d.distance + '</strong> m' : '—') + '</td></tr>';
+    // Current down reason row
+    if (d.status === 'offline' || d.down_reason) {
+        var drText = d.down_reason ? d.down_reason.toUpperCase().replace(/-/g,' ') : 'OFFLINE';
+        var drBg = drText.includes('POWER') ? '#dc3545' : (drText.includes('WORD') || drText.includes('WIRE') ? '#fd7e14' : '#6c757d');
+        html += '<tr><td style="font-weight:700;background:#fff3cd;color:#856404;">Down Reason</td><td><span style="color:' + drBg + ';font-size:13px;font-weight:600;"><i class="fas fa-exclamation-triangle mr-1"></i>' + drText + '</span></td></tr>';
+    }
+    html += '</tbody></table>';
+    html += '<div class="text-right"><small class="text-muted">Synced at: ' + (d.polled_at || 'N/A') + '</small></div>';
+    html += '</div>';
+
+    $('#clientOnuModalBody').html(html);
+}
+
+function openSetInstallChargeModal() {
+    jQuery('#setInstallChargeModal').modal('show');
+}
+
+function fixOnuLink(btn) {
+    var clientId = document.getElementById('fixOnuLinkBtn').dataset.clientId;
+    var $btn = $(btn);
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Fixing...');
+
+    $.ajax({
+        url: '/admin/clients/' + clientId + '/fix-onu-link',
+        type: 'POST',
+        headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')},
+        timeout: 30000,
+        success: function(res) {
+            if (res.success) {
+                toastr.success(res.message, 'ONU Linked!', {timeOut: 6000});
+                $btn.html('<i class="fas fa-check-circle mr-1"></i>Fixed!').addClass('btn-success').removeClass('btn-warning');
+
+                // Update inline display
+                if (res.onu_mac || res.onu_serial) {
+                    $('#onu_mac_val').text(res.onu_mac || res.onu_serial || '—');
+                }
+                if (res.olt_port) {
+                    $('#onu_port_val').text(res.olt_port);
+                }
+                if (res.status) {
+                    var isOnline = res.status === 'online';
+                    $('#onu_status_val').html(
+                        '<i class="fas fa-wifi" style="font-size:11px;margin-right:2px;"></i>' +
+                        (isOnline ? 'ONLINE' : 'OFFLINE')
+                    ).css('color', isOnline ? '#28a745' : '#dc3545');
+                }
+
+                // Update ONU Sync button with new onu_id
+                if (res.onu_id) {
+                    $('#refreshOnuDiag').data('onu-id', res.onu_id);
+                }
+
+                $('#onuDiagSource').html('<i class="fas fa-check-circle text-success mr-1"></i><small>ONU linked — ' + new Date().toLocaleTimeString() + '</small>');
+
+                // Hide fix button after 3 seconds
+                setTimeout(function() { $btn.hide(); }, 3000);
+
+            } else {
+                toastr.error(res.message, 'Fix Failed');
+                $btn.prop('disabled', false).html('<i class="fas fa-link mr-1"></i>Fix ONU Link');
+            }
+        },
+        error: function() {
+            toastr.error('Server error. Please try again.', 'Fix Failed');
+            $btn.prop('disabled', false).html('<i class="fas fa-link mr-1"></i>Fix ONU Link');
+        }
+    });
+}
+
+</script>
+@endpush

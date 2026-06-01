@@ -1,0 +1,108 @@
+@extends('layouts.admin')
+
+@section('title', 'SLA Configuration')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Service Level Agreement Settings</h3>
+                    </div>
+                    <form action="{{ route('admin.support.sla-config.save') }}" method="POST">
+                        @csrf
+                        <div class="card-body">
+                            <p class="text-muted">Configure response and resolution time limits for each ticket priority level.</p>
+                            
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Priority</th>
+                                        <th>Response Time (Hours)</th>
+                                        <th>Resolution Time (Hours)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php
+                                        $priorities = ['urgent', 'high', 'medium', 'low'];
+                                        $defaultTimes = [
+                                            'urgent' => ['response' => 1, 'resolution' => 4],
+                                            'high' => ['response' => 4, 'resolution' => 8],
+                                            'medium' => ['response' => 8, 'resolution' => 24],
+                                            'low' => ['response' => 24, 'resolution' => 72],
+                                        ];
+                                    @endphp
+                                    @foreach($priorities as $index => $priority)
+                                        @php
+                                            $config = $configs->firstWhere('priority', $priority);
+                                        @endphp
+                                        <tr>
+                                            <td>
+                                                <span class="badge badge-{{ $priority === 'urgent' ? 'danger' : ($priority === 'high' ? 'warning' : ($priority === 'medium' ? 'info' : 'secondary')) }}">
+                                                    {{ ucfirst($priority) }}
+                                                </span>
+                                                <input type="hidden" name="configs[{{ $index }}][priority]" value="{{ $priority }}">
+                                            </td>
+                                            <td>
+                                                <input type="number" name="configs[{{ $index }}][response_hours]" 
+                                                       class="form-control" min="1" 
+                                                       value="{{ $config?->response_hours ?? $defaultTimes[$priority]['response'] }}" required>
+                                            </td>
+                                            <td>
+                                                <input type="number" name="configs[{{ $index }}][resolution_hours]" 
+                                                       class="form-control" min="1" 
+                                                       value="{{ $config?->resolution_hours ?? $defaultTimes[$priority]['resolution'] }}" required>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card card-info">
+                    <div class="card-header">
+                        <h3 class="card-title">About SLA</h3>
+                    </div>
+                    <div class="card-body">
+                        <h6>Response Time</h6>
+                        <p class="text-muted small">The maximum time allowed for an agent to first respond to a ticket after it's created.</p>
+                        
+                        <h6>Resolution Time</h6>
+                        <p class="text-muted small">The maximum time allowed to fully resolve a ticket from the moment it's created.</p>
+                        
+                        <hr>
+                        
+                        <h6>SLA Breach</h6>
+                        <p class="text-muted small">When a ticket exceeds the configured time limits, it will be marked as "SLA Breached" for reporting and escalation purposes.</p>
+                    </div>
+                </div>
+
+                <div class="card card-warning">
+                    <div class="card-header">
+                        <h3 class="card-title">Recommended Settings</h3>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled small">
+                            <li><strong>Critical:</strong> 1h response / 4h resolution</li>
+                            <li><strong>High:</strong> 4h response / 8h resolution</li>
+                            <li><strong>Medium:</strong> 8h response / 24h resolution</li>
+                            <li><strong>Low:</strong> 24h response / 72h resolution</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@endsection

@@ -1,0 +1,192 @@
+<?php
+
+namespace App\Services\OLT;
+
+class BdcomGponOIDMapping extends OIDMapping
+{
+    // BDCOM GP3600 GPON OLT - System Resources
+    const GPON_CPU_USAGE       = '.1.3.6.1.4.1.3320.9.109.1.1.1.1.5.1';
+    const GPON_MEMORY_USAGE    = '.1.3.6.1.4.1.3320.9.48.4.0';
+    const GPON_TEMPERATURE     = '.1.3.6.1.4.1.3320.9.48.5.0';
+
+    // BDCOM GP3600 GPON ONU Table
+    // 1.3.6.1.4.1.3320.9.63.1.3.1.X where X is the column:
+    //   .1 = ONU unique index
+    //   .4 = physical GPON port number (1-8)
+    //   .5 = ONU ID within that port
+    //   .6 = ONU operational state (1=online, 2=offline)
+    const GPON_ONU_STATUS      = '.1.3.6.1.4.1.3320.9.63.1.3.1.6';
+    const GPON_ONU_PORT_COL    = '.1.3.6.1.4.1.3320.9.63.1.3.1.4';
+    const GPON_ONU_ID_COL      = '.1.3.6.1.4.1.3320.9.63.1.3.1.5';
+
+    // BDCOM GP3600 ONU provisioning table (for MAC, serial)
+    // NOTE: .2.1.3 and .2.1.4 return INTEGER:5 (auth-type enum), NOT real MAC/serial on this firmware.
+    const GPON_ONU_MAC         = null;
+    const GPON_ONU_SERIAL      = null;
+
+    // BDCOM GP3600 ONU RX/TX power — NOT supported on this firmware (returns No Such Object)
+    const GPON_ONU_RX_POWER    = null;
+    const GPON_ONU_TX_POWER    = null;
+
+    // Port ONU count
+    const GPON_PORT_ONU_COUNT  = '.1.3.6.1.4.1.3320.9.63.1.1.1.2';
+
+    // Per-ONU reboot OID
+    const GPON_REBOOT_ONU      = '.1.3.6.1.4.1.3320.9.63.1.2.1.28';
+
+    /**
+     * Port map: {suffix => port_number} populated by getOnuIndexToPortMap()
+     */
+    protected array $portMap = [];
+    protected array $onuIdMap = [];
+
+    public function getVendor(): string
+    {
+        return 'bdcom';
+    }
+
+    public function getPonType(): string
+    {
+        return 'gpon';
+    }
+
+    public function getOnuStatusOid(): ?string
+    {
+        return self::GPON_ONU_STATUS;
+    }
+
+    public function getOnuMacOid(): ?string
+    {
+        return null; // Not available via SNMP on this firmware
+    }
+
+    public function getOnuSerialOid(): ?string
+    {
+        return null; // Not available via SNMP on this firmware
+    }
+
+    public function getOnuRxPowerOid(): ?string
+    {
+        return null; // Not supported on this firmware
+    }
+
+    public function getOnuTxPowerOid(): ?string
+    {
+        return null; // Not supported on this firmware
+    }
+
+    public function getCpuUsageOid(): ?string
+    {
+        return self::GPON_CPU_USAGE;
+    }
+
+    public function getMemoryUsageOid(): ?string
+    {
+        return self::GPON_MEMORY_USAGE;
+    }
+
+    public function getTemperatureOid(): ?string
+    {
+        return self::GPON_TEMPERATURE;
+    }
+
+    public function getPonPortOnuCountOid(): ?string
+    {
+        return self::GPON_PORT_ONU_COUNT;
+    }
+
+    public function getRebootOid(): ?string
+    {
+        return self::GPON_REBOOT_ONU;
+    }
+
+    /**
+     * Pre-populate port/onu-id maps from SNMP client so parseOnuIndex can use them.
+     * Called by MonitoringService before pollOnuStatus.
+     */
+    public function getOnuIndexToPortMap(SNMPClient $client): array
+    {
+        $portResults  = $client->walk(self::GPON_ONU_PORT_COL);
+        $onuIdResults = $client->walk(self::GPON_ONU_ID_COL);
+
+        $this->portMap  = [];
+        $this->onuIdMap = [];
+
+        foreach ($portResults as $oid => $val) {
+            if (preg_match('/\.(\d+)$/', $oid, $m)) {
+                $this->portMap[$m[1]] = (int)$val;
+            }
+        }
+        foreach ($onuIdResults as $oid => $val) {
+            if (preg_match('/\.(\d+)$/', $oid, $m)) {
+                $this->onuIdMap[$m[1]] = (int)$val;
+            }
+        }
+
+        return $this->portMap;
+    }
+
+    public function parseOnuIndex(string $oid): array
+    {
+        if (preg_match('/\.(\d+)$/', $oid, $m)) {
+            $suffix = $m[1];
+            $portIndex = $this->portMap[$suffix]  ?? 1;
+            $onuIndex  = $this->onuIdMap[$suffix] ?? (int)$suffix;
+            return ['port_index' => $portIndex, 'onu_index' => $onuIndex];
+        }
+        return ['port_index' => 1, 'onu_index' => 0];
+    }
+
+    public function formatPortName(int $portIndex): string
+    {
+        return "GPON0/{$portIndex}";
+    }
+
+    public function formatOnuInterface(int $portIndex, int $onuIndex): string
+    {
+        return "GPON0/{$portIndex}:{$onuIndex}";
+    }
+
+    public function parseOnuStatus($rawValue): string
+    {
+        $val = intval($rawValue);
+        return match($val) {
+            1 => 'online',
+            2 => 'offline',
+            default => ($val >= 1 && $val <= 5) ? 'online' : 'offline',
+        };
+    }
+
+    public function parseRxPower($rawValue): ?float
+    {
+        if ($rawValue === null || $rawValue === '' || $rawValue === 'noSuchInstance' || $rawValue === 'noSuchObject') {
+            return null;
+        }
+        $val = (float)$rawValue;
+        // BDCOM GPON reports RX power in 0.001 dBm units (tenths of dBm)
+        if (abs($val) > 1000) {
+            return $val / 100.0;
+        }
+        if (abs($val) > 100) {
+            return $val / 10.0;
+        }
+        return $val;
+    }
+
+    public function parseMacAddress($rawValue): string
+    {
+        $rawValue = trim($rawValue, '" ');
+        if (preg_match('/^([0-9A-Fa-f]{2}[:\-.]){5}[0-9A-Fa-f]{2}$/', $rawValue)) {
+            return strtoupper(str_replace(['-', '.'], ':', $rawValue));
+        }
+        $hex = bin2hex($rawValue);
+        if (strlen($hex) === 12) {
+            return strtoupper(implode(':', str_split($hex, 2)));
+        }
+        $clean = strtoupper(preg_replace('/[^0-9A-F]/', '', $rawValue));
+        if (strlen($clean) === 12) {
+            return implode(':', str_split($clean, 2));
+        }
+        return strtoupper($rawValue);
+    }
+}

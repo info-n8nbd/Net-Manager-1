@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" width="160" height="110">
+  <rect width="160" height="110" fill="white"/>
+  <!-- Question mark style -->
+  <circle cx="55" cy="42" r="24" fill="none" stroke="#78909C" stroke-width="5"/>
+  <text x="55" y="50" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" font-weight="bold" fill="#78909C">?</text>
+  <text x="105" y="48" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="18" font-weight="900" fill="#78909C">Other</text>
+  <text x="105" y="63" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" fill="#999">OLT Vendor</text>
+</svg>

@@ -1,0 +1,116 @@
+@extends('layouts.admin')
+
+@section('title', 'Migration Wizard')
+
+@section('content')
+        @include('partials.alerts')
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Migration Runs</h3>
+            </div>
+            <div class="card-body p-0">
+                @if($runs->isEmpty())
+                <div class="text-center py-5">
+                    <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No migration runs yet. Start a new migration to import clients from your old billing system.</p>
+                    <a href="{{ route('admin.migration.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Start Migration
+                    </a>
+                </div>
+                @else
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Phase</th>
+                            <th>Clients</th>
+                            <th>Routers</th>
+                            <th>Started</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($runs as $run)
+                        <tr>
+                            <td>{{ $run->id }}</td>
+                            <td>{{ $run->name }}</td>
+                            <td>
+                                @if($run->status === 'completed')
+                                <span class="badge badge-success">Completed</span>
+                                @elseif($run->status === 'in_progress')
+                                <span class="badge badge-warning">In Progress</span>
+                                @elseif($run->status === 'failed')
+                                <span class="badge badge-danger">Failed</span>
+                                @else
+                                <span class="badge badge-secondary">{{ ucfirst($run->status) }}</span>
+                                @endif
+                            </td>
+                            <td>Phase {{ $run->current_phase }} / 5</td>
+                            <td>{{ $run->total_clients_imported }}</td>
+                            <td>{{ $run->total_routers_scanned }}</td>
+                            <td>{{ $run->created_at->format('d-m-y H:i') }}</td>
+                            <td>
+                                @if($run->status === 'completed')
+                                <a href="{{ route('admin.migration.show', $run) }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                @else
+                                <a href="{{ route('admin.migration.show', $run) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-play"></i> Continue
+                                </a>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                @endif
+            </div>
+            @if($runs->hasPages())
+            <div class="card-footer"><div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-1">
+    <div class="d-flex align-items-center">
+        <label class="small text-muted mb-0 mr-2" style="white-space:nowrap;">SHOW</label>
+        <select class="form-control form-control-sm bulk-show-entries" style="width:80px;">
+            <option value="20" {{ request('per_page',20)==20?'selected':'' }}>20</option>
+            <option value="50" {{ request('per_page',20)==50?'selected':'' }}>50</option>
+            <option value="100" {{ request('per_page',20)==100?'selected':'' }}>100</option>
+            <option value="200" {{ request('per_page',20)==200?'selected':'' }}>200</option>
+        </select>
+        <label class="small text-muted mb-0 ml-2" style="white-space:nowrap;">ENTRIES</label>
+    </div>
+    <div>
+        {{ $runs->appends(request()->query())->links() }}
+    </div>
+</div>
+<script>
+(function(){
+    var sel = document.querySelector('.bulk-show-entries');
+    if(sel){ sel.addEventListener('change',function(){
+        var p=new URLSearchParams(window.location.search);
+        p.set('per_page',this.value); p.delete('page');
+        window.location=window.location.pathname+'?'+p.toString();
+    }); }
+})();
+</script></div>
+            @endif
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="callout callout-info">
+                    <h5><i class="fas fa-info-circle"></i> Migration Process</h5>
+                    <p>The migration wizard guides you through 5 phases to safely migrate your ISP clients:</p>
+                    <ol>
+                        <li><strong>Data Ingestion</strong> - Import client data from spreadsheet (XLSX/CSV)</li>
+                        <li><strong>MikroTik Discovery</strong> - Scan routers to find existing PPPoE users (read-only)</li>
+                        <li><strong>Reconciliation</strong> - Compare imported data with router data</li>
+                        <li><strong>Safe Sync</strong> - Apply corrections with full audit trail</li>
+                        <li><strong>Go Live</strong> - Verify everything and activate billing as master</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+@endsection

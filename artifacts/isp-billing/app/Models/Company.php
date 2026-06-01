@@ -1,0 +1,1977 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Company extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'name', 'slug', 'email', 'phone', 'alt_phone', 'address',
+        'logo', 'logo_light', 'favicon', 'slogan', 'website',
+        'currency_symbol', 'currency_code', 'btrc_license', 'bin_no',
+        'trade_license', 'invoice_footer', 'terms_conditions',
+        'sidebar_color', 'primary_color', 'ticker_label', 'ticker_text',
+        'login_animation_words', 'login_animation_opacity',
+        'max_clients', 'enabled_features', 'allowed_menus', 'page_features', 'is_active',
+        'subscription_start', 'subscription_end', 'notes',
+    ];
+
+    protected $casts = [
+        'enabled_features' => 'array',
+        'allowed_menus' => 'array',
+        'page_features' => 'array',
+        'is_active' => 'boolean',
+        'subscription_start' => 'date',
+        'subscription_end' => 'date',
+        'max_clients' => 'integer',
+        'login_animation_opacity' => 'integer',
+    ];
+
+    public static array $menuStructure = [
+        'dashboard' => [
+            'label' => 'DashBoard',
+            'icon' => 'fas fa-tachometer-alt',
+            'items' => [
+                'dashboard.total_clients'         => 'Total Clients',
+                'dashboard.online_clients'        => 'Online Clients',
+                'dashboard.total_active'          => 'Total Active',
+                'dashboard.total_inactive'        => 'Total Inactive',
+                'dashboard.monthly_collection'    => 'Monthly Collection',
+                'dashboard.today_collection'      => "Today's Collection",
+                'dashboard.running_month_bills'   => 'Running Month Bills',
+                'dashboard.month_bills_collected' => 'Month Bills Collected',
+                'dashboard.prev_month_due'        => 'Prev Month Due',
+                'dashboard.this_month_due'        => 'This Month Due',
+                'dashboard.total_dues'            => 'Total Dues',
+                'dashboard.overdue_clients'       => 'Overdue Clients',
+                'dashboard.prev_month_paid'       => 'Prev Month Paid',
+                'dashboard.this_month_paid'       => 'This Month Paid',
+                'dashboard.today_expense'         => "Today's Expense",
+                'dashboard.monthly_expense'       => 'Monthly Expense',
+                'dashboard.unpaid_clients'        => 'Unpaid Clients',
+                'dashboard.billing_clients'       => 'Billing Clients',
+                'dashboard.today_auto_inactive'   => 'Today Auto Inactive',
+                'dashboard.pending_tickets'       => 'Pending Tickets',
+                'dashboard.installation_charge'   => 'Installation Charge',
+                'dashboard.reseller_collection'   => 'Reseller Collection',
+                'dashboard.other_collection'      => 'Others Collection',
+                'dashboard.total_pops'            => 'Total POPs',
+                // Widgets & Sections
+                'dashboard.live_online_chart'     => 'Live Online Chart',
+                'dashboard.expiring_soon'         => 'Expiring Soon',
+                'dashboard.recent_auto_inactive'  => 'Recent Auto Inactive',
+                'dashboard.recent_online_payments'=> 'Recent Online Payments',
+                'dashboard.recent_payments'       => 'Recent Payments',
+                'dashboard.recent_tickets'        => 'Recent Tickets',
+                'dashboard.staff_dues'            => 'Staff Dues Widget',
+                'dashboard.zone_inactive_clients' => 'Zone Inactive Clients',
+                // Charts
+                'dashboard.chart_30d_clients'     => 'Chart: 30-Day New Clients',
+                'dashboard.chart_30d_collection'  => 'Chart: 30-Day Collection',
+                'dashboard.chart_30d_auto_inactive'=> 'Chart: 30-Day Auto Inactive',
+                'dashboard.chart_due_bills'       => 'Chart: Due Bills',
+                'dashboard.chart_reseller_expense'=> 'Chart: Reseller Expense',
+                'dashboard.chart_zone_clients'    => 'Chart: Zone Clients',
+                'dashboard.chart_area_clients'    => 'Chart: Area Clients',
+                'dashboard.chart_180d_collection' => 'Chart: 180-Day Collection',
+                'dashboard.chart_monthly_revenue' => 'Chart: Monthly Revenue',
+            ],
+        ],
+        'client' => [
+            'label' => 'Client',
+            'icon' => 'fas fa-users',
+            'items' => [
+                'client.new_request' => 'New Request',
+                'client.submit_application' => 'Submit Application',
+                'client.my_applications' => 'My Applications',
+                'client.add_new' => 'Add New',
+                'client.client_list' => 'Client List',
+                'client.change_request' => 'Change Request',
+                'client.scheduler' => 'Scheduler',
+                'client.portal_manage' => 'Portal Manage',
+                'client.left_client' => 'Left Client',
+                'client.client_restore' => 'Client Restore',
+                'client.client_map' => 'Client Map',
+            ],
+        ],
+        'billing' => [
+            'label' => 'Billing',
+            'icon' => 'fas fa-money-check-alt',
+            'items' => [
+                'billing.generate' => 'Generate Bills',
+                'billing.bill_list' => 'Bill List',
+                'billing.due' => 'Due Bills',
+                'billing.payments' => 'Payments',
+                'billing.advance_collection' => 'Advance Collection',
+                'billing.pending_payments' => 'Pending Payments',
+                'billing.collection_transfer' => 'Collection Transfer',
+                'billing.online_payments' => 'Online Payments',
+                'billing.staff_dues' => 'Staff Dues',
+                'billing.daily_collections' => 'Daily Collections',
+                'billing.collection_report' => 'Collection Report',
+                'billing.corrections' => 'Bill/Payment Corrections',
+                'billing.automation' => 'Automation Settings',
+                'billing.android_sms' => 'Send Money Auto Payment',
+            ],
+        ],
+        'accounts' => [
+            'label' => 'Accounts',
+            'icon' => 'fas fa-balance-scale',
+            'items' => [
+                'accounts.cash' => 'Cash In Hand',
+                'accounts.banks' => 'Bank Accounts',
+                'accounts.income' => 'Income',
+                'accounts.expense' => 'Expense',
+                'accounts.loan' => 'Loan Management',
+            ],
+        ],
+        'reports' => [
+            'label' => 'Report',
+            'icon' => 'fas fa-chart-pie',
+            'items' => [
+                'reports.income_statement' => 'Income Statement',
+                'reports.profit_loss' => 'Profit & Loss',
+                'reports.daily' => 'Daily Collection',
+                'reports.monthly' => 'Monthly Revenue',
+                'reports.due' => 'Due Report',
+                'reports.client_ledger' => 'Client Ledger',
+                'reports.zone' => 'Zone Report',
+                'reports.employee_collection' => 'Employee Collection',
+                'reports.bandwidth' => 'Bandwidth Report',
+                'reports.btrc' => 'BTRC Report',
+                'reports.stock' => 'Stock Report',
+                'reports.inventory_stock' => 'Inventory Stock Report',
+            ],
+        ],
+        'olt' => [
+            'label' => 'OLT Management',
+            'icon' => 'fas fa-microchip',
+            'items' => [
+                'olt.devices' => 'OLT Devices',
+                'olt.users' => 'OLT Users',
+                'olt.onu_list' => 'ONU List',
+                'olt.onu_status' => 'ONU Status',
+            ],
+        ],
+        'mikrotik' => [
+            'label' => 'MikroTik Router',
+            'icon' => 'fas fa-ethernet',
+            'items' => [
+                'mikrotik.router_list' => 'Router List',
+                'mikrotik.connectivity_test' => 'Connectivity Test',
+                'mikrotik.firewall' => 'Firewall Rules',
+                'mikrotik.nat' => 'NAT Rules',
+                'mikrotik.bulk_operations' => 'Bulk Operations',
+            ],
+        ],
+        'network' => [
+            'label' => 'Network & Devices',
+            'icon' => 'fas fa-sitemap',
+            'items' => [
+                'network.ip_pools' => 'IP Pool Management',
+                'network.pop' => 'Network POP',
+                'network.splitters' => 'Splitter Management',
+                'network.mac_binding' => 'MAC Binding',
+                'network.radius_settings' => 'RADIUS Settings',
+                'network.connections' => 'Network Connections',
+                'network.distributed_items' => 'Distributed Inv. Items',
+                'network.two_way_sync' => 'Two-Way Sync',
+                'network.device_logs' => 'Device Logs',
+            ],
+        ],
+        'diagram' => [
+            'label' => 'Diagram & Maps',
+            'icon' => 'fas fa-map-marked-alt',
+            'items' => [
+                'diagram.network_diagram'  => 'Network Diagram',
+                'diagram.client_diagram'   => 'Client Diagram',
+                'diagram.network_map'      => 'Network View in Map',
+                'diagram.network_topology' => 'Network Topology',
+                'diagram.selfie_map'       => 'Selfie Attendance Map',
+                'diagram.client_map'       => 'Client Map',
+            ],
+        ],
+        'mac_reseller' => [
+            'label' => 'MAC Reseller',
+            'icon' => 'fas fa-handshake',
+            'items' => [
+                'mac_reseller.list' => 'MAC Reseller List',
+                'mac_reseller.clients' => 'MAC Reseller Clients',
+                'mac_reseller.funding' => 'MAC Reseller Billing',
+                'mac_reseller.collection_report' => 'MAC Collection Report',
+            ],
+        ],
+        'bw_reseller' => [
+            'label' => 'Bandwidth Reseller',
+            'icon' => 'fas fa-tachometer-alt',
+            'items' => [
+                'bw_reseller.list' => 'Bandwidth Reseller List',
+                'bw_reseller.bw_categories' => 'BW Categories',
+                'bw_reseller.bw_billing' => 'BW Reseller Billing',
+                'bw_reseller.bw_collection_report' => 'BW Collection Report',
+            ],
+        ],
+        'agent' => [
+            'label' => 'Referral Partner',
+            'icon' => 'fas fa-user-tie',
+            'items' => [
+                'agent.add' => 'Add Referral Partner',
+                'agent.list' => 'Referral Partner List',
+                'agent.ledgers' => 'Referral Partner Ledger',
+            ],
+        ],
+        'events' => [
+            'label' => 'Events & Holidays',
+            'icon' => 'fas fa-glass-cheers',
+            'items' => [
+                'events.list' => 'Events List',
+                'events.holidays' => 'Holidays',
+            ],
+        ],
+        'branches' => [
+            'label' => 'Branch & POP',
+            'icon' => 'fas fa-building',
+            'items' => [
+                'branches.list' => 'Branches',
+                'branches.pops' => 'POPs',
+            ],
+        ],
+        'support' => [
+            'label' => 'Support & Ticketing',
+            'icon' => 'fas fa-headset',
+            'items' => [
+                'support.tickets' => 'All Tickets',
+                'support.categories' => 'Ticket Categories',
+                'support.sla' => 'SLA Configuration',
+                'support.technician_efficiency' => 'Technician Efficiency',
+            ],
+        ],
+        'tasks' => [
+            'label' => 'Task Management',
+            'icon' => 'fas fa-clipboard-list',
+            'items' => [
+                'tasks.create' => 'Create Task',
+                'tasks.all' => 'All Tasks',
+                'tasks.calendar' => 'Task Calendar',
+            ],
+        ],
+        'store' => [
+            'label' => 'Store',
+            'icon' => 'fas fa-store',
+            'items' => [
+                'store.vendors' => 'Vendors',
+                'store.categories' => 'Product Categories',
+                'store.products' => 'Products',
+                'store.add_purchase' => 'Add Purchase',
+                'store.purchases' => 'Purchase List',
+            ],
+        ],
+        'sales' => [
+            'label' => 'Sales & Service',
+            'icon' => 'fas fa-cash-register',
+            'items' => [
+                'sales.create' => 'New Sale',
+                'sales.list' => 'Sales List',
+                'sales.installation_charges' => 'Installation Charges',
+                'sales.services' => 'Service Charges',
+            ],
+        ],
+        'inventory' => [
+            'label' => 'Inventory',
+            'icon' => 'fas fa-warehouse',
+            'items' => [
+                'inventory.dashboard' => 'Dashboard',
+                'inventory.product_categories' => 'Categories',
+                'inventory.vendors' => 'Vendors',
+                'inventory.serial' => 'Serial Search',
+                'inventory.instruments' => 'Instruments',
+                'inventory.product_analyse' => 'Product Analyse',
+                'inventory.fiber' => 'Fiber Stock',
+                'inventory.fiber_analytics' => 'Fiber Analytics',
+                'inventory.damaged' => 'Damaged Items',
+                'inventory.returned_equipments' => 'Returned Equipment',
+                'inventory.inactive_client_history' => 'Inactive Client History',
+                'inventory.stock_availability' => 'Stock Availability',
+                'inventory.products' => 'Products Stocks',
+                'inventory.product_in' => 'Product In History',
+                'inventory.product_out' => 'Product Out',
+                'inventory.product_out_history' => 'Product Out History',
+            ],
+        ],
+        'daily_billing' => [
+            'label' => 'Daily Billing',
+            'icon' => 'fas fa-calendar-day',
+            'items' => [],
+        ],
+        'minute_sales' => [
+            'label' => 'Minute Sales',
+            'icon' => 'fas fa-history',
+            'items' => [
+                'minute_sales.packages' => 'Packages',
+                'minute_sales.sell' => 'Sell Minutes',
+                'minute_sales.report' => 'Sales Report',
+            ],
+        ],
+        'payment_links' => [
+            'label' => 'Payment Links',
+            'icon' => 'fas fa-money-bill-wave',
+            'items' => [],
+        ],
+        'hrm' => [
+            'label' => 'HRM',
+            'icon' => 'fas fa-id-card-alt',
+            'items' => [
+                'hrm.employees' => 'Employees',
+                'hrm.departments' => 'Departments',
+                'hrm.designations' => 'Designations',
+                'hrm.attendance' => 'Attendance',
+                'hrm.selfie_attendance' => 'Selfie Attendance',
+                'hrm.selfie_attendance_report' => 'Selfie Report',
+                'hrm.leave' => 'Leave Management',
+                'hrm.salary' => 'Salary Payroll',
+                'hrm.staff_dues' => 'Staff Dues',
+                'hrm.menu_access' => 'Menu Access Control',
+                'hrm.role_permissions' => 'Role Permissions',
+            ],
+        ],
+        // ── Utilities ─────────────────────────────────────────────────────────────────────
+        'data_transfer' => [
+            'label' => 'Data Transfer',
+            'icon' => 'fas fa-cloud-upload-alt',
+            'items' => [
+                'data_transfer.overview' => 'Overview',
+                'data_transfer.quick' => 'Quick Import/Export',
+                'data_transfer.import' => 'Import Data',
+                'data_transfer.export' => 'Export Data',
+                'data_transfer.migration' => 'Migration Wizard',
+            ],
+        ],
+        'hotspot' => [
+            'label' => 'Hotspot Editor',
+            'icon' => 'fas fa-wifi',
+            'items' => [
+                'hotspot.editor' => 'Hotspot Editor',
+            ],
+        ],
+        'sms' => [
+            'label' => 'SMS Service',
+            'icon' => 'fas fa-paper-plane',
+            'items' => [
+                'sms.individual' => 'Individual SMS',
+                'sms.bulk' => 'Send SMS',
+                'sms.templates' => 'SMS Templates',
+                'sms.gateway' => 'SMS Gateway',
+                'sms.settings' => 'SMS Settings',
+                'sms.logs' => 'SMS Logs',
+            ],
+        ],
+        'whatsapp' => [
+            'label' => 'WhatsApp',
+            'icon' => 'fab fa-whatsapp',
+            'items' => [
+                'whatsapp.settings' => 'Settings',
+                'whatsapp.templates' => 'Templates',
+                'whatsapp.logs' => 'Message Logs',
+            ],
+        ],
+        'email' => [
+            'label' => 'Email System',
+            'icon' => 'fas fa-envelope',
+            'items' => [
+                'email.logs'     => 'Dashboard & Logs',
+                'email.settings' => 'SMTP Settings',
+            ],
+        ],
+        'ipam' => [
+            'label' => 'IPAM',
+            'icon' => 'fas fa-globe',
+            'items' => [
+                'ipam.pools' => 'IP Pools',
+                'ipam.create' => 'Create Pool',
+            ],
+        ],
+        'vpn' => [
+            'label' => 'VPN & Forwarding',
+            'icon' => 'fas fa-lock',
+            'items' => [
+                'vpn.accounts' => 'VPN Accounts',
+                'vpn.port_forwarding' => 'Port Forwarding',
+            ],
+        ],
+        'voice_calls' => [
+            'label' => 'Voice Calls',
+            'icon' => 'fas fa-phone-alt',
+            'items' => [
+                'voice_calls.history' => 'Call History',
+                'voice_calls.settings' => 'Settings',
+            ],
+        ],
+        'card_billing' => [
+            'label' => 'Card Billing',
+            'icon' => 'fas fa-credit-card',
+            'items' => [
+                'card_billing.batches' => 'Card Batches',
+                'card_billing.cards' => 'All Cards',
+                'card_billing.redeem' => 'Redeem Card',
+                'card_billing.distributors' => 'Distributors',
+            ],
+        ],
+        'configuration' => [
+            'label' => 'Configuration',
+            'icon' => 'fas fa-sliders-h',
+            'items' => [
+                'configuration.district' => 'District',
+                'configuration.area' => 'Area',
+                'configuration.connection_type' => 'Connection Type',
+                'configuration.protocol_type' => 'Protocol Type',
+                'configuration.client_type' => 'Client Type',
+                'configuration.package' => 'Package & Profile',
+                'configuration.dropdown_options' => 'Dropdown Options',
+
+            ],
+        ],
+        'settings' => [
+            'label' => 'Settings',
+            'icon' => 'fas fa-wrench',
+            'items' => [
+                'settings.company' => 'Company Profile',
+                'settings.logo' => 'Logo Settings',
+                'settings.system' => 'System Settings',
+                'settings.payment_methods' => 'Payment Methods',
+                'settings.payment' => 'Payment Settings',
+                'settings.logs' => 'System Logs',
+            ],
+        ],
+        'security' => [
+            'label' => 'Security',
+            'icon' => 'fas fa-fingerprint',
+            'items' => [
+                'security.dashboard' => 'Dashboard',
+                'security.2fa' => 'Two-Factor Auth',
+                'security.password_policy' => 'Password Policy',
+                'security.login_logs' => 'Login Logs',
+                'security.api_tokens' => 'API Tokens',
+            ],
+        ],
+        'backups' => [
+            'label' => 'Backup & Restore',
+            'icon' => 'fas fa-hdd',
+            'items' => [],
+        ],
+        'help' => [
+            'label' => 'Help Center',
+            'icon' => 'fas fa-book-open',
+            'items' => [
+                'help.center' => 'Help Center',
+            ],
+        ],
+    ];
+
+
+
+    /**
+     * Page Feature Permissions: mirrors $menuStructure hierarchy.
+     * Structure: parent => [ label, icon, pages => [ submenu_key => [ label, features => [key => label] ] ] ]
+     * Feature keys follow: parent.submenu_page.action
+     * Default (empty page_features): ALL features enabled (backward compatible).
+     */
+    public static array $pageFeatures = [
+
+        'dashboard' => [
+            'label' => 'DashBoard',
+            'icon'  => 'fas fa-tachometer-alt',
+            'pages' => [
+                'dashboard.stats' => [
+                    'label'    => 'Stats / Counter Boxes',
+                    'features' => [
+                        'dashboard.stats.total_clients'         => 'Total Clients',
+                        'dashboard.stats.online_clients'        => 'Online Clients',
+                        'dashboard.stats.total_active'          => 'Total Active',
+                        'dashboard.stats.total_inactive'        => 'Total Inactive',
+                        'dashboard.stats.monthly_collection'    => 'Monthly Collection',
+                        'dashboard.stats.today_collection'      => "Today's Collection",
+                        'dashboard.stats.running_month_bills'   => 'Running Month Bills',
+                        'dashboard.stats.month_bills_collected' => 'Month Bills Collected',
+                        'dashboard.stats.prev_month_due'        => 'Prev Month Due',
+                        'dashboard.stats.this_month_due'        => 'This Month Due',
+                        'dashboard.stats.total_dues'            => 'Total Dues',
+                        'dashboard.stats.overdue_clients'       => 'Overdue Clients',
+                        'dashboard.stats.today_expense'         => "Today's Expense",
+                        'dashboard.stats.monthly_expense'       => 'Monthly Expense',
+                        'dashboard.stats.unpaid_clients'        => 'Unpaid Clients',
+                        'dashboard.stats.billing_clients'       => 'Billing Clients',
+                        'dashboard.stats.today_auto_inactive'   => 'Today Auto Inactive',
+                        'dashboard.stats.pending_tickets'       => 'Pending Tickets',
+                        'dashboard.stats.installation_charge'   => 'Installation Charge',
+                        'dashboard.stats.reseller_collection'   => 'Reseller Collection',
+                        'dashboard.stats.other_collection'      => 'Others Collection',
+                        'dashboard.stats.total_pops'            => 'Total POPs',
+                    ],
+                ],
+                'dashboard.widgets' => [
+                    'label'    => 'Widgets & Sections',
+                    'features' => [
+                        'dashboard.widgets.live_online_chart'      => 'Live Online Chart',
+                        'dashboard.widgets.expiring_soon'          => 'Expiring Soon',
+                        'dashboard.widgets.recent_auto_inactive'   => 'Recent Auto Inactive',
+                        'dashboard.widgets.recent_online_payments' => 'Recent Online Payments',
+                        'dashboard.widgets.recent_payments'        => 'Recent Payments',
+                        'dashboard.widgets.recent_tickets'         => 'Recent Tickets',
+                        'dashboard.widgets.staff_dues'             => 'Staff Dues Widget',
+                        'dashboard.widgets.zone_inactive_clients'  => 'Zone Inactive Clients',
+                    ],
+                ],
+                'dashboard.charts' => [
+                    'label'    => 'Charts',
+                    'features' => [
+                        'dashboard.charts.30d_clients'      => 'Chart: 30-Day New Clients',
+                        'dashboard.charts.30d_collection'   => 'Chart: 30-Day Collection',
+                        'dashboard.charts.30d_auto_inactive'=> 'Chart: 30-Day Auto Inactive',
+                        'dashboard.charts.due_bills'        => 'Chart: Due Bills',
+                        'dashboard.charts.reseller_expense' => 'Chart: Reseller Expense',
+                        'dashboard.charts.zone_clients'     => 'Chart: Zone Clients',
+                        'dashboard.charts.area_clients'     => 'Chart: Area Clients',
+                        'dashboard.charts.180d_collection'  => 'Chart: 180-Day Collection',
+                        'dashboard.charts.monthly_revenue'  => 'Chart: Monthly Revenue',
+                    ],
+                ],
+            ],
+        ],
+
+        'client' => [
+            'label' => 'Client',
+            'icon'  => 'fas fa-users',
+            'pages' => [
+                'client.client_list' => [
+                    'label'    => 'Client List',
+                    'features' => [
+                        'client.client_list.add'            => 'Add New Client',
+                        'client.client_list.import'         => 'Import Clients',
+                        'client.client_list.export'         => 'Export Clients',
+                        'client.client_list.bulk_delete'    => 'Bulk Delete',
+                        'client.client_list.bulk_sms'       => 'Bulk SMS',
+                        'client.client_list.edit'           => 'Edit Client',
+                        'client.client_list.delete'         => 'Delete Client',
+                        'client.client_list.view_password'  => 'View PPPoE Password',
+                        'client.client_list.reconnect'      => 'Reconnect / Disconnect',
+                        'client.client_list.change_package' => 'Change Package',
+                        'client.client_list.payment_tab'    => 'Payment History Tab',
+                        'client.client_list.connection_tab' => 'Connection Info Tab',
+                        'client.client_list.send_sms'       => 'Send SMS',
+                    ],
+                ],
+                'client.add_new' => [
+                    'label'    => 'Add New Client',
+                    'features' => [
+                        'client.add_new.pppoe_section'    => 'PPPoE / Connection Section',
+                        'client.add_new.hotspot_section'  => 'Hotspot Section',
+                        'client.add_new.mikrotik_section' => 'MikroTik Assignment',
+                        'client.add_new.ip_assignment'    => 'IP Assignment',
+                        'client.add_new.discount'         => 'Discount Field',
+                    ],
+                ],
+                'client.new_request' => [
+                    'label'    => 'New Request / Applications',
+                    'features' => [
+                        'client.new_request.approve'   => 'Approve Application',
+                        'client.new_request.reject'    => 'Reject Application',
+                        'client.new_request.delete'    => 'Delete Application',
+                        'client.new_request.export'    => 'Export',
+                    ],
+                ],
+                'client.change_request' => [
+                    'label'    => 'Change Request',
+                    'features' => [
+                        'client.change_request.approve' => 'Approve Request',
+                        'client.change_request.reject'  => 'Reject Request',
+                        'client.change_request.delete'  => 'Delete Request',
+                    ],
+                ],
+                'client.scheduler' => [
+                    'label'    => 'Scheduler',
+                    'features' => [
+                        'client.scheduler.create'        => 'Create Schedule',
+                        'client.scheduler.edit'          => 'Edit Schedule',
+                        'client.scheduler.delete'        => 'Delete Schedule',
+                        'client.scheduler.mark_complete' => 'Mark Complete',
+                    ],
+                ],
+                'client.left_client' => [
+                    'label'    => 'Left Client',
+                    'features' => [
+                        'client.left_client.restore' => 'Restore Client',
+                        'client.left_client.delete'  => 'Delete Permanently',
+                        'client.left_client.export'  => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'billing' => [
+            'label' => 'Billing',
+            'icon'  => 'fas fa-money-check-alt',
+            'pages' => [
+                'billing.bill_list' => [
+                    'label'    => 'Bill List',
+                    'features' => [
+                        'billing.bill_list.collect'      => 'Collect Payment',
+                        'billing.bill_list.delete'       => 'Delete Bill',
+                        'billing.bill_list.void'         => 'Void / Cancel Bill',
+                        'billing.bill_list.export'       => 'Export Bills',
+                        'billing.bill_list.discount'     => 'Apply Discount',
+                        'billing.bill_list.waiver'       => 'Apply Waiver',
+                        'billing.bill_list.print'        => 'Print Bill',
+                        'billing.bill_list.bulk_collect' => 'Bulk Collect',
+                    ],
+                ],
+                'billing.generate' => [
+                    'label'    => 'Generate Bills',
+                    'features' => [
+                        'billing.generate.generate'    => 'Generate Bills Action',
+                        'billing.generate.bulk_sms'    => 'Send Bulk SMS after generate',
+                        'billing.generate.auto_inactive' => 'Auto Inactive toggle',
+                    ],
+                ],
+                'billing.due' => [
+                    'label'    => 'Due Bills',
+                    'features' => [
+                        'billing.due.collect'      => 'Collect Payment',
+                        'billing.due.export'       => 'Export Due Bills',
+                        'billing.due.bulk_sms'     => 'Bulk SMS to Due Clients',
+                        'billing.due.bulk_collect' => 'Bulk Collect',
+                    ],
+                ],
+                'billing.payments' => [
+                    'label'    => 'Payments',
+                    'features' => [
+                        'billing.payments.delete' => 'Delete Payment',
+                        'billing.payments.export' => 'Export Payments',
+                        'billing.payments.print'  => 'Print Receipt',
+                        'billing.payments.refund' => 'Refund Payment',
+                    ],
+                ],
+                'billing.online_payments' => [
+                    'label'    => 'Online Payments',
+                    'features' => [
+                        'billing.online_payments.approve' => 'Approve Payment',
+                        'billing.online_payments.reject'  => 'Reject Payment',
+                        'billing.online_payments.export'  => 'Export',
+                    ],
+                ],
+                'billing.automation' => [
+                    'label'    => 'Automation Settings',
+                    'features' => [
+                        'billing.automation.edit_rules'   => 'Edit Automation Rules',
+                        'billing.automation.toggle'       => 'Enable / Disable Automation',
+                        'billing.automation.run_manually' => 'Run Manually',
+                    ],
+                ],
+                'billing.collection_report' => [
+                    'label'    => 'Collection Report',
+                    'features' => [
+                        'billing.collection_report.export' => 'Export Report',
+                        'billing.collection_report.print'  => 'Print Report',
+                    ],
+                ],
+                'billing.daily_collections' => [
+                    'label'    => 'Daily Collections',
+                    'features' => [
+                        'billing.daily_collections.export' => 'Export',
+                        'billing.daily_collections.print'  => 'Print',
+                    ],
+                ],
+                'billing.corrections' => [
+                    'label'    => 'Bill / Payment Corrections',
+                    'features' => [
+                        'billing.corrections.add'    => 'Add Correction',
+                        'billing.corrections.delete' => 'Delete Correction',
+                    ],
+                ],
+                'billing.advance_collection' => [
+                    'label'    => 'Advance Collection',
+                    'features' => [
+                        'billing.advance_collection.add'    => 'Add Advance',
+                        'billing.advance_collection.use'    => 'Use Advance',
+                        'billing.advance_collection.export' => 'Export',
+                    ],
+                ],
+                'billing.staff_dues' => [
+                    'label'    => 'Staff Dues',
+                    'features' => [
+                        'billing.staff_dues.settle' => 'Settle Dues',
+                        'billing.staff_dues.export' => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'accounts' => [
+            'label' => 'Accounts',
+            'icon'  => 'fas fa-balance-scale',
+            'pages' => [
+                'accounts.income' => [
+                    'label'    => 'Income',
+                    'features' => [
+                        'accounts.income.add'    => 'Add Income',
+                        'accounts.income.edit'   => 'Edit Income',
+                        'accounts.income.delete' => 'Delete Income',
+                        'accounts.income.export' => 'Export',
+                    ],
+                ],
+                'accounts.expense' => [
+                    'label'    => 'Expense',
+                    'features' => [
+                        'accounts.expense.add'    => 'Add Expense',
+                        'accounts.expense.edit'   => 'Edit Expense',
+                        'accounts.expense.delete' => 'Delete Expense',
+                        'accounts.expense.export' => 'Export',
+                    ],
+                ],
+                'accounts.cash' => [
+                    'label'    => 'Cash In Hand',
+                    'features' => [
+                        'accounts.cash.fund_transfer' => 'Fund Transfer',
+                        'accounts.cash.export'        => 'Export',
+                    ],
+                ],
+                'accounts.banks' => [
+                    'label'    => 'Bank Accounts',
+                    'features' => [
+                        'accounts.banks.add'      => 'Add Bank Account',
+                        'accounts.banks.edit'     => 'Edit Bank Account',
+                        'accounts.banks.delete'   => 'Delete Bank Account',
+                        'accounts.banks.transfer' => 'Fund Transfer',
+                    ],
+                ],
+                'accounts.loan' => [
+                    'label'    => 'Loan Management',
+                    'features' => [
+                        'accounts.loan.add'    => 'Add Loan',
+                        'accounts.loan.pay'    => 'Pay Installment',
+                        'accounts.loan.delete' => 'Delete Loan',
+                        'accounts.loan.export' => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'reports' => [
+            'label' => 'Report',
+            'icon'  => 'fas fa-chart-pie',
+            'pages' => [
+                'reports.income_statement' => [
+                    'label'    => 'Income Statement',
+                    'features' => [
+                        'reports.income_statement.export' => 'Export',
+                        'reports.income_statement.print'  => 'Print',
+                    ],
+                ],
+                'reports.daily' => [
+                    'label'    => 'Daily Collection',
+                    'features' => [
+                        'reports.daily.export' => 'Export',
+                        'reports.daily.print'  => 'Print',
+                    ],
+                ],
+                'reports.monthly' => [
+                    'label'    => 'Monthly Revenue',
+                    'features' => [
+                        'reports.monthly.export' => 'Export',
+                        'reports.monthly.print'  => 'Print',
+                    ],
+                ],
+                'reports.due' => [
+                    'label'    => 'Due Report',
+                    'features' => [
+                        'reports.due.export'   => 'Export',
+                        'reports.due.bulk_sms' => 'Bulk SMS from report',
+                    ],
+                ],
+                'reports.client_ledger' => [
+                    'label'    => 'Client Ledger',
+                    'features' => [
+                        'reports.client_ledger.export' => 'Export',
+                        'reports.client_ledger.print'  => 'Print',
+                    ],
+                ],
+                'reports.zone' => [
+                    'label'    => 'Zone Report',
+                    'features' => [
+                        'reports.zone.export' => 'Export',
+                    ],
+                ],
+                'reports.employee_collection' => [
+                    'label'    => 'Employee Collection',
+                    'features' => [
+                        'reports.employee_collection.export' => 'Export',
+                        'reports.employee_collection.print'  => 'Print',
+                    ],
+                ],
+                'reports.profit_loss' => [
+                    'label'    => 'Profit & Loss',
+                    'features' => [
+                        'reports.profit_loss.export' => 'Export',
+                        'reports.profit_loss.print'  => 'Print',
+                    ],
+                ],
+                'reports.bandwidth' => [
+                    'label'    => 'Bandwidth Report',
+                    'features' => [
+                        'reports.bandwidth.export' => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'olt' => [
+            'label' => 'OLT Management',
+            'icon'  => 'fas fa-microchip',
+            'pages' => [
+                'olt.devices' => [
+                    'label'    => 'OLT Devices',
+                    'features' => [
+                        'olt.devices.add'          => 'Add OLT',
+                        'olt.devices.edit'         => 'Edit OLT',
+                        'olt.devices.delete'       => 'Delete OLT',
+                        'olt.devices.live_refresh' => 'Live Refresh',
+                    ],
+                ],
+                'olt.onu_list' => [
+                    'label'    => 'ONU List',
+                    'features' => [
+                        'olt.onu_list.provision'   => 'Provision ONU',
+                        'olt.onu_list.deprovision' => 'Deprovision ONU',
+                        'olt.onu_list.export'      => 'Export',
+                    ],
+                ],
+                'olt.onu_status' => [
+                    'label'    => 'ONU Status',
+                    'features' => [],
+                ],
+                'olt.users' => [
+                    'label'    => 'OLT Users',
+                    'features' => [
+                        'olt.users.add'    => 'Add OLT User',
+                        'olt.users.edit'   => 'Edit OLT User',
+                        'olt.users.delete' => 'Delete OLT User',
+                    ],
+                ],
+            ],
+        ],
+
+        'mikrotik' => [
+            'label' => 'MikroTik Router',
+            'icon'  => 'fas fa-ethernet',
+            'pages' => [
+                'mikrotik.router_list' => [
+                    'label'    => 'Router List',
+                    'features' => [
+                        'mikrotik.router_list.add'            => 'Add Router',
+                        'mikrotik.router_list.edit'           => 'Edit Router',
+                        'mikrotik.router_list.delete'         => 'Delete Router',
+                        'mikrotik.router_list.sync'           => 'Sync / Refresh',
+                        'mikrotik.router_list.pppoe_enable'   => 'PPPoE Enable / Disable',
+                        'mikrotik.router_list.bandwidth'      => 'Change Bandwidth',
+                        'mikrotik.router_list.reboot'         => 'Reboot Router',
+                    ],
+                ],
+                'mikrotik.bulk_operations' => [
+                    'label'    => 'Bulk Operations',
+                    'features' => [
+                        'mikrotik.bulk_operations.run'  => 'Run Bulk Operations',
+                    ],
+                ],
+                'mikrotik.connectivity_test' => [
+                    'label'    => 'Connectivity Test',
+                    'features' => [
+                        'mikrotik.connectivity_test.ping'  => 'Ping Test',
+                        'mikrotik.connectivity_test.speed' => 'Speed Test',
+                    ],
+                ],
+                'mikrotik.firewall' => [
+                    'label'    => 'Firewall Rules',
+                    'features' => [
+                        'mikrotik.firewall.add'    => 'Add Rule',
+                        'mikrotik.firewall.edit'   => 'Edit Rule',
+                        'mikrotik.firewall.delete' => 'Delete Rule',
+                        'mikrotik.firewall.toggle' => 'Enable / Disable Rule',
+                    ],
+                ],
+                'mikrotik.nat' => [
+                    'label'    => 'NAT Rules',
+                    'features' => [
+                        'mikrotik.nat.add'    => 'Add NAT Rule',
+                        'mikrotik.nat.edit'   => 'Edit NAT Rule',
+                        'mikrotik.nat.delete' => 'Delete NAT Rule',
+                    ],
+                ],
+            ],
+        ],
+
+        'network' => [
+            'label' => 'Network & Devices',
+            'icon'  => 'fas fa-sitemap',
+            'pages' => [
+                'network.pop' => [
+                    'label'    => 'Network POP',
+                    'features' => [
+                        'network.pop.add'    => 'Add POP',
+                        'network.pop.edit'   => 'Edit POP',
+                        'network.pop.delete' => 'Delete POP',
+                    ],
+                ],
+                'network.connections' => [
+                    'label'    => 'Network Connections',
+                    'features' => [
+                        'network.connections.add'    => 'Add Connection',
+                        'network.connections.edit'   => 'Edit Connection',
+                        'network.connections.delete' => 'Delete Connection',
+                        'network.connections.ping'   => 'Ping Test',
+                    ],
+                ],
+                'network.ip_pools' => [
+                    'label'    => 'IP Pool Management',
+                    'features' => [
+                        'network.ip_pools.add'    => 'Add IP Pool',
+                        'network.ip_pools.edit'   => 'Edit IP Pool',
+                        'network.ip_pools.delete' => 'Delete IP Pool',
+                    ],
+                ],
+                'network.mac_binding' => [
+                    'label'    => 'MAC Binding',
+                    'features' => [
+                        'network.mac_binding.add'    => 'Add MAC Binding',
+                        'network.mac_binding.edit'   => 'Edit',
+                        'network.mac_binding.delete' => 'Delete',
+                        'network.mac_binding.export' => 'Export',
+                    ],
+                ],
+                'network.splitters' => [
+                    'label'    => 'Splitter Management',
+                    'features' => [
+                        'network.splitters.add'    => 'Add Splitter',
+                        'network.splitters.edit'   => 'Edit Splitter',
+                        'network.splitters.delete' => 'Delete Splitter',
+                    ],
+                ],
+                'network.radius_settings' => [
+                    'label'    => 'RADIUS Settings',
+                    'features' => [
+                        'network.radius_settings.edit' => 'Edit RADIUS Settings',
+                    ],
+                ],
+            ],
+        ],
+
+        'diagram' => [
+            'label' => 'Diagram & Maps',
+            'icon'  => 'fas fa-map-marked-alt',
+            'pages' => [
+                'diagram.network_diagram' => [
+                    'label'    => 'Network Diagram',
+                    'features' => [
+                        'diagram.network_diagram.add_node'    => 'Add Node',
+                        'diagram.network_diagram.edit_node'   => 'Edit Node',
+                        'diagram.network_diagram.delete_node' => 'Delete Node',
+                        'diagram.network_diagram.export'      => 'Export Diagram',
+                    ],
+                ],
+                'diagram.network_map' => [
+                    'label'    => 'Network View in Map',
+                    'features' => [
+                        'diagram.network_map.add_marker'    => 'Add Marker',
+                        'diagram.network_map.edit_marker'   => 'Edit Marker',
+                        'diagram.network_map.delete_marker' => 'Delete Marker',
+                    ],
+                ],
+                'diagram.client_map' => [
+                    'label'    => 'Client Map',
+                    'features' => [
+                        'diagram.client_map.view_client' => 'View Client Details',
+                        'diagram.client_map.export'      => 'Export Map',
+                    ],
+                ],
+            ],
+        ],
+
+        'mac_reseller' => [
+            'label' => 'MAC Reseller',
+            'icon'  => 'fas fa-handshake',
+            'pages' => [
+                'mac_reseller.list' => [
+                    'label'    => 'MAC Reseller List',
+                    'features' => [
+                        'mac_reseller.list.add'          => 'Add Reseller',
+                        'mac_reseller.list.edit'         => 'Edit Reseller',
+                        'mac_reseller.list.delete'       => 'Delete Reseller',
+                        'mac_reseller.list.view_balance' => 'View Balance',
+                        'mac_reseller.list.add_balance'  => 'Add Balance',
+                        'mac_reseller.list.export'       => 'Export',
+                    ],
+                ],
+                'mac_reseller.clients' => [
+                    'label'    => 'MAC Reseller Clients',
+                    'features' => [
+                        'mac_reseller.clients.add'    => 'Add Client',
+                        'mac_reseller.clients.edit'   => 'Edit Client',
+                        'mac_reseller.clients.delete' => 'Delete Client',
+                        'mac_reseller.clients.export' => 'Export',
+                    ],
+                ],
+                'mac_reseller.funding' => [
+                    'label'    => 'MAC Reseller Billing',
+                    'features' => [
+                        'mac_reseller.funding.add'    => 'Add Funding',
+                        'mac_reseller.funding.delete' => 'Delete Funding',
+                        'mac_reseller.funding.export' => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'bw_reseller' => [
+            'label' => 'Bandwidth Reseller',
+            'icon'  => 'fas fa-tachometer-alt',
+            'pages' => [
+                'bw_reseller.list' => [
+                    'label'    => 'Bandwidth Reseller List',
+                    'features' => [
+                        'bw_reseller.list.add'          => 'Add Reseller',
+                        'bw_reseller.list.edit'         => 'Edit Reseller',
+                        'bw_reseller.list.delete'       => 'Delete Reseller',
+                        'bw_reseller.list.view_balance' => 'View Balance',
+                        'bw_reseller.list.add_balance'  => 'Add Balance',
+                    ],
+                ],
+                'bw_reseller.bw_categories' => [
+                    'label'    => 'BW Categories',
+                    'features' => [
+                        'bw_reseller.bw_categories.add'    => 'Add Category',
+                        'bw_reseller.bw_categories.edit'   => 'Edit Category',
+                        'bw_reseller.bw_categories.delete' => 'Delete Category',
+                    ],
+                ],
+                'bw_reseller.bw_billing' => [
+                    'label'    => 'BW Reseller Billing',
+                    'features' => [
+                        'bw_reseller.bw_billing.add'    => 'Add Billing',
+                        'bw_reseller.bw_billing.delete' => 'Delete Billing',
+                        'bw_reseller.bw_billing.export' => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'agent' => [
+            'label' => 'Referral Partner',
+            'icon'  => 'fas fa-user-tie',
+            'pages' => [
+                'agent.list' => [
+                    'label'    => 'Referral Partner List',
+                    'features' => [
+                        'agent.list.add'          => 'Add Partner',
+                        'agent.list.edit'         => 'Edit Partner',
+                        'agent.list.delete'       => 'Delete Partner',
+                        'agent.list.view_balance' => 'View Balance',
+                        'agent.list.add_balance'  => 'Add Balance',
+                        'agent.list.export'       => 'Export',
+                    ],
+                ],
+                'agent.ledgers' => [
+                    'label'    => 'Referral Ledger',
+                    'features' => [
+                        'agent.ledgers.export' => 'Export Ledger',
+                    ],
+                ],
+            ],
+        ],
+
+        'events' => [
+            'label' => 'Events & Holidays',
+            'icon'  => 'fas fa-glass-cheers',
+            'pages' => [
+                'events.list' => [
+                    'label'    => 'Events List',
+                    'features' => [
+                        'events.list.add'    => 'Add Event',
+                        'events.list.edit'   => 'Edit Event',
+                        'events.list.delete' => 'Delete Event',
+                    ],
+                ],
+                'events.holidays' => [
+                    'label'    => 'Holidays',
+                    'features' => [
+                        'events.holidays.add'    => 'Add Holiday',
+                        'events.holidays.edit'   => 'Edit Holiday',
+                        'events.holidays.delete' => 'Delete Holiday',
+                    ],
+                ],
+            ],
+        ],
+
+        'branches' => [
+            'label' => 'Branch & POP',
+            'icon'  => 'fas fa-building',
+            'pages' => [
+                'branches.list' => [
+                    'label'    => 'Branches',
+                    'features' => [
+                        'branches.list.add'    => 'Add Branch',
+                        'branches.list.edit'   => 'Edit Branch',
+                        'branches.list.delete' => 'Delete Branch',
+                    ],
+                ],
+                'branches.pops' => [
+                    'label'    => 'POPs',
+                    'features' => [
+                        'branches.pops.add'    => 'Add POP',
+                        'branches.pops.edit'   => 'Edit POP',
+                        'branches.pops.delete' => 'Delete POP',
+                    ],
+                ],
+            ],
+        ],
+
+        'support' => [
+            'label' => 'Support & Ticketing',
+            'icon'  => 'fas fa-headset',
+            'pages' => [
+                'support.tickets' => [
+                    'label'    => 'All Tickets',
+                    'features' => [
+                        'support.tickets.create'     => 'Create Ticket',
+                        'support.tickets.assign'     => 'Assign Ticket',
+                        'support.tickets.close'      => 'Close Ticket',
+                        'support.tickets.delete'     => 'Delete Ticket',
+                        'support.tickets.export'     => 'Export Tickets',
+                        'support.tickets.bulk_close' => 'Bulk Close',
+                    ],
+                ],
+                'support.categories' => [
+                    'label'    => 'Ticket Categories',
+                    'features' => [
+                        'support.categories.add'    => 'Add Category',
+                        'support.categories.edit'   => 'Edit Category',
+                        'support.categories.delete' => 'Delete Category',
+                    ],
+                ],
+                'support.sla' => [
+                    'label'    => 'SLA Configuration',
+                    'features' => [
+                        'support.sla.add'    => 'Add SLA',
+                        'support.sla.edit'   => 'Edit SLA',
+                        'support.sla.delete' => 'Delete SLA',
+                    ],
+                ],
+            ],
+        ],
+
+        'tasks' => [
+            'label' => 'Task Management',
+            'icon'  => 'fas fa-clipboard-list',
+            'pages' => [
+                'tasks.all' => [
+                    'label'    => 'All Tasks',
+                    'features' => [
+                        'tasks.all.create'        => 'Create Task',
+                        'tasks.all.assign'        => 'Assign Task',
+                        'tasks.all.edit'          => 'Edit Task',
+                        'tasks.all.delete'        => 'Delete Task',
+                        'tasks.all.mark_complete' => 'Mark Complete',
+                        'tasks.all.export'        => 'Export Tasks',
+                    ],
+                ],
+                'tasks.calendar' => [
+                    'label'    => 'Task Calendar',
+                    'features' => [
+                        'tasks.calendar.create' => 'Create from Calendar',
+                        'tasks.calendar.edit'   => 'Edit from Calendar',
+                    ],
+                ],
+            ],
+        ],
+
+        'store' => [
+            'label' => 'Store',
+            'icon'  => 'fas fa-store',
+            'pages' => [
+                'store.products' => [
+                    'label'    => 'Products',
+                    'features' => [
+                        'store.products.add'    => 'Add Product',
+                        'store.products.edit'   => 'Edit Product',
+                        'store.products.delete' => 'Delete Product',
+                    ],
+                ],
+                'store.purchases' => [
+                    'label'    => 'Purchase List',
+                    'features' => [
+                        'store.purchases.add'    => 'Add Purchase',
+                        'store.purchases.edit'   => 'Edit Purchase',
+                        'store.purchases.delete' => 'Delete Purchase',
+                        'store.purchases.export' => 'Export',
+                    ],
+                ],
+                'store.vendors' => [
+                    'label'    => 'Vendors',
+                    'features' => [
+                        'store.vendors.add'    => 'Add Vendor',
+                        'store.vendors.edit'   => 'Edit Vendor',
+                        'store.vendors.delete' => 'Delete Vendor',
+                    ],
+                ],
+                'store.categories' => [
+                    'label'    => 'Product Categories',
+                    'features' => [
+                        'store.categories.add'    => 'Add Category',
+                        'store.categories.edit'   => 'Edit Category',
+                        'store.categories.delete' => 'Delete Category',
+                    ],
+                ],
+            ],
+        ],
+
+        'sales' => [
+            'label' => 'Sales & Service',
+            'icon'  => 'fas fa-cash-register',
+            'pages' => [
+                'sales.list' => [
+                    'label'    => 'Sales List',
+                    'features' => [
+                        'sales.list.create' => 'Create Sale',
+                        'sales.list.edit'   => 'Edit Sale',
+                        'sales.list.delete' => 'Delete Sale',
+                        'sales.list.export' => 'Export',
+                        'sales.list.print'  => 'Print Invoice',
+                    ],
+                ],
+                'sales.services' => [
+                    'label'    => 'Service Charges',
+                    'features' => [
+                        'sales.services.add'    => 'Add Service',
+                        'sales.services.edit'   => 'Edit Service',
+                        'sales.services.delete' => 'Delete Service',
+                    ],
+                ],
+                'sales.installation_charges' => [
+                    'label'    => 'Installation Charges',
+                    'features' => [
+                        'sales.installation_charges.add'    => 'Add Charge',
+                        'sales.installation_charges.edit'   => 'Edit Charge',
+                        'sales.installation_charges.delete' => 'Delete Charge',
+                        'sales.installation_charges.export' => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'inventory' => [
+            'label' => 'Inventory',
+            'icon'  => 'fas fa-warehouse',
+            'pages' => [
+                'inventory.products' => [
+                    'label'    => 'Products / Stocks',
+                    'features' => [
+                        'inventory.products.add'    => 'Add Product',
+                        'inventory.products.edit'   => 'Edit Product',
+                        'inventory.products.delete' => 'Delete Product',
+                        'inventory.products.export' => 'Export',
+                    ],
+                ],
+                'inventory.product_in' => [
+                    'label'    => 'Product In History',
+                    'features' => [
+                        'inventory.product_in.add'    => 'Add Product In',
+                        'inventory.product_in.delete' => 'Delete',
+                        'inventory.product_in.export' => 'Export',
+                    ],
+                ],
+                'inventory.product_out' => [
+                    'label'    => 'Product Out',
+                    'features' => [
+                        'inventory.product_out.add'    => 'Add Product Out',
+                        'inventory.product_out.delete' => 'Delete',
+                        'inventory.product_out.export' => 'Export',
+                    ],
+                ],
+                'inventory.vendors' => [
+                    'label'    => 'Vendors',
+                    'features' => [
+                        'inventory.vendors.add'    => 'Add Vendor',
+                        'inventory.vendors.edit'   => 'Edit Vendor',
+                        'inventory.vendors.delete' => 'Delete Vendor',
+                    ],
+                ],
+                'inventory.damaged' => [
+                    'label'    => 'Damaged Items',
+                    'features' => [
+                        'inventory.damaged.add'    => 'Add Damaged',
+                        'inventory.damaged.delete' => 'Delete',
+                        'inventory.damaged.export' => 'Export',
+                    ],
+                ],
+                'inventory.fiber' => [
+                    'label'    => 'Fiber Stock',
+                    'features' => [
+                        'inventory.fiber.add'    => 'Add Fiber',
+                        'inventory.fiber.edit'   => 'Edit Fiber',
+                        'inventory.fiber.delete' => 'Delete Fiber',
+                        'inventory.fiber.export' => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'hrm' => [
+            'label' => 'HRM',
+            'icon'  => 'fas fa-id-card-alt',
+            'pages' => [
+                'hrm.employees' => [
+                    'label'    => 'Employees',
+                    'features' => [
+                        'hrm.employees.add'          => 'Add Employee',
+                        'hrm.employees.edit'         => 'Edit Employee',
+                        'hrm.employees.delete'       => 'Delete Employee',
+                        'hrm.employees.view_salary'  => 'View Salary',
+                        'hrm.employees.export'       => 'Export',
+                    ],
+                ],
+                'hrm.attendance' => [
+                    'label'    => 'Attendance',
+                    'features' => [
+                        'hrm.attendance.mark'   => 'Mark Attendance',
+                        'hrm.attendance.edit'   => 'Edit Attendance',
+                        'hrm.attendance.export' => 'Export',
+                    ],
+                ],
+                'hrm.salary' => [
+                    'label'    => 'Salary Payroll',
+                    'features' => [
+                        'hrm.salary.generate' => 'Generate Salary',
+                        'hrm.salary.pay'      => 'Pay Salary',
+                        'hrm.salary.delete'   => 'Delete Payroll',
+                        'hrm.salary.export'   => 'Export',
+                        'hrm.salary.print'    => 'Print Payslip',
+                    ],
+                ],
+                'hrm.leave' => [
+                    'label'    => 'Leave Management',
+                    'features' => [
+                        'hrm.leave.apply'   => 'Apply Leave',
+                        'hrm.leave.approve' => 'Approve Leave',
+                        'hrm.leave.reject'  => 'Reject Leave',
+                        'hrm.leave.delete'  => 'Delete Leave',
+                    ],
+                ],
+                'hrm.departments' => [
+                    'label'    => 'Departments',
+                    'features' => [
+                        'hrm.departments.add'    => 'Add Department',
+                        'hrm.departments.edit'   => 'Edit Department',
+                        'hrm.departments.delete' => 'Delete Department',
+                    ],
+                ],
+                'hrm.role_permissions' => [
+                    'label'    => 'Role Permissions',
+                    'features' => [
+                        'hrm.role_permissions.add'    => 'Add Role',
+                        'hrm.role_permissions.edit'   => 'Edit Role',
+                        'hrm.role_permissions.delete' => 'Delete Role',
+                        'hrm.role_permissions.assign' => 'Assign Permissions',
+                    ],
+                ],
+                'hrm.staff_dues' => [
+                    'label'    => 'Staff Dues',
+                    'features' => [
+                        'hrm.staff_dues.settle' => 'Settle Dues',
+                        'hrm.staff_dues.export' => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'sms' => [
+            'label' => 'SMS Service',
+            'icon'  => 'fas fa-paper-plane',
+            'pages' => [
+                'sms.bulk' => [
+                    'label'    => 'Send Bulk SMS',
+                    'features' => [
+                        'sms.bulk.send'            => 'Send SMS',
+                        'sms.bulk.filter_by_zone'  => 'Filter by Zone',
+                        'sms.bulk.filter_by_group' => 'Filter by Group',
+                    ],
+                ],
+                'sms.individual' => [
+                    'label'    => 'Individual SMS',
+                    'features' => [
+                        'sms.individual.send' => 'Send Individual SMS',
+                    ],
+                ],
+                'sms.templates' => [
+                    'label'    => 'SMS Templates',
+                    'features' => [
+                        'sms.templates.add'    => 'Add Template',
+                        'sms.templates.edit'   => 'Edit Template',
+                        'sms.templates.delete' => 'Delete Template',
+                    ],
+                ],
+                'sms.logs' => [
+                    'label'    => 'SMS Logs',
+                    'features' => [
+                        'sms.logs.delete' => 'Delete Logs',
+                        'sms.logs.export' => 'Export Logs',
+                    ],
+                ],
+                'sms.gateway' => [
+                    'label'    => 'SMS Gateway',
+                    'features' => [
+                        'sms.gateway.add'    => 'Add Gateway',
+                        'sms.gateway.edit'   => 'Edit Gateway',
+                        'sms.gateway.delete' => 'Delete Gateway',
+                        'sms.gateway.set_default' => 'Set Default Gateway',
+                    ],
+                ],
+            ],
+        ],
+
+        'whatsapp' => [
+            'label' => 'WhatsApp',
+            'icon'  => 'fab fa-whatsapp',
+            'pages' => [
+                'whatsapp.templates' => [
+                    'label'    => 'Templates',
+                    'features' => [
+                        'whatsapp.templates.add'    => 'Add Template',
+                        'whatsapp.templates.edit'   => 'Edit Template',
+                        'whatsapp.templates.delete' => 'Delete Template',
+                    ],
+                ],
+                'whatsapp.settings' => [
+                    'label'    => 'Settings',
+                    'features' => [
+                        'whatsapp.settings.edit' => 'Edit WhatsApp Settings',
+                    ],
+                ],
+                'whatsapp.logs' => [
+                    'label'    => 'Message Logs',
+                    'features' => [
+                        'whatsapp.logs.delete' => 'Delete Logs',
+                        'whatsapp.logs.export' => 'Export Logs',
+                    ],
+                ],
+            ],
+        ],
+
+        'email' => [
+            'label' => 'Email System',
+            'icon'  => 'fas fa-envelope',
+            'pages' => [
+                'email.logs' => [
+                    'label'    => 'Dashboard & Logs',
+                    'features' => [
+                        'email.logs.delete' => 'Delete Logs',
+                        'email.logs.export' => 'Export Logs',
+                    ],
+                ],
+                'email.settings' => [
+                    'label'    => 'SMTP Settings',
+                    'features' => [
+                        'email.settings.edit' => 'Edit SMTP Settings',
+                        'email.settings.test' => 'Send Test Email',
+                    ],
+                ],
+            ],
+        ],
+
+        'card_billing' => [
+            'label' => 'Card Billing',
+            'icon'  => 'fas fa-credit-card',
+            'pages' => [
+                'card_billing.batches' => [
+                    'label'    => 'Card Batches',
+                    'features' => [
+                        'card_billing.batches.create' => 'Create Batch',
+                        'card_billing.batches.delete' => 'Delete Batch',
+                        'card_billing.batches.export' => 'Export Cards',
+                        'card_billing.batches.print'  => 'Print Cards',
+                    ],
+                ],
+                'card_billing.cards' => [
+                    'label'    => 'All Cards',
+                    'features' => [
+                        'card_billing.cards.block'  => 'Block Card',
+                        'card_billing.cards.delete' => 'Delete Card',
+                        'card_billing.cards.export' => 'Export',
+                    ],
+                ],
+                'card_billing.distributors' => [
+                    'label'    => 'Distributors',
+                    'features' => [
+                        'card_billing.distributors.add'    => 'Add Distributor',
+                        'card_billing.distributors.edit'   => 'Edit Distributor',
+                        'card_billing.distributors.delete' => 'Delete Distributor',
+                    ],
+                ],
+            ],
+        ],
+
+        'configuration' => [
+            'label' => 'Configuration',
+            'icon'  => 'fas fa-sliders-h',
+            'pages' => [
+                'configuration.package' => [
+                    'label'    => 'Package & Profile',
+                    'features' => [
+                        'configuration.package.add'    => 'Add Package',
+                        'configuration.package.edit'   => 'Edit Package',
+                        'configuration.package.delete' => 'Delete Package',
+                        'configuration.package.push_mikrotik' => 'Push to MikroTik',
+                    ],
+                ],
+                'configuration.area' => [
+                    'label'    => 'Area / Zone',
+                    'features' => [
+                        'configuration.area.add'    => 'Add Area / Zone',
+                        'configuration.area.edit'   => 'Edit Area / Zone',
+                        'configuration.area.delete' => 'Delete Area / Zone',
+                    ],
+                ],
+                'configuration.connection_type' => [
+                    'label'    => 'Connection Type',
+                    'features' => [
+                        'configuration.connection_type.add'    => 'Add',
+                        'configuration.connection_type.edit'   => 'Edit',
+                        'configuration.connection_type.delete' => 'Delete',
+                    ],
+                ],
+                'configuration.dropdown_options' => [
+                    'label'    => 'Dropdown Options',
+                    'features' => [
+                        'configuration.dropdown_options.add'    => 'Add Option',
+                        'configuration.dropdown_options.edit'   => 'Edit Option',
+                        'configuration.dropdown_options.delete' => 'Delete Option',
+                    ],
+                ],
+            ],
+        ],
+
+        'settings' => [
+            'label' => 'Settings',
+            'icon'  => 'fas fa-wrench',
+            'pages' => [
+                'settings.company' => [
+                    'label'    => 'Company Profile',
+                    'features' => [
+                        'settings.company.edit'   => 'Edit Company Profile',
+                        'settings.company.logo'   => 'Upload Logo',
+                        'settings.company.delete' => 'Delete Company Data',
+                    ],
+                ],
+                'settings.payment_methods' => [
+                    'label'    => 'Payment Methods',
+                    'features' => [
+                        'settings.payment_methods.add'    => 'Add Payment Method',
+                        'settings.payment_methods.edit'   => 'Edit Payment Method',
+                        'settings.payment_methods.delete' => 'Delete Payment Method',
+                        'settings.payment_methods.set_default' => 'Set Default',
+                    ],
+                ],
+                'settings.system' => [
+                    'label'    => 'System Settings',
+                    'features' => [
+                        'settings.system.edit' => 'Edit System Settings',
+                    ],
+                ],
+                'settings.payment' => [
+                    'label'    => 'Payment Settings',
+                    'features' => [
+                        'settings.payment.edit' => 'Edit Payment Gateway Settings',
+                    ],
+                ],
+                'settings.logs' => [
+                    'label'    => 'System Logs',
+                    'features' => [
+                        'settings.logs.view'   => 'View Logs',
+                        'settings.logs.delete' => 'Delete Logs',
+                        'settings.logs.export' => 'Export Logs',
+                    ],
+                ],
+                'settings.login_logs' => [
+                    'label'    => 'Login Logs',
+                    'features' => [
+                        'settings.login_logs.view'   => 'View Login Logs',
+                        'settings.login_logs.delete' => 'Delete Logs',
+                        'settings.login_logs.export' => 'Export Logs',
+                    ],
+                ],
+            ],
+        ],
+
+        'security' => [
+            'label' => 'Security',
+            'icon'  => 'fas fa-fingerprint',
+            'pages' => [
+                'security.dashboard' => [
+                    'label'    => 'Security Dashboard',
+                    'features' => [
+                        'security.dashboard.view_threats'   => 'View Threat Alerts',
+                        'security.dashboard.manage_blocked' => 'Manage Blocked IPs',
+                    ],
+                ],
+                'security.2fa' => [
+                    'label'    => 'Two-Factor Auth',
+                    'features' => [
+                        'security.2fa.enable'  => 'Enable 2FA',
+                        'security.2fa.disable' => 'Disable 2FA',
+                        'security.2fa.reset'   => 'Reset User 2FA',
+                    ],
+                ],
+                'security.password_policy' => [
+                    'label'    => 'Password Policy',
+                    'features' => [
+                        'security.password_policy.edit' => 'Edit Password Policy',
+                    ],
+                ],
+                'security.api_tokens' => [
+                    'label'    => 'API Tokens',
+                    'features' => [
+                        'security.api_tokens.create' => 'Create Token',
+                        'security.api_tokens.revoke' => 'Revoke Token',
+                        'security.api_tokens.delete' => 'Delete Token',
+                    ],
+                ],
+            ],
+        ],
+
+        'vpn' => [
+            'label' => 'VPN & Forwarding',
+            'icon'  => 'fas fa-lock',
+            'pages' => [
+                'vpn.accounts' => [
+                    'label'    => 'VPN Accounts',
+                    'features' => [
+                        'vpn.accounts.add'    => 'Add VPN Account',
+                        'vpn.accounts.edit'   => 'Edit VPN Account',
+                        'vpn.accounts.delete' => 'Delete VPN Account',
+                    ],
+                ],
+                'vpn.port_forwarding' => [
+                    'label'    => 'Port Forwarding',
+                    'features' => [
+                        'vpn.port_forwarding.add'    => 'Add Rule',
+                        'vpn.port_forwarding.edit'   => 'Edit Rule',
+                        'vpn.port_forwarding.delete' => 'Delete Rule',
+                        'vpn.port_forwarding.toggle' => 'Enable / Disable',
+                    ],
+                ],
+            ],
+        ],
+
+        'ipam' => [
+            'label' => 'IPAM',
+            'icon'  => 'fas fa-globe',
+            'pages' => [
+                'ipam.pools' => [
+                    'label'    => 'IP Pools',
+                    'features' => [
+                        'ipam.pools.add'    => 'Add IP Pool',
+                        'ipam.pools.edit'   => 'Edit IP Pool',
+                        'ipam.pools.delete' => 'Delete IP Pool',
+                        'ipam.pools.export' => 'Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'data_transfer' => [
+            'label' => 'Data Transfer',
+            'icon'  => 'fas fa-cloud-upload-alt',
+            'pages' => [
+                'data_transfer.import' => [
+                    'label'    => 'Import Data',
+                    'features' => [
+                        'data_transfer.import.run'      => 'Run Import',
+                        'data_transfer.import.template' => 'Download Template',
+                    ],
+                ],
+                'data_transfer.export' => [
+                    'label'    => 'Export Data',
+                    'features' => [
+                        'data_transfer.export.run' => 'Run Export',
+                    ],
+                ],
+            ],
+        ],
+
+        'hotspot' => [
+            'label' => 'Hotspot Editor',
+            'icon'  => 'fas fa-wifi',
+            'pages' => [
+                'hotspot.editor' => [
+                    'label'    => 'Hotspot Editor',
+                    'features' => [
+                        'hotspot.editor.edit'   => 'Edit Hotspot Page',
+                        'hotspot.editor.save'   => 'Save / Publish',
+                        'hotspot.editor.reset'  => 'Reset to Default',
+                        'hotspot.editor.upload' => 'Upload Assets',
+                    ],
+                ],
+            ],
+        ],
+
+        'voice_calls' => [
+            'label' => 'Voice Calls',
+            'icon'  => 'fas fa-phone-alt',
+            'pages' => [
+                'voice_calls.history' => [
+                    'label'    => 'Call History',
+                    'features' => [
+                        'voice_calls.history.delete' => 'Delete Record',
+                        'voice_calls.history.export' => 'Export',
+                    ],
+                ],
+                'voice_calls.settings' => [
+                    'label'    => 'Settings',
+                    'features' => [
+                        'voice_calls.settings.edit' => 'Edit Settings',
+                    ],
+                ],
+            ],
+        ],
+
+        'media_servers' => [
+            'label' => 'Media Servers',
+            'icon'  => 'fas fa-server',
+            'pages' => [
+                'media_servers.ftp' => [
+                    'label'    => 'FTP Servers',
+                    'features' => [
+                        'media_servers.ftp.add'    => 'Add Server',
+                        'media_servers.ftp.edit'   => 'Edit Server',
+                        'media_servers.ftp.delete' => 'Delete Server',
+                        'media_servers.ftp.toggle' => 'Enable / Disable',
+                    ],
+                ],
+                'media_servers.live_tv' => [
+                    'label'    => 'Live TV / IPTV',
+                    'features' => [
+                        'media_servers.live_tv.add'    => 'Add Channel',
+                        'media_servers.live_tv.edit'   => 'Edit Channel',
+                        'media_servers.live_tv.delete' => 'Delete Channel',
+                        'media_servers.live_tv.export' => 'Export Playlist',
+                    ],
+                ],
+                'media_servers.other' => [
+                    'label'    => 'Other Media Servers',
+                    'features' => [
+                        'media_servers.other.add'    => 'Add Server',
+                        'media_servers.other.edit'   => 'Edit Server',
+                        'media_servers.other.delete' => 'Delete Server',
+                    ],
+                ],
+            ],
+        ],
+
+    ];
+
+    public static array $allFeatures = [
+        // ── Core ──────────────────────────────────────────────────────────
+        'clients'       => 'Client Management',
+        'billing'       => 'Billing & Invoicing',
+        'daily_billing' => 'Daily Billing (Hotspot/Minute)',
+        'card_billing'  => 'Card / Scratch Card Billing',
+        'reports'       => 'Reports & Analytics',
+        'configuration' => 'Configuration (Zones, Packages, Areas)',
+        'settings'      => 'System Settings',
+
+        // ── Network & Hardware ────────────────────────────────────────────
+        'olt'           => 'OLT / ONU Management (Premium)',
+        'mikrotik'      => 'MikroTik Router Management',
+        'network'       => 'Network & Devices (POPs, Topology, MAC)',
+        'hotspot'       => 'Hotspot Editor (Premium)',
+        'vpn'           => 'VPN & Port Forwarding',
+        'ipam'          => 'IP Address Management (IPAM)',
+        'branches'      => 'Branch & POP Management',
+
+        // ── Communication ─────────────────────────────────────────────────
+        'sms'           => 'SMS Notifications',
+        'whatsapp'      => 'WhatsApp Notifications',
+        'voice_calls'   => 'Voice Calls',
+        'email'         => 'Email System',
+
+        // ── Business ──────────────────────────────────────────────────────
+        'reseller'      => 'Reseller Panel (MAC & BW)',
+        'agent'         => 'Referral Partner (Agent)',
+        'sales'         => 'Sales & Service Charges',
+        'inventory'     => 'Inventory & Store',
+        'support'       => 'Support & Ticketing',
+        'tasks'         => 'Task Management',
+        'events'        => 'Events & Holidays',
+        'minute_sales'  => 'Minute Sales (Premium)',
+
+        // ── Finance & HR ──────────────────────────────────────────────────
+        'accounts'      => 'Accounting (Income / Expense / Ledger)',
+        'hrm'           => 'HRM (Employee, Salary, Attendance)',
+        'payment_links' => 'Payment Links',
+
+        // ── Utilities ─────────────────────────────────────────────────────
+        'data_transfer' => 'Data Transfer & Migration',
+        'security'      => 'Security & Two-Factor Auth',
+        'backups'       => 'Backup & Restore',
+
+        // ── Content & Media ───────────────────────────────────────────────
+        'media_servers' => 'Media Servers (FTP, Live TV, Other)',
+    ];
+
+    public static array $featureGroups = [
+        'Core' => ['clients', 'billing', 'daily_billing', 'card_billing', 'reports', 'configuration', 'settings'],
+        'Network & Hardware' => ['olt', 'mikrotik', 'network', 'hotspot', 'vpn', 'ipam', 'branches'],
+        'Communication' => ['sms', 'whatsapp', 'voice_calls', 'email'],
+        'Business' => ['reseller', 'agent', 'sales', 'inventory', 'support', 'tasks', 'events', 'minute_sales'],
+        'Finance & HR' => ['accounts', 'hrm', 'payment_links'],
+        'Content & Media' => ['media_servers'],
+        'Utilities' => ['data_transfer', 'security', 'backups'],
+    ];
+
+    protected static array $featureAliases = [
+        'onu'        => 'olt',
+        'accounting' => 'accounts',
+        'voice_call' => 'voice_calls',
+        'client'     => 'clients',
+    ];
+
+
+    public function hasPageFeature(string $key): bool
+    {
+        $features = $this->page_features ?? [];
+        if (empty($features)) return true; // default: all enabled
+        return in_array($key, $features);
+    }
+
+    public function hasFeature(string $feature): bool
+    {
+        $features = $this->enabled_features ?? [];
+        if (empty($features)) return true;
+
+        $canonical = static::$featureAliases[$feature] ?? $feature;
+
+        if (in_array($feature, $features) || in_array($canonical, $features)) return true;
+
+        $check = $canonical;
+        if (str_contains($check, '.')) {
+            $parent = explode('.', $check)[0];
+            if (in_array($parent, $features)) return true;
+        }
+
+        foreach (static::$featureAliases as $old => $new) {
+            if ($feature === $new && in_array($old, $features)) return true;
+        }
+
+        return false;
+    }
+
+    private static array $menuKeyAliases = [
+        'mac_reseller.list'              => 'reseller.list',
+        'mac_reseller.clients'           => 'reseller.clients',
+        'mac_reseller.funding'           => 'reseller.funding',
+        'mac_reseller.collection_report' => 'reseller.collection_report',
+        'bw_reseller.list'               => 'reseller.bw_categories',
+        'bw_reseller.bw_categories'      => 'reseller.bw_categories',
+        'bw_reseller.bw_billing'         => 'reseller.bw_funding',
+        'bw_reseller.bw_collection_report' => 'reseller.bw_collection_report',
+    ];
+
+    public function hasMenuAccess(string $key): bool
+    {
+        $menus = $this->allowed_menus ?? [];
+        if (empty($menus)) return true;
+        if (in_array($key, $menus)) return true;
+        // Forward compat: key is new format (mac_reseller.*), stored is old alias
+        if (isset(self::$menuKeyAliases[$key]) && in_array(self::$menuKeyAliases[$key], $menus)) return true;
+        // Reverse compat: sidebar uses old key (reseller.*), stored is new format (mac_reseller.*)
+        foreach (self::$menuKeyAliases as $newKey => $oldKey) {
+            if ($oldKey === $key && in_array($newKey, $menus)) return true;
+        }
+        if (!str_contains($key, '.')) {
+            foreach ($menus as $m) {
+                if (str_starts_with($m, $key . '.')) return true;
+            }
+        }
+        return false;
+    }
+
+    public function hasAnyChildAccess(string $parentKey): bool
+    {
+        $menus = $this->allowed_menus ?? [];
+        if (empty($menus)) return true;
+
+        if (in_array($parentKey, $menus)) return true;
+
+        foreach ($menus as $m) {
+            if (str_starts_with($m, $parentKey . '.')) return true;
+        }
+        // Reverse alias: sidebar checks old parent (reseller), stored uses new parent (mac_reseller/bw_reseller)
+        foreach (self::$menuKeyAliases as $newKey => $oldKey) {
+            if (str_starts_with($oldKey, $parentKey . '.') && in_array($newKey, $menus)) return true;
+        }
+        return false;
+    }
+
+    public function getAllowedMenuKeys(): array
+    {
+        $menus = $this->allowed_menus ?? [];
+        if (empty($menus)) {
+            $allKeys = [];
+            foreach (self::$menuStructure as $parentKey => $group) {
+                $allKeys[] = $parentKey;
+                foreach ($group['items'] as $key => $label) {
+                    $allKeys[] = $key;
+                }
+            }
+            return $allKeys;
+        }
+        return $menus;
+    }
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function clients()
+    {
+        return $this->hasMany(Client::class);
+    }
+
+    public function isSubscriptionActive(): bool
+    {
+        if (!$this->subscription_end) return true;
+        return $this->subscription_end->isFuture();
+    }
+
+    public function clientCount(): int
+    {
+        return $this->clients()->count();
+    }
+
+    public function canAddMoreClients(): bool
+    {
+        if ($this->max_clients <= 0) return true;
+        return $this->clientCount() < $this->max_clients;
+    }
+
+    public function getLogoUrlAttribute(): string
+    {
+        return $this->logo ?: '/images/logo.png';
+    }
+
+    public function getLogoLightUrlAttribute(): string
+    {
+        return $this->logo_light ?: $this->logo_url;
+    }
+}

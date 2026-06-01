@@ -1,0 +1,282 @@
+@extends('layouts.admin')
+
+@section('title', 'Manage Categories & Sub-Categories')
+
+@section('content')
+@include('admin.inventory.partials.nav-buttons')
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-5">
+                <div class="card card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-plus-circle"></i> Add New Category</h3>
+                    </div>
+                    <form action="{{ route('admin.inventory.instrument-categories.store') }}" method="POST">
+                        @csrf
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Category Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" placeholder="e.g. ONU, Splitter, TJ, Cable" required>
+                            </div>
+
+                            <hr>
+                            <label><i class="fas fa-tags mr-1"></i> Types / Sub-Categories <small class="text-muted">(optional)</small></label>
+                            <div id="typeFields">
+                                <div class="input-group mb-2 type-row">
+                                    <input type="text" name="types[]" class="form-control form-control-sm" placeholder="Type name (e.g. XPON, GPON, 1:8)">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeTypeRow(this)" title="Remove"><i class="fas fa-times"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-success btn-block mb-2" onclick="addTypeRow()">
+                                <i class="fas fa-plus mr-1"></i> Add More Type
+                            </button>
+
+                            <hr>
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" name="has_serial" id="has_serial" class="custom-control-input" value="1" checked>
+                                    <label class="custom-control-label" for="has_serial">
+                                        <i class="fas fa-barcode mr-1"></i> Requires Serial Number
+                                    </label>
+                                    <small class="form-text text-muted">Check this if products in this category need serial/MAC tracking during Product In.</small>
+                                </div>
+                            </div>
+
+                            <hr>
+                            <div class="form-group mb-0">
+                                <label>Description <small class="text-muted">(optional)</small></label>
+                                <input type="text" name="description" class="form-control" placeholder="Optional description">
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save"></i> Save Category</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-7">
+                <div class="card card-info">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-list"></i> All Categories</h3>
+                        <div class="card-tools">
+                            <span class="badge badge-light">{{ $categories->count() }} Categories</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        @if($categories->isEmpty())
+                        <div class="text-center py-4">
+                            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No categories found. Add your first category!</p>
+                        </div>
+                        @else
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th style="width:5%">#</th>
+                                        <th>Category Name</th>
+                                        <th>Description</th>
+                                        <th>Serial</th>
+                                        <th>Types</th>
+                                        <th style="width:15%">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @php $serial = 1; @endphp
+                                @foreach($categories as $cat)
+                                    <tr class="bg-light">
+                                        <td><strong>{{ $serial++ }}</strong></td>
+                                        <td>
+                                            <i class="fas fa-folder text-warning"></i>
+                                            <strong>{{ $cat->name }}</strong>
+                                        </td>
+                                        <td><small class="text-muted">{{ $cat->description ?? '-' }}</small></td>
+                                        <td>
+                                            @if($cat->has_serial)
+                                                <span class="badge badge-success"><i class="fas fa-check"></i> Yes</span>
+                                            @else
+                                                <span class="badge badge-secondary"><i class="fas fa-times"></i> No</span>
+                                            @endif
+                                        </td>
+                                        <td><span class="badge badge-info">{{ $cat->children->count() }}</span></td>
+                                        <td>
+                                            <button class="btn btn-xs btn-success" onclick="openAddTypeModal({{ $cat->id }}, '{{ addslashes($cat->name) }}')" title="Add Type">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                            <button class="btn btn-xs btn-warning" onclick="openEditModal({{ $cat->id }}, '{{ addslashes($cat->name) }}', '{{ addslashes($cat->description ?? '') }}', null, {{ $cat->has_serial ? 'true' : 'false' }})" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <form action="{{ route('admin.inventory.instrument-categories.destroy', $cat->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this category and all its types?')">
+                                                @csrf @method('DELETE')
+                                                <button class="btn btn-xs btn-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    @foreach($cat->children as $sub)
+                                    <tr>
+                                        <td></td>
+                                        <td class="pl-4">
+                                            <i class="fas fa-level-up-alt fa-rotate-90 text-muted mr-1"></i>
+                                            <span class="badge badge-secondary">{{ $cat->name }} Type</span>
+                                            {{ $sub->name }}
+                                        </td>
+                                        <td><small class="text-muted">{{ $sub->description ?? '-' }}</small></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td>
+                                            <button class="btn btn-xs btn-warning" onclick="openEditModal({{ $sub->id }}, '{{ addslashes($sub->name) }}', '{{ addslashes($sub->description ?? '') }}', {{ $sub->parent_id }})" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <form action="{{ route('admin.inventory.instrument-categories.destroy', $sub->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this sub-category?')">
+                                                @csrf @method('DELETE')
+                                                <button class="btn btn-xs btn-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="editCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="editCategoryForm" method="POST">
+            @csrf
+            @method('PUT')
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Category</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Parent Category</label>
+                        <select class="form-control" name="parent_id" id="editParentId">
+                            <option value="">-- None (Main Category) --</option>
+                            @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editCategoryName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" name="description" id="editCategoryDesc" class="form-control">
+                    </div>
+                    <div class="form-group" id="editSerialGroup">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" name="has_serial" id="editHasSerial" class="custom-control-input" value="1">
+                            <label class="custom-control-label" for="editHasSerial">
+                                <i class="fas fa-barcode mr-1"></i> Requires Serial Number
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning"><i class="fas fa-save"></i> Update</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="addTypeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="{{ route('admin.inventory.instrument-categories.store') }}" method="POST">
+            @csrf
+            <input type="hidden" name="parent_id" id="addTypeParentId">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-plus"></i> Add Type to <span id="addTypeParentName"></span></h5>
+                    <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Type Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. XPON, GPON, 1:8, 1:16" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" name="description" class="form-control" placeholder="Optional description">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Type</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+function addTypeRow() {
+    var html = '<div class="input-group mb-2 type-row">';
+    html += '<input type="text" name="types[]" class="form-control form-control-sm" placeholder="Type name">';
+    html += '<div class="input-group-append">';
+    html += '<button type="button" class="btn btn-sm btn-danger" onclick="removeTypeRow(this)" title="Remove"><i class="fas fa-times"></i></button>';
+    html += '</div></div>';
+    document.getElementById('typeFields').insertAdjacentHTML('beforeend', html);
+}
+
+function removeTypeRow(btn) {
+    var rows = document.querySelectorAll('.type-row');
+    if (rows.length > 1) {
+        btn.closest('.type-row').remove();
+    } else {
+        btn.closest('.type-row').querySelector('input').value = '';
+    }
+}
+
+function openEditModal(id, name, desc, parentId, hasSerial) {
+    document.getElementById('editCategoryForm').action = '{{ url("admin/inventory/instrument-categories") }}/' + id;
+    document.getElementById('editCategoryName').value = name;
+    document.getElementById('editCategoryDesc').value = desc || '';
+
+    var parentSelect = document.getElementById('editParentId');
+    for (var i = 0; i < parentSelect.options.length; i++) {
+        var opt = parentSelect.options[i];
+        if (opt.value == id) {
+            opt.disabled = true;
+            opt.style.display = 'none';
+        } else {
+            opt.disabled = false;
+            opt.style.display = '';
+        }
+    }
+    parentSelect.value = parentId || '';
+
+    if (parentId) {
+        document.getElementById('editSerialGroup').style.display = 'none';
+    } else {
+        document.getElementById('editSerialGroup').style.display = 'block';
+        document.getElementById('editHasSerial').checked = hasSerial ? true : false;
+    }
+    $('#editCategoryModal').modal('show');
+}
+
+function openAddTypeModal(parentId, parentName) {
+    document.getElementById('addTypeParentId').value = parentId;
+    document.getElementById('addTypeParentName').textContent = parentName;
+    $('#addTypeModal').modal('show');
+}
+</script>
+@endpush

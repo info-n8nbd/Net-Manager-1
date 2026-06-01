@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" width="160" height="110">
+  <rect width="160" height="110" fill="white"/>
+  <!-- Hexagon/network node mark -->
+  <polygon points="36,25 50,17 64,25 64,41 50,49 36,41" fill="none" stroke="#F47920" stroke-width="4"/>
+  <polygon points="41,30 50,25 59,30 59,40 50,45 41,40" fill="#F47920" opacity="0.25"/>
+  <circle cx="50" cy="35" r="4" fill="#F47920"/>
+  <text x="100" y="40" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="16" font-weight="900" fill="#F47920">Solitine</text>
+  <text x="100" y="55" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" fill="#777">Fiber Optics</text>
+</svg>

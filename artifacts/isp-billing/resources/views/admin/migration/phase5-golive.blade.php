@@ -1,0 +1,133 @@
+@extends('layouts.admin')
+
+@section('title', 'Phase 5: Go Live')
+
+@section('content')
+        @include('partials.alerts')
+        @include('admin.migration._phase-steps', ['currentPhase' => 5, 'run' => $run])
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-{{ $report['readiness_score'] >= 75 ? 'success' : ($report['readiness_score'] >= 50 ? 'warning' : 'danger') }}">
+                        <h3 class="card-title">
+                            <i class="fas fa-tachometer-alt"></i>
+                            Migration Readiness: {{ $report['readiness_score'] }}%
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress mb-3" style="height: 30px;">
+                            <div class="progress-bar bg-{{ $report['readiness_score'] >= 75 ? 'success' : ($report['readiness_score'] >= 50 ? 'warning' : 'danger') }}"
+                                 style="width: {{ $report['readiness_score'] }}%"
+                                 role="progressbar">
+                                {{ $report['readiness_score'] }}%
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-bordered">
+                                    <tr>
+                                        <td><i class="fas {{ $report['readiness']['all_clients_imported'] ? 'fa-check-circle text-success' : 'fa-times-circle text-danger' }}"></i></td>
+                                        <td>Clients Imported</td>
+                                        <td><strong>{{ $report['readiness']['all_clients_imported'] ? 'Yes' : 'No' }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas {{ $report['readiness']['router_scanned'] ? 'fa-check-circle text-success' : 'fa-times-circle text-danger' }}"></i></td>
+                                        <td>Routers Scanned</td>
+                                        <td><strong>{{ $report['readiness']['router_scanned'] ? 'Yes' : 'No' }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas {{ $report['readiness']['reconciliation_done'] ? 'fa-check-circle text-success' : 'fa-times-circle text-danger' }}"></i></td>
+                                        <td>Reconciliation Complete</td>
+                                        <td><strong>{{ $report['readiness']['reconciliation_done'] ? 'Yes' : 'No' }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas {{ $report['readiness']['sync_applied'] ? 'fa-check-circle text-success' : 'fa-times-circle text-danger' }}"></i></td>
+                                        <td>Sync Applied</td>
+                                        <td><strong>{{ $report['readiness']['sync_applied'] ? 'Yes' : 'No' }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><i class="fas {{ $report['readiness']['unresolved_issues'] == 0 ? 'fa-check-circle text-success' : 'fa-exclamation-circle text-warning' }}"></i></td>
+                                        <td>Unresolved Issues</td>
+                                        <td><strong>{{ $report['readiness']['unresolved_issues'] }}</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-bordered">
+                                    <tr><td>Total Clients in Billing</td><td><strong>{{ $report['total_clients'] }}</strong></td></tr>
+                                    <tr><td>Clients with PPPoE Username</td><td><strong>{{ $report['clients_with_username'] }}</strong></td></tr>
+                                    <tr><td>Clients Linked to Router</td><td><strong>{{ $report['clients_with_router'] }}</strong></td></tr>
+                                    <tr><td>Router Users Discovered</td><td><strong>{{ $report['router_snapshots_total'] }}</strong></td></tr>
+                                    <tr><td>Router Users Synced</td><td><strong>{{ $report['router_snapshots_synced'] }}</strong></td></tr>
+                                    <tr><td>Ghost Users (Router Only)</td><td><strong>{{ $report['ghost_users'] }}</strong></td></tr>
+                                    <tr><td>Billing-Only Clients</td><td><strong>{{ $report['billing_only_clients'] }}</strong></td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-info">
+                <h3 class="card-title"><i class="fas fa-clipboard-check"></i> Post-Migration Capabilities</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-power-off fa-2x text-danger mb-2"></i>
+                                <h5>Disconnect / Reconnect</h5>
+                                <p class="text-muted">Billing can disable/enable router users based on payment status</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-tachometer-alt fa-2x text-primary mb-2"></i>
+                                <h5>Speed Control</h5>
+                                <p class="text-muted">Package changes in billing automatically update router profiles</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <i class="fas fa-signal fa-2x text-success mb-2"></i>
+                                <h5>Live Status</h5>
+                                <p class="text-muted">View real-time connection status, uptime, and bandwidth usage</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if(!$run->isPhaseComplete(5))
+        <div class="card">
+            <div class="card-body text-center">
+                <h4>Ready to Go Live?</h4>
+                <p class="text-muted">Once you confirm, billing becomes the master system. All future changes will originate from billing.</p>
+                <form action="{{ route('admin.migration.phase5-complete', $run) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="btn btn-success btn-lg" onclick="return confirm('Confirm Go Live? Billing will become the master system for all client management.')">
+                        <i class="fas fa-rocket"></i> Confirm Go Live - Billing is Now Master
+                    </button>
+                </form>
+            </div>
+        </div>
+        @else
+        <div class="alert alert-success text-center">
+            <h4><i class="fas fa-check-circle"></i> Migration Complete!</h4>
+            <p>Billing is now the master system. All client management should be done through the billing panel.</p>
+            <a href="{{ route('admin.dashboard') }}" class="btn btn-primary btn-lg mt-2">
+                <i class="fas fa-home"></i> Go to Dashboard
+            </a>
+        </div>
+        @endif
+@endsection

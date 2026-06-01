@@ -1,0 +1,305 @@
+@extends('layouts.admin')
+
+@section('title', 'Import Guide - Data Transfer')
+
+@section('content')
+
+        <div class="callout callout-info">
+            <h5><i class="fas fa-info-circle mr-1"></i> How to Import Data</h5>
+            <p class="mb-0">Download the sample Excel template for the data type you want to import, fill in your data following the format, then upload it. The system will auto-detect columns and let you review before importing.</p>
+        </div>
+
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-download mr-2"></i>Download Sample Templates</h3>
+            </div>
+            <div class="card-body">
+                <p>Download a ready-made Excel template with sample data and a Field Guide sheet explaining every column:</p>
+                <div class="row">
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="info-box bg-gradient-primary">
+                            <span class="info-box-icon"><i class="fas fa-users"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Clients Template</span>
+                                <span class="info-box-number">25 columns with 5 sample rows</span>
+                                <a href="{{ route('admin.data-transfer.sample-template', 'clients') }}" class="btn btn-sm btn-light mt-1">
+                                    <i class="fas fa-file-excel mr-1"></i> Download .xlsx
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="info-box bg-gradient-warning">
+                            <span class="info-box-icon"><i class="fas fa-file-invoice"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Bills Template</span>
+                                <span class="info-box-number">9 columns with 5 sample rows</span>
+                                <a href="{{ route('admin.data-transfer.sample-template', 'bills') }}" class="btn btn-sm btn-light mt-1">
+                                    <i class="fas fa-file-excel mr-1"></i> Download .xlsx
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="info-box bg-gradient-success">
+                            <span class="info-box-icon"><i class="fas fa-money-bill"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Payments Template</span>
+                                <span class="info-box-number">8 columns with 5 sample rows</span>
+                                <a href="{{ route('admin.data-transfer.sample-template', 'payments') }}" class="btn btn-sm btn-light mt-1">
+                                    <i class="fas fa-file-excel mr-1"></i> Download .xlsx
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="info-box bg-gradient-danger">
+                            <span class="info-box-icon"><i class="fas fa-map-marker-alt"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Zones Template</span>
+                                <span class="info-box-number">3 columns with 4 sample rows</span>
+                                <a href="{{ route('admin.data-transfer.sample-template', 'zones') }}" class="btn btn-sm btn-light mt-1">
+                                    <i class="fas fa-file-excel mr-1"></i> Download .xlsx
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="info-box bg-gradient-info">
+                            <span class="info-box-icon"><i class="fas fa-map-pin"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Areas Template</span>
+                                <span class="info-box-number">4 columns with 5 sample rows</span>
+                                <a href="{{ route('admin.data-transfer.sample-template', 'areas') }}" class="btn btn-sm btn-light mt-1">
+                                    <i class="fas fa-file-excel mr-1"></i> Download .xlsx
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-md-6 mb-3">
+                        <div class="info-box bg-gradient-indigo">
+                            <span class="info-box-icon"><i class="fas fa-cube"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Packages Template</span>
+                                <span class="info-box-number">6 columns with 6 sample rows</span>
+                                <a href="{{ route('admin.data-transfer.sample-template', 'packages') }}" class="btn btn-sm btn-light mt-1">
+                                    <i class="fas fa-file-excel mr-1"></i> Download .xlsx
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-warning card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-sort-amount-up mr-2"></i>Recommended Import Order</h3>
+            </div>
+            <div class="card-body">
+                <p>If you are migrating from another system, follow this order to avoid errors:</p>
+                <div class="row">
+                    <div class="col-md-10 col-lg-8">
+                        <div class="timeline">
+                            <div class="time-label"><span class="bg-green">Step 1</span></div>
+                            <div><i class="fas fa-cube bg-green"></i><div class="timeline-item"><h3 class="timeline-header">Import <strong>Packages</strong> first</h3><div class="timeline-body">Package names must exist before importing clients. Package name MUST match MikroTik PPP profile name exactly.</div></div></div>
+                            <div class="time-label"><span class="bg-blue">Step 2</span></div>
+                            <div><i class="fas fa-map-marker-alt bg-blue"></i><div class="timeline-item"><h3 class="timeline-header">Import <strong>Zones</strong></h3><div class="timeline-body">Create your service zones. These are the top-level areas your ISP covers.</div></div></div>
+                            <div class="time-label"><span class="bg-info">Step 3</span></div>
+                            <div><i class="fas fa-map-pin bg-info"></i><div class="timeline-item"><h3 class="timeline-header">Import <strong>Areas</strong> (Subzones)</h3><div class="timeline-body">Areas belong to zones. The Zone Name column must match an existing zone.</div></div></div>
+                            <div class="time-label"><span class="bg-primary">Step 4</span></div>
+                            <div><i class="fas fa-users bg-primary"></i><div class="timeline-item"><h3 class="timeline-header">Import <strong>Clients</strong></h3><div class="timeline-body">Client import references packages, zones, and areas. The Username you provide becomes the exact MikroTik PPPoE username - no changes are made.</div></div></div>
+                            <div class="time-label"><span class="bg-warning">Step 5</span></div>
+                            <div><i class="fas fa-file-invoice bg-warning"></i><div class="timeline-item"><h3 class="timeline-header">Import <strong>Bills</strong> (optional)</h3><div class="timeline-body">Import historical bills. Use Client ID, Username, or Phone to identify clients.</div></div></div>
+                            <div class="time-label"><span class="bg-success">Step 6</span></div>
+                            <div><i class="fas fa-money-bill bg-success"></i><div class="timeline-item"><h3 class="timeline-header">Import <strong>Payments</strong> (optional)</h3><div class="timeline-body">Import payment history. Can be linked to specific bill months.</div></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card card-success card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-users mr-2"></i>Client Import Format</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Column</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr class="table-danger"><td><strong>Name</strong></td><td><span class="badge badge-danger">YES</span></td><td>Full name</td><td>Karim Ahmed</td></tr>
+                                <tr class="table-danger"><td><strong>Phone</strong></td><td><span class="badge badge-danger">YES</span></td><td>Mobile number (11 digits)</td><td>01711111111</td></tr>
+                                <tr><td>Email</td><td><span class="badge badge-secondary">No</span></td><td>Email address</td><td>karim@email.com</td></tr>
+                                <tr><td>Address</td><td><span class="badge badge-secondary">No</span></td><td>Full address</td><td>House 10, Road 5</td></tr>
+                                <tr><td>Username</td><td><span class="badge badge-secondary">No</span></td><td>PPPoE username (exact - no changes)</td><td>karim_ahmed</td></tr>
+                                <tr><td>PPPoE Password</td><td><span class="badge badge-secondary">No</span></td><td>PPPoE login password</td><td>MyPass123</td></tr>
+                                <tr><td>Zone Name</td><td><span class="badge badge-secondary">No</span></td><td>Zone (auto-created if missing)</td><td>Zone A</td></tr>
+                                <tr><td>Area Name</td><td><span class="badge badge-secondary">No</span></td><td>Area/subzone</td><td>Mirpur-1</td></tr>
+                                <tr><td>Package Name</td><td><span class="badge badge-secondary">No</span></td><td>Must match existing package</td><td>Basic Home</td></tr>
+                                <tr><td>Monthly Bill</td><td><span class="badge badge-secondary">No</span></td><td>BDT amount (auto from package)</td><td>500</td></tr>
+                                <tr><td>Connection Type</td><td><span class="badge badge-secondary">No</span></td><td>pppoe / hotspot / static / dhcp</td><td>pppoe</td></tr>
+                                <tr><td>Joining Date</td><td><span class="badge badge-secondary">No</span></td><td>YYYY-MM-DD format</td><td>2026-01-15</td></tr>
+                                <tr><td>Billing Date</td><td><span class="badge badge-secondary">No</span></td><td>Day of month (1-28)</td><td>1</td></tr>
+                                <tr><td>Status</td><td><span class="badge badge-secondary">No</span></td><td>active / pending / inactive</td><td>active</td></tr>
+                                <tr><td>NID</td><td><span class="badge badge-secondary">No</span></td><td>National ID number</td><td>1234567890</td></tr>
+                                <tr><td>Due Amount</td><td><span class="badge badge-secondary">No</span></td><td>Outstanding due in BDT</td><td>0</td></tr>
+                                <tr><td>MAC Address</td><td><span class="badge badge-secondary">No</span></td><td>Device MAC</td><td>AA:BB:CC:DD:EE:FF</td></tr>
+                                <tr><td>IP Address</td><td><span class="badge badge-secondary">No</span></td><td>Static IP if assigned</td><td>192.168.1.50</td></tr>
+                                <tr><td>ONU Serial</td><td><span class="badge badge-secondary">No</span></td><td>ONU serial number</td><td>ZTEG-C320-001</td></tr>
+                                <tr><td>Remarks</td><td><span class="badge badge-secondary">No</span></td><td>Any notes</td><td>New customer</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card card-warning card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-file-invoice mr-2"></i>Bill Import Format</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Column</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr class="table-danger"><td><strong>Client ID</strong></td><td><span class="badge badge-danger">YES</span></td><td>CLT-ID, Username, or Phone</td><td>CLT-000001</td></tr>
+                                <tr class="table-danger"><td><strong>Amount</strong></td><td><span class="badge badge-danger">YES</span></td><td>Bill amount in BDT</td><td>500</td></tr>
+                                <tr class="table-danger"><td><strong>Bill Month</strong></td><td><span class="badge badge-danger">YES</span></td><td>YYYY-MM format</td><td>2026-01</td></tr>
+                                <tr><td>Discount</td><td><span class="badge badge-secondary">No</span></td><td>Discount in BDT</td><td>0</td></tr>
+                                <tr><td>Net Amount</td><td><span class="badge badge-secondary">No</span></td><td>After discount (auto-calc)</td><td>500</td></tr>
+                                <tr><td>Status</td><td><span class="badge badge-secondary">No</span></td><td>unpaid / paid / partial</td><td>unpaid</td></tr>
+                                <tr><td>Due Date</td><td><span class="badge badge-secondary">No</span></td><td>YYYY-MM-DD format</td><td>2026-01-15</td></tr>
+                                <tr><td>Notes</td><td><span class="badge badge-secondary">No</span></td><td>Any notes</td><td>January bill</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card card-success card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-money-bill mr-2"></i>Payment Import Format</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Column</th><th>Required</th><th>Description</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr class="table-danger"><td><strong>Client ID</strong></td><td><span class="badge badge-danger">YES</span></td><td>CLT-ID, Username, or Phone</td><td>CLT-000001</td></tr>
+                                <tr class="table-danger"><td><strong>Amount</strong></td><td><span class="badge badge-danger">YES</span></td><td>Payment amount in BDT</td><td>500</td></tr>
+                                <tr class="table-danger"><td><strong>Payment Date</strong></td><td><span class="badge badge-danger">YES</span></td><td>YYYY-MM-DD format</td><td>2026-01-10</td></tr>
+                                <tr><td>Payment Method</td><td><span class="badge badge-secondary">No</span></td><td>cash / bkash / nagad / bank</td><td>cash</td></tr>
+                                <tr><td>Transaction ID</td><td><span class="badge badge-secondary">No</span></td><td>Reference for digital pay</td><td>TXN123456</td></tr>
+                                <tr><td>Bill Month</td><td><span class="badge badge-secondary">No</span></td><td>Links to specific bill</td><td>2026-01</td></tr>
+                                <tr><td>Notes</td><td><span class="badge badge-secondary">No</span></td><td>Any notes</td><td>January payment</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-4">
+                <div class="card card-danger card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-map-marker-alt mr-2"></i>Zone Import Format</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Column</th><th>Required</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr class="table-danger"><td><strong>Name</strong></td><td><span class="badge badge-danger">YES</span></td><td>Zone A</td></tr>
+                                <tr><td>Description</td><td><span class="badge badge-secondary">No</span></td><td>North Dhaka Zone</td></tr>
+                                <tr><td>Status</td><td><span class="badge badge-secondary">No</span></td><td>active</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card card-info card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-map-pin mr-2"></i>Area Import Format</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Column</th><th>Required</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr class="table-danger"><td><strong>Name</strong></td><td><span class="badge badge-danger">YES</span></td><td>Mirpur-1</td></tr>
+                                <tr class="table-danger"><td><strong>Zone Name</strong></td><td><span class="badge badge-danger">YES</span></td><td>Zone A</td></tr>
+                                <tr><td>Description</td><td><span class="badge badge-secondary">No</span></td><td>Mirpur Section 1</td></tr>
+                                <tr><td>Status</td><td><span class="badge badge-secondary">No</span></td><td>active</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card card-indigo card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-cube mr-2"></i>Package Import Format</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Column</th><th>Required</th><th>Example</th></tr></thead>
+                            <tbody>
+                                <tr class="table-danger"><td><strong>Name</strong></td><td><span class="badge badge-danger">YES</span></td><td>Basic Home</td></tr>
+                                <tr class="table-danger"><td><strong>Price</strong></td><td><span class="badge badge-danger">YES</span></td><td>500</td></tr>
+                                <tr class="table-danger"><td><strong>Bandwidth</strong></td><td><span class="badge badge-danger">YES</span></td><td>10</td></tr>
+                                <tr><td>Bandwidth Unit</td><td><span class="badge badge-secondary">No</span></td><td>Mbps</td></tr>
+                                <tr><td>Description</td><td><span class="badge badge-secondary">No</span></td><td>Basic 10Mbps plan</td></tr>
+                                <tr><td>Status</td><td><span class="badge badge-secondary">No</span></td><td>active</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-secondary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-question-circle mr-2"></i>Frequently Asked Questions</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><strong>What file formats are supported?</strong></h6>
+                        <p>Excel (.xlsx, .xls), CSV (.csv), JSON (.json), and ZIP (.zip) files up to 50MB.</p>
+
+                        <h6><strong>Will duplicate records be imported?</strong></h6>
+                        <p>No. The system automatically detects duplicates and skips them. For clients, duplicate detection is based on phone number. For bills, it checks client + bill month.</p>
+
+                        <h6><strong>What happens if a zone or area does not exist?</strong></h6>
+                        <p>During client import, if a zone or area name is provided but does not exist, it will be created automatically.</p>
+
+                        <h6><strong>What happens to the username I provide?</strong></h6>
+                        <p>The username you type in the Excel sheet is used exactly as-is for MikroTik PPPoE login. No extra text, numbers, or client ID is added. What you type is what gets created.</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><strong>How do I identify clients in bill/payment imports?</strong></h6>
+                        <p>You can use any of these: Client ID (CLT-000001), Username (karim_ahmed), or Phone number (01711111111). The system will find the matching client.</p>
+
+                        <h6><strong>What date format should I use?</strong></h6>
+                        <p>Use <strong>YYYY-MM-DD</strong> format (example: 2026-01-15). For bill months, use <strong>YYYY-MM</strong> format (example: 2026-01).</p>
+
+                        <h6><strong>Can I import data from other ISP billing software?</strong></h6>
+                        <p>Yes. Export your data from the other software as Excel or CSV, then map the columns during import. The system has smart auto-mapping that detects common column names.</p>
+
+                        <h6><strong>What if some rows fail during import?</strong></h6>
+                        <p>Each row is processed independently. If one row fails, the rest continue importing. You will see a detailed report showing which rows succeeded and which failed with error messages.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-4">
+            <a href="{{ route('admin.data-transfer.import.create') }}" class="btn btn-lg btn-primary">
+                <i class="fas fa-upload mr-2"></i> Start Importing Data
+            </a>
+            <a href="{{ route('admin.data-transfer.index') }}" class="btn btn-lg btn-default ml-2">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Data Transfer
+            </a>
+        </div>
+
+@endsection

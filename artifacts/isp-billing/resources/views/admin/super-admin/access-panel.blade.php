@@ -1,0 +1,487 @@
+@extends('layouts.admin')
+
+@section('title', 'Super Admin Control Panel')
+
+@section('content')
+        <div class="row">
+            <div class="col-lg-3 col-md-4">
+                <div class="card card-outline card-danger">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-users-cog mr-2"></i>Roles</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-toggle="modal" data-target="#addRoleModal">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="nav nav-pills flex-column" id="rolesList">
+                            @foreach($roles as $role)
+                            <li class="nav-item">
+                                <a href="#" class="nav-link role-item {{ $loop->first ? 'active' : '' }}" 
+                                   data-role-id="{{ $role->id }}" data-role-name="{{ $role->name }}">
+                                    <i class="fas fa-user-tag mr-2"></i>
+                                    {{ $role->name }}
+                                    @if($role->name === 'Super Admin')
+                                    <span class="badge badge-danger float-right">All Access</span>
+                                    @else
+                                    <span class="badge badge-primary float-right permission-count" data-role-id="{{ $role->id }}">
+                                        {{ $rolePermissionCounts[$role->id] ?? 0 }}
+                                    </span>
+                                    @endif
+                                </a>
+                            </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-sm btn-outline-primary btn-block" id="syncPermissionsBtn">
+                            <i class="fas fa-sync-alt mr-1"></i> Sync Permissions
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card card-outline card-info">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-chart-pie mr-2"></i>Statistics</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-box bg-light mb-2">
+                            <span class="info-box-icon bg-primary"><i class="fas fa-list"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Total Menus</span>
+                                <span class="info-box-number">{{ $menuCount }}</span>
+                            </div>
+                        </div>
+                        <div class="info-box bg-light mb-2">
+                            <span class="info-box-icon bg-success"><i class="fas fa-mouse-pointer"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Total Actions</span>
+                                <span class="info-box-number">{{ $actionCount }}</span>
+                            </div>
+                        </div>
+                        <div class="info-box bg-light mb-0">
+                            <span class="info-box-icon bg-warning"><i class="fas fa-key"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Total Permissions</span>
+                                <span class="info-box-number">{{ $menuCount + $actionCount }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-9 col-md-8">
+                <div class="card card-outline card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-key mr-2"></i>
+                            Permissions for: <strong id="selectedRoleName">{{ $roles->first()->name ?? 'Select Role' }}</strong>
+                        </h3>
+                        <div class="card-tools">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-success" id="selectAllBtn">
+                                    <i class="fas fa-check-double mr-1"></i> Select All
+                                </button>
+                                <button type="button" class="btn btn-sm btn-secondary" id="deselectAllBtn">
+                                    <i class="fas fa-times mr-1"></i> Deselect All
+                                </button>
+                                <button type="button" class="btn btn-sm btn-primary" id="savePermissionsBtn">
+                                    <i class="fas fa-save mr-1"></i> Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body" id="permissionsContainer">
+                        <div class="row" id="permissionCategories">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-outline card-warning">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-history mr-2"></i>Recent Permission Changes</h3>
+                        <div class="card-tools">
+                            <a href="{{ route('admin.super-admin.audit-log') }}" class="btn btn-sm btn-outline-warning">
+                                View All <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>User</th>
+                                    <th>Action</th>
+                                    <th>Permission</th>
+                                    <th>Role</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($recentAuditLogs as $log)
+                                <tr>
+                                    <td><small>{{ $log->created_at->diffForHumans() }}</small></td>
+                                    <td>{{ $log->user->name ?? 'System' }}</td>
+                                    <td>
+                                        @if($log->action === 'grant')
+                                        <span class="badge badge-success">Granted</span>
+                                        @elseif($log->action === 'revoke')
+                                        <span class="badge badge-danger">Revoked</span>
+                                        @else
+                                        <span class="badge badge-info">{{ ucfirst($log->action) }}</span>
+                                        @endif
+                                    </td>
+                                    <td><code>{{ $log->permission_key }}</code></td>
+                                    <td>{{ $log->role_name }}</td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">No recent changes</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="addRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title text-white"><i class="fas fa-plus mr-2"></i>Create New Role</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="createRoleForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="roleName">Role Name</label>
+                        <input type="text" class="form-control" id="roleName" name="name" required 
+                               placeholder="Enter role name (e.g., Supervisor)">
+                    </div>
+                    <div class="form-group">
+                        <label for="roleDescription">Description</label>
+                        <textarea class="form-control" id="roleDescription" name="description" rows="2"
+                                  placeholder="Brief description of this role"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save mr-1"></i> Create Role
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let selectedRoleId = {{ $roles->first()->id ?? 'null' }};
+    let selectedRoleName = '{{ $roles->first()->name ?? '' }}';
+    let currentPermissions = [];
+    let allPermissions = @json($permissionsByCategory);
+    
+    const roleItems = document.querySelectorAll('.role-item');
+    roleItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            roleItems.forEach(r => r.classList.remove('active'));
+            this.classList.add('active');
+            selectedRoleId = this.dataset.roleId;
+            selectedRoleName = this.dataset.roleName;
+            document.getElementById('selectedRoleName').textContent = selectedRoleName;
+            loadRolePermissions(selectedRoleId);
+        });
+    });
+    
+    function loadRolePermissions(roleId) {
+        fetch(`/admin/super-admin/roles/${roleId}/permissions`, {
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentPermissions = data.permissions || [];
+                renderPermissions(data.is_super_admin);
+            }
+        })
+        .catch(error => console.error('Error loading permissions:', error));
+    }
+    
+    function renderPermissions(isSuperAdmin) {
+        const container = document.getElementById('permissionCategories');
+        container.innerHTML = '';
+        
+        if (isSuperAdmin) {
+            container.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-danger text-center">
+                        <i class="fas fa-crown fa-3x mb-3"></i>
+                        <h4>Super Admin Role</h4>
+                        <p class="mb-0">This role has unrestricted access to all system features. Permissions cannot be modified.</p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        const categories = Object.keys(allPermissions).sort();
+        categories.forEach(category => {
+            const permissions = allPermissions[category];
+            const categoryDiv = document.createElement('div');
+            categoryDiv.className = 'col-lg-4 col-md-6 mb-3';
+            
+            const menuPerms = permissions.filter(p => p.type === 'menu');
+            const actionPerms = permissions.filter(p => p.type === 'action');
+            
+            let html = `
+                <div class="card card-outline card-secondary h-100">
+                    <div class="card-header py-2">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-folder mr-1"></i>
+                            ${category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' ')}
+                        </h6>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool category-toggle" data-category="${category}">
+                                <i class="fas fa-check-square"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-2" style="max-height: 300px; overflow-y: auto;">
+            `;
+            
+            if (menuPerms.length > 0) {
+                html += `<div class="mb-2"><small class="text-muted font-weight-bold">MENUS</small></div>`;
+                menuPerms.forEach(perm => {
+                    const isChecked = currentPermissions.includes(perm.key);
+                    html += `
+                        <div class="custom-control custom-checkbox mb-1">
+                            <input type="checkbox" class="custom-control-input permission-checkbox" 
+                                   id="perm_${perm.key.replace(/\./g, '_')}" 
+                                   data-key="${perm.key}" data-category="${category}"
+                                   ${isChecked ? 'checked' : ''}>
+                            <label class="custom-control-label" for="perm_${perm.key.replace(/\./g, '_')}">
+                                <i class="fas fa-bars text-primary mr-1"></i>
+                                ${perm.name}
+                            </label>
+                        </div>
+                    `;
+                });
+            }
+            
+            if (actionPerms.length > 0) {
+                html += `<div class="mt-2 mb-2"><small class="text-muted font-weight-bold">ACTIONS</small></div>`;
+                actionPerms.forEach(perm => {
+                    const isChecked = currentPermissions.includes(perm.key);
+                    let iconClass = 'fa-cog text-secondary';
+                    if (perm.key.includes('.view')) iconClass = 'fa-eye text-info';
+                    else if (perm.key.includes('.create')) iconClass = 'fa-plus text-success';
+                    else if (perm.key.includes('.edit')) iconClass = 'fa-edit text-warning';
+                    else if (perm.key.includes('.delete')) iconClass = 'fa-trash text-danger';
+                    else if (perm.key.includes('.approve')) iconClass = 'fa-check-circle text-success';
+                    else if (perm.key.includes('.override')) iconClass = 'fa-undo text-danger';
+                    
+                    html += `
+                        <div class="custom-control custom-checkbox mb-1">
+                            <input type="checkbox" class="custom-control-input permission-checkbox" 
+                                   id="perm_${perm.key.replace(/\./g, '_')}" 
+                                   data-key="${perm.key}" data-category="${category}"
+                                   ${isChecked ? 'checked' : ''}>
+                            <label class="custom-control-label" for="perm_${perm.key.replace(/\./g, '_')}">
+                                <i class="fas ${iconClass} mr-1"></i>
+                                ${perm.name.replace(category + '.', '')}
+                            </label>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += `</div></div>`;
+            categoryDiv.innerHTML = html;
+            container.appendChild(categoryDiv);
+        });
+        
+        document.querySelectorAll('.category-toggle').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const category = this.dataset.category;
+                const checkboxes = document.querySelectorAll(`.permission-checkbox[data-category="${category}"]`);
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                checkboxes.forEach(cb => cb.checked = !allChecked);
+            });
+        });
+    }
+    
+    document.getElementById('selectAllBtn').addEventListener('click', function() {
+        document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = true);
+    });
+    
+    document.getElementById('deselectAllBtn').addEventListener('click', function() {
+        document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
+    });
+    
+    document.getElementById('savePermissionsBtn').addEventListener('click', function() {
+        if (!selectedRoleId) return;
+        
+        const roleName = document.getElementById('selectedRoleName').textContent.trim();
+        
+        if (roleName === 'Super Admin') {
+            showToast('warning', 'Super Admin has all permissions by default - no changes needed');
+            return;
+        }
+        
+        const permissions = [];
+        document.querySelectorAll('.permission-checkbox:checked').forEach(cb => {
+            permissions.push(cb.dataset.key);
+        });
+        
+        if (!confirm(`Are you sure you want to save permission changes for "${roleName}"?\n\nThis will affect all users with this role.`)) {
+            return;
+        }
+        
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...';
+        
+        fetch(`/admin/super-admin/roles/${selectedRoleId}/permissions`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ permissions: permissions })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', 'Permissions saved successfully');
+                const countBadge = document.querySelector(`.permission-count[data-role-id="${selectedRoleId}"]`);
+                if (countBadge) countBadge.textContent = permissions.length;
+            } else {
+                showToast('error', data.message || 'Failed to save permissions');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('error', 'An error occurred while saving');
+        })
+        .finally(() => {
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-save mr-1"></i> Save Changes';
+        });
+    });
+    
+    document.getElementById('syncPermissionsBtn').addEventListener('click', function() {
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Syncing...';
+        
+        fetch('/admin/super-admin/sync-permissions', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', `Synced: ${data.created} new, ${data.existing} existing`);
+                location.reload();
+            } else {
+                showToast('error', data.message || 'Sync failed');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('error', 'An error occurred');
+        })
+        .finally(() => {
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-sync-alt mr-1"></i> Sync Permissions';
+        });
+    });
+    
+    document.getElementById('createRoleForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const roleName = formData.get('name');
+        
+        if (roleName.toLowerCase() === 'super admin') {
+            showToast('error', 'Cannot create another Super Admin role');
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to create the role "${roleName}"?`)) {
+            return;
+        }
+        
+        fetch('/admin/super-admin/roles', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                name: formData.get('name'),
+                description: formData.get('description')
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', 'Role created successfully');
+                location.reload();
+            } else {
+                showToast('error', data.message || 'Failed to create role');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('error', 'An error occurred');
+        });
+    });
+    
+    function showToast(type, message) {
+        const bgClasses = {
+            'success': 'bg-success',
+            'error': 'bg-danger',
+            'warning': 'bg-warning'
+        };
+        const titles = {
+            'success': 'Success',
+            'error': 'Error',
+            'warning': 'Warning'
+        };
+        const bgClass = bgClasses[type] || 'bg-info';
+        const title = titles[type] || 'Notice';
+        const textClass = type === 'warning' ? 'text-dark' : 'text-white';
+        
+        const toast = document.createElement('div');
+        toast.className = `toast ${bgClass} ${textClass}`;
+        toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            <div class="toast-header ${bgClass} ${textClass}">
+                <strong class="mr-auto">${title}</strong>
+                <button type="button" class="ml-2 mb-1 close ${textClass}" data-dismiss="toast">&times;</button>
+            </div>
+            <div class="toast-body">${message}</div>
+        `;
+        document.body.appendChild(toast);
+        $(toast).toast({ delay: 3000 }).toast('show');
+        setTimeout(() => toast.remove(), 3500);
+    }
+    
+    if (selectedRoleId) {
+        loadRolePermissions(selectedRoleId);
+    }
+});
+</script>
+@endpush

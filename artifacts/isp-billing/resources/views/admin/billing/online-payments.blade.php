@@ -1,0 +1,574 @@
+@extends('layouts.admin')
+
+@section('title', 'Online Payments')
+@section('breadcrumb')
+<li class="breadcrumb-item"><a href="{{ route('admin.billing.index') }}">Billing</a></li>
+<li class="breadcrumb-item active">Online Payments</li>
+@endsection
+
+@section('content')
+<style>
+.op-tabs .nav-link {
+    color: rgba(255,255,255,0.6);
+    font-weight: 600;
+    font-size: 12px;
+    padding: 6px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    transition: all 0.2s;
+}
+.op-tabs .nav-link:hover { color: rgba(255,255,255,0.9); border-bottom-color: rgba(255,255,255,0.3); }
+.op-tabs .nav-link.active { color: #fff; border-bottom-color: #fff; background: rgba(255,255,255,0.1); }
+.op-tabs .nav-link i { margin-right: 5px; font-size: 11px; }
+.transaction-card { border-left: 4px solid #17a2b8; margin-bottom: 12px; background: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.transaction-card.status-completed { border-left-color: #28a745; }
+.transaction-card.status-pending { border-left-color: #ffc107; }
+.transaction-card.status-failed { border-left-color: #dc3545; }
+.transaction-card .card-body { padding: 12px 15px; }
+.transaction-card .transaction-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.transaction-card .transaction-amount { font-weight: bold; font-size: 18px; color: #28a745; }
+.transaction-card .transaction-info { font-size: 13px; color: #666; margin-bottom: 4px; }
+.gateway-response-content { max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+.wh-stat-box { padding: 12px 16px; border-radius: 8px; text-align: center; }
+.wh-stat-box .stat-val { font-size: 20px; font-weight: 700; }
+.wh-stat-box .stat-label { font-size: 11px; color: #718096; }
+@media (min-width: 768px) { .mobile-cards { display: none; } }
+@media (max-width: 767px) { .desktop-table { display: none; } }
+</style>
+
+@include('admin.billing.partials.payment-tabs')
+<div class="card shadow-sm">
+    <div class="card-header p-0" style="background: linear-gradient(135deg, #1e3c72, #2a5298); border: none;">
+        <ul class="nav nav-tabs op-tabs px-2 pt-1" role="tablist" style="border: none; margin: 0;">
+            <li class="nav-item">
+                <a class="nav-link {{ $activeTab == 'online' ? 'active' : '' }}" data-toggle="tab" href="#tabOnline" role="tab">
+                    <i class="fas fa-credit-card"></i>Gateway Payments
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {{ $activeTab == 'webhook' ? 'active' : '' }}" data-toggle="tab" href="#tabWebhook" role="tab">
+                    <i class="fas fa-satellite-dish"></i>Webhook Payments
+                    @if($webhookAppliedCount > 0)
+                    <span class="badge badge-light ml-1" style="font-size: 9px; padding: 2px 5px;">{{ $webhookAppliedCount }}</span>
+                    @endif
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="tab-content">
+
+            <div class="tab-pane fade {{ $activeTab == 'online' ? 'show active' : '' }}" id="tabOnline" role="tabpanel">
+                <div class="p-3">
+                    <div class="row mb-3">
+                        <div class="col-6 col-md-3 mb-2">
+                            <div class="small-box bg-success mb-0">
+                                <div class="inner py-2 px-3">
+                                    <h4 style="font-size: 18px;">৳{{ number_format($totalOnlineCollected, 2) }}</h4>
+                                    <p style="font-size: 12px; margin: 0;">Total Collected</p>
+                                </div>
+                                <div class="icon"><i class="fas fa-check-circle"></i></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-2">
+                            <div class="small-box bg-warning mb-0">
+                                <div class="inner py-2 px-3">
+                                    <h4 style="font-size: 18px;">{{ $pendingCount }}</h4>
+                                    <p style="font-size: 12px; margin: 0;">Pending</p>
+                                </div>
+                                <div class="icon"><i class="fas fa-hourglass-half"></i></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-2">
+                            <div class="small-box bg-info mb-0">
+                                <div class="inner py-2 px-3">
+                                    <h4 style="font-size: 18px;">{{ $completedCount }}</h4>
+                                    <p style="font-size: 12px; margin: 0;">Completed</p>
+                                </div>
+                                <div class="icon"><i class="fas fa-check-double"></i></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-2">
+                            <div class="small-box bg-danger mb-0">
+                                <div class="inner py-2 px-3">
+                                    <h4 style="font-size: 18px;">{{ $failedCount }}</h4>
+                                    <p style="font-size: 12px; margin: 0;">Failed</p>
+                                </div>
+                                <div class="icon"><i class="fas fa-times-circle"></i></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4 mb-2">
+                            <div class="info-box mb-0">
+                                <span class="info-box-icon bg-success"><i class="fas fa-link"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Active Links</span>
+                                    <span class="info-box-number">{{ $paymentLinksActive }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="info-box mb-0">
+                                <span class="info-box-icon bg-primary"><i class="fas fa-check"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Paid Links</span>
+                                    <span class="info-box-number">{{ $paymentLinksPaid }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="info-box mb-0">
+                                <span class="info-box-icon bg-danger"><i class="fas fa-clock"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Expired Links</span>
+                                    <span class="info-box-number">{{ $paymentLinksExpired }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="GET" action="{{ route('admin.billing.online-payments') }}" class="mb-3">
+                        <input type="hidden" name="tab" value="online">
+                        <div class="row">
+                            <div class="col-md-3 col-6 mb-2">
+                                <input type="text" id="quickSearch" name="search" class="form-control form-control-sm" placeholder="Search: Client / TrxID / Sender No" value="{{ request('search') }}" autocomplete="off">
+                            </div>
+                            <div class="col-md-2 col-6 mb-2">
+                                <select name="gateway" class="form-control form-control-sm">
+                                    <option value="">All Gateways</option>
+                                    @foreach($gateways as $gw)
+                                    <option value="{{ $gw }}" {{ request('gateway') == $gw ? 'selected' : '' }}>{{ ucfirst($gw) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-6 mb-2">
+                                <select name="status" class="form-control form-control-sm">
+                                    <option value="">All Status</option>
+                                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                                    <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                                    <option value="failed" {{ request('status') == 'failed' ? 'selected' : '' }}>Failed</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-6 mb-2">
+                                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
+                            </div>
+                            <div class="col-md-2 col-6 mb-2">
+                                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
+                            </div>
+                            <div class="col-md-1 col-6 mb-2">
+                                <button type="submit" class="btn btn-primary btn-sm btn-block"><i class="fas fa-search"></i></button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div id="online-results">
+                    <div class="mobile-cards">
+                        @forelse($transactions as $txn)
+                        <div class="card transaction-card status-{{ $txn->status }}">
+                            <div class="card-body">
+                                <div class="transaction-header">
+                                    <div>
+                                        @php $gwLogosM=['bkash'=>'bkash.png','sslcommerz'=>'sslcommerz.png','nagad'=>'nagad.png','rocket'=>'rocket.svg']; $gwLogoM=$gwLogosM[strtolower($txn->gateway)]??null; @endphp
+                                        @if($gwLogoM)<img src="{{ asset('images/gateways/'.$gwLogoM) }}" alt="{{ $txn->gateway }}" style="height:20px;max-width:55px;object-fit:contain;margin-right:4px;">@else<strong>{{ ucfirst($txn->gateway) }}</strong>@endif
+                                        <span class="badge badge-{{ $txn->status == 'completed' ? 'success' : ($txn->status == 'pending' ? 'warning' : 'danger') }} ml-2">
+                                            {{ ucfirst($txn->status) }}
+                                        </span>
+                                    </div>
+                                    <span class="transaction-amount">৳{{ number_format($txn->amount ?? 0, 2) }}</span>
+                                </div>
+                                @php
+$realTrxId = null;
+$gr = $txn->gateway_response ?? [];
+if ($txn->gateway === 'bkash') $realTrxId = $gr['trxID'] ?? null;
+elseif (in_array($txn->gateway, ['sslcommerz','ssl'])) $realTrxId = $gr['bank_tran_id'] ?? $gr['val_id'] ?? null;
+elseif ($txn->gateway === 'nagad') $realTrxId = $gr['nagad_trx_id'] ?? $gr['issuerPaymentRefNo'] ?? $gr['payment_ref_id'] ?? null;
+$displayTrxId = $realTrxId ?? $txn->transaction_id ?? 'N/A';
+@endphp
+                                <div class="transaction-info"><i class="fas fa-hashtag mr-1"></i> <strong style="color:#1d4ed8;">{{ $displayTrxId }}</strong></div>
+                                <div class="transaction-info">
+                                    <i class="fas fa-user mr-1"></i> <strong>{{ $txn->client->username ?? $txn->client->client_id ?? 'N/A' }}</strong>
+                                </div>
+                                <div class="transaction-info">
+                                    <i class="fas fa-calendar mr-1"></i> {{ $txn->created_at->format('d-m-Y h:i A') }}
+                                    @if($txn->verified_at)
+                                    <br><small class="text-success"><i class="fas fa-check-circle mr-1"></i>Verified: {{ $txn->verified_at->format('d-m-Y h:i A') }}</small>
+                                    @endif
+                                </div>
+                                @if($txn->gateway_response)
+                                <button class="btn btn-sm btn-outline-info mt-2" data-toggle="modal" data-target="#txnModal{{ $txn->id }}">
+                                    <i class="fas fa-eye mr-1"></i> Details
+                                </button>
+                                @endif
+                            </div>
+                        </div>
+                        @empty
+                        <div class="text-center text-muted py-4">No online payment transactions found</div>
+                        @endforelse
+                    </div>
+
+                    <div class="desktop-table">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0" style="font-size: 13px;">
+                                <thead style="background: #f8fafc;">
+                                    <tr>
+                                        <th>Gateway</th>
+                                        <th>Transaction ID</th>
+                                        <th>Sender</th>
+                                        <th>Client ID</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                        <th>Verified At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($transactions as $txn)
+                                    <tr>
+                                        <td>
+                                            @php
+                                            $gwLogos = ['bkash'=>'bkash.png','sslcommerz'=>'sslcommerz.png','nagad'=>'nagad.png','rocket'=>'rocket.svg'];
+                                            $gwLogo = $gwLogos[strtolower($txn->gateway)] ?? null;
+                                            @endphp
+                                            @if($gwLogo)
+                                            <img src="{{ asset('images/gateways/'.$gwLogo) }}" alt="{{ $txn->gateway }}" style="height:24px;max-width:60px;object-fit:contain;" title="{{ ucfirst($txn->gateway) }}">
+                                            @else
+                                            <span class="badge badge-info">{{ ucfirst($txn->gateway) }}</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @php
+$realTrxId = null;
+$gr = $txn->gateway_response ?? [];
+if ($txn->gateway === 'bkash') $realTrxId = $gr['trxID'] ?? null;
+elseif (in_array($txn->gateway, ['sslcommerz','ssl'])) $realTrxId = $gr['bank_tran_id'] ?? $gr['val_id'] ?? null;
+elseif ($txn->gateway === 'nagad') $realTrxId = $gr['nagad_trx_id'] ?? $gr['issuerPaymentRefNo'] ?? $gr['payment_ref_id'] ?? null;
+$displayTrxId = $realTrxId ?? $txn->transaction_id ?? 'N/A';
+@endphp
+                                            <code style="font-size: 11px; color: #1d4ed8;">{{ $displayTrxId }}</code>
+                                        </td>
+                                        @php $senderNo = $txn->gateway === 'bkash' ? ($gr['customerMsisdn'] ?? $gr['payerAccount'] ?? null) : ($txn->gateway === 'nagad' ? ($gr['clientMobileNo'] ?? null) : null); @endphp
+                                        <td style="font-size: 12px;">{{ $senderNo ?? '-' }}</td>
+                                        <td>
+                                            <strong>{{ $txn->client->username ?? $txn->client->client_id ?? 'N/A' }}</strong>
+                                        </td>
+                                        <td class="font-weight-bold">৳{{ number_format($txn->amount ?? 0, 2) }}</td>
+                                        <td>
+                                            <span class="badge badge-{{ $txn->status == 'completed' ? 'success' : ($txn->status == 'pending' ? 'warning' : 'danger') }}">
+                                                {{ ucfirst($txn->status) }}
+                                            </span>
+                                        </td>
+                                        <td style="white-space: nowrap;">{{ $txn->created_at->format('d-m-Y h:i A') }}</td>
+                                        <td>
+                                            @if($txn->verified_at)
+                                            <small class="text-success">{{ $txn->verified_at->format('d-m-Y h:i A') }}</small>
+                                            @else
+                                            <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($txn->gateway_response)
+                                            <button class="btn btn-xs btn-outline-info" data-toggle="modal" data-target="#txnModal{{ $txn->id }}">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr><td colspan="9" class="text-center text-muted py-4">No online payment transactions found</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    @if($transactions->hasPages())
+                    <div class="mt-2"><div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-1">
+    <div class="d-flex align-items-center">
+        <label class="small text-muted mb-0 mr-2" style="white-space:nowrap;">SHOW</label>
+        <select class="form-control form-control-sm bulk-show-entries" style="width:80px;">
+            <option value="20" {{ request('per_page',20)==20?'selected':'' }}>20</option>
+            <option value="50" {{ request('per_page',20)==50?'selected':'' }}>50</option>
+            <option value="100" {{ request('per_page',20)==100?'selected':'' }}>100</option>
+            <option value="200" {{ request('per_page',20)==200?'selected':'' }}>200</option>
+        </select>
+        <label class="small text-muted mb-0 ml-2" style="white-space:nowrap;">ENTRIES</label>
+    </div>
+    <div>
+        {{ $transactions->appends(request()->query())->links() }}
+    </div>
+</div>
+<script>
+(function(){
+    var sel = document.querySelector('.bulk-show-entries');
+    if(sel){ sel.addEventListener('change',function(){
+        var p=new URLSearchParams(window.location.search);
+        p.set('per_page',this.value); p.delete('page');
+        window.location=window.location.pathname+'?'+p.toString();
+    }); }
+})();
+</script></div>
+                    @endif
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade {{ $activeTab == 'webhook' ? 'show active' : '' }}" id="tabWebhook" role="tabpanel">
+                <div class="p-3">
+                    <div class="row mb-3">
+                        <div class="col-6 mb-2">
+                            <div class="wh-stat-box" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
+                                <div class="stat-val text-success">৳{{ number_format($webhookTotalAmount, 2) }}</div>
+                                <div class="stat-label">Total Received</div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <div class="wh-stat-box" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb);">
+                                <div class="stat-val text-primary">{{ $webhookAppliedCount }}</div>
+                                <div class="stat-label">Applied</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="GET" action="{{ route('admin.billing.online-payments') }}" class="mb-3">
+                        <input type="hidden" name="tab" value="webhook">
+                        <div class="row">
+                            <div class="col-md-3 col-6 mb-2">
+                                <input type="text" name="wh_search" class="form-control form-control-sm" placeholder="TrxID / Reference / Client" value="{{ request('wh_search') }}">
+                            </div>
+                            <div class="col-md-2 col-6 mb-2">
+                                <select name="wh_gateway" class="form-control form-control-sm">
+                                    <option value="">All Gateways</option>
+                                    <option value="bkash" {{ request('wh_gateway') == 'bkash' ? 'selected' : '' }}>bKash</option>
+                                    <option value="nagad" {{ request('wh_gateway') == 'nagad' ? 'selected' : '' }}>Nagad</option>
+                                    <option value="rocket" {{ request('wh_gateway') == 'rocket' ? 'selected' : '' }}>Rocket</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-6 mb-2">
+                                <input type="date" name="wh_date_from" class="form-control form-control-sm" value="{{ request('wh_date_from') }}">
+                            </div>
+                            <div class="col-md-2 col-6 mb-2">
+                                <input type="date" name="wh_date_to" class="form-control form-control-sm" value="{{ request('wh_date_to') }}">
+                            </div>
+                            <div class="col-md-1 col-6 mb-2">
+                                <button type="submit" class="btn btn-primary btn-sm btn-block"><i class="fas fa-search"></i></button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0" style="font-size: 12px;">
+                            <thead style="background: #f8fafc;">
+                                <tr>
+                                    <th style="padding: 8px 10px;">Time</th>
+                                    <th>Gateway</th>
+                                    <th>TrxID</th>
+                                    <th>Sender</th>
+                                    <th>Reference</th>
+                                    <th>Amount</th>
+                                    <th>Client</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($webhookLogs as $log)
+                                <tr>
+                                    <td style="padding: 6px 10px; white-space: nowrap;">{{ $log->created_at->format('d M Y H:i:s') }}</td>
+                                    <td>
+                                        @php
+                                            $gwColors = ['bkash' => '#e2136e', 'nagad' => '#f6921e', 'rocket' => '#8b5cf6'];
+                                        @endphp
+                                        <span class="badge" style="background: {{ $gwColors[$log->gateway] ?? '#6b7280' }}; color: #fff; font-size: 10px;">
+                                            {{ strtoupper($log->gateway) }}
+                                        </span>
+                                    </td>
+                                    <td><code style="font-size: 10px;">{{ $log->trx_id ?? '-' }}</code></td>
+                                    <td style="font-size: 11px;">{{ $log->sender_number ?? '-' }}</td>
+                                    <td><strong>{{ $log->reference ?? '-' }}</strong></td>
+                                    <td style="font-weight: 600;">৳{{ number_format($log->amount, 2) }}</td>
+                                    <td>
+                                        @if($log->client)
+                                        <a href="{{ route('admin.clients.show', $log->client_id) }}" style="font-size: 11px;">
+                                            {{ $log->client->name }}
+                                            <br><small class="text-muted">{{ $log->client->username }}</small>
+                                        </a>
+                                        @else
+                                        <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($log->raw_payload)
+                                        <button type="button" class="btn btn-xs btn-outline-secondary" style="font-size: 10px; padding: 1px 6px;"
+                                            onclick="showWebhookPayload({{ $log->id }})">
+                                            <i class="fas fa-code"></i>
+                                        </button>
+                                        <div id="wh-payload-{{ $log->id }}" style="display:none;">{{ json_encode($log->raw_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</div>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">
+                                        <i class="fas fa-satellite-dish fa-2x mb-2 d-block" style="opacity: 0.3;"></i>
+                                        No webhook payments received yet
+                                    </td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                    @if($webhookLogs->hasPages())
+                    <div class="mt-2"><div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-1">
+    <div class="d-flex align-items-center">
+        <label class="small text-muted mb-0 mr-2" style="white-space:nowrap;">SHOW</label>
+        <select class="form-control form-control-sm bulk-show-entries" style="width:80px;">
+            <option value="20" {{ request('per_page',20)==20?'selected':'' }}>20</option>
+            <option value="50" {{ request('per_page',20)==50?'selected':'' }}>50</option>
+            <option value="100" {{ request('per_page',20)==100?'selected':'' }}>100</option>
+            <option value="200" {{ request('per_page',20)==200?'selected':'' }}>200</option>
+        </select>
+        <label class="small text-muted mb-0 ml-2" style="white-space:nowrap;">ENTRIES</label>
+    </div>
+    <div>
+        {{ $webhookLogs->appends(request()->query())->links() }}
+    </div>
+</div>
+<script>
+(function(){
+    var sel = document.querySelector('.bulk-show-entries');
+    if(sel){ sel.addEventListener('change',function(){
+        var p=new URLSearchParams(window.location.search);
+        p.set('per_page',this.value); p.delete('page');
+        window.location=window.location.pathname+'?'+p.toString();
+    }); }
+})();
+</script></div>
+                    @endif
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@foreach($transactions as $txn)
+@if($txn->gateway_response)
+<div class="modal fade" id="txnModal{{ $txn->id }}" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header py-2" style="background: #1e3c72;">
+                @php
+                $mGr = $txn->gateway_response ?? [];
+$mRealTrx = null;
+if ($txn->gateway === 'bkash') $mRealTrx = $mGr['trxID'] ?? null;
+elseif (in_array($txn->gateway, ['sslcommerz','ssl'])) $mRealTrx = $mGr['bank_tran_id'] ?? $mGr['val_id'] ?? null;
+elseif ($txn->gateway === 'nagad') $mRealTrx = $mGr['nagad_trx_id'] ?? $mGr['issuerPaymentRefNo'] ?? null;
+$mDisplayTrx = $mRealTrx ?? $txn->transaction_id;
+                @endphp
+                <h6 class="modal-title text-white" style="font-size: 13px;">Transaction Details - {{ $mDisplayTrx }}</h6>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3" style="font-size: 13px;">
+                    <strong>Gateway:</strong> {{ ucfirst($txn->gateway) }}<br>
+                    <strong>Real TrxID:</strong> <code style="color:#1d4ed8;">{{ $mDisplayTrx }}</code><br>
+                    @if($mRealTrx && $mRealTrx !== $txn->transaction_id)
+                    <strong>Internal Ref:</strong> <small class="text-muted">{{ $txn->transaction_id }}</small><br>
+                    @endif
+                    <strong>Amount:</strong> ৳{{ number_format($txn->amount ?? 0, 2) }}<br>
+                    <strong>Status:</strong>
+                    <span class="badge badge-{{ $txn->status == 'completed' ? 'success' : ($txn->status == 'pending' ? 'warning' : 'danger') }}">
+                        {{ ucfirst($txn->status) }}
+                    </span><br>
+                    <strong>Client:</strong> {{ $txn->client->name ?? 'N/A' }}<br>
+                    <strong>Date:</strong> {{ $txn->created_at->format('d-m-Y h:i A') }}<br>
+                    @if($txn->verified_at)
+                    <strong>Verified:</strong> {{ $txn->verified_at->format('d-m-Y h:i A') }}
+                    @endif
+                </div>
+                <strong>Gateway Response:</strong>
+                <div class="gateway-response-content mt-2">{{ json_encode($txn->gateway_response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</div>
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+@endforeach
+
+<div class="modal fade" id="webhookPayloadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header py-2" style="background: #1e3c72;">
+                <h6 class="modal-title text-white" style="font-size: 13px;"><i class="fas fa-code mr-1"></i>Webhook Raw Payload</h6>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="webhookPayloadContent" style="font-size: 11px; max-height: 400px; overflow: auto; background: #f8fafc; padding: 12px; border-radius: 8px;"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@endsection
+
+@push('scripts')
+<script>
+function showWebhookPayload(id) {
+    var el = document.getElementById('wh-payload-' + id);
+    if (el) {
+        document.getElementById('webhookPayloadContent').textContent = el.textContent;
+        $('#webhookPayloadModal').modal('show');
+    }
+}
+
+$(document).ready(function() {
+    // Live AJAX search with debounce
+    var searchTimer;
+    $('#quickSearch').on('input', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function() {
+            var form = $('#quickSearch').closest('form');
+            var params = new URLSearchParams(new FormData(form[0]));
+            var url = form.attr('action') + '?' + params.toString();
+            $('#online-results').css('opacity', '0.5');
+            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(function(r){ return r.text(); })
+                .then(function(html) {
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(html, 'text/html');
+                    var newResults = doc.getElementById('online-results');
+                    if (newResults) {
+                        document.getElementById('online-results').innerHTML = newResults.innerHTML;
+                        document.getElementById('online-results').style.opacity = '1';
+                    }
+                    history.replaceState(null, '', url);
+                })
+                .catch(function(){ document.getElementById('online-results').style.opacity='1'; });
+        }, 500);
+    });
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var activeTab = urlParams.get('tab') || 'online';
+
+    if (activeTab === 'webhook') {
+        $('.op-tabs .nav-link').removeClass('active');
+        $('.tab-pane').removeClass('show active');
+        $('a[href="#tabWebhook"]').addClass('active').tab('show');
+        $('#tabWebhook').addClass('show active');
+    }
+
+    $(document).on('click', '.op-tabs .nav-link', function(e) {
+        var target = $(this).attr('href');
+        var tabName = target === '#tabWebhook' ? 'webhook' : 'online';
+        var newUrl = window.location.pathname + '?tab=' + tabName;
+        history.replaceState(null, '', newUrl);
+    });
+});
+</script>
+@endpush

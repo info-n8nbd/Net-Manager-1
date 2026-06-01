@@ -1,0 +1,106 @@
+@extends('layouts.admin')
+
+@section('title', 'Permission Audit Log')
+
+@section('content')
+        <div class="card card-outline card-warning">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list mr-2"></i>All Permission Changes</h3>
+                <div class="card-tools">
+                    <form method="GET" class="form-inline">
+                        <select name="action" class="form-control form-control-sm mr-2">
+                            <option value="">All Actions</option>
+                            <option value="grant" {{ request('action') == 'grant' ? 'selected' : '' }}>Granted</option>
+                            <option value="revoke" {{ request('action') == 'revoke' ? 'selected' : '' }}>Revoked</option>
+                            <option value="bulk_update" {{ request('action') == 'bulk_update' ? 'selected' : '' }}>Bulk Update</option>
+                        </select>
+                        <input type="text" name="search" class="form-control form-control-sm mr-2" 
+                               placeholder="Search..." value="{{ request('search') }}">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th style="width: 150px;">Date/Time</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Permission</th>
+                                <th>Role</th>
+                                <th>Reason</th>
+                                <th>IP Address</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($logs as $log)
+                            <tr>
+                                <td>
+                                    <small>{{ $log->created_at->format('d-m-Y') }}</small><br>
+                                    <small class="text-muted">{{ $log->created_at->format('H:i:s') }}</small>
+                                </td>
+                                <td>
+                                    <i class="fas fa-user text-primary mr-1"></i>
+                                    {{ $log->user->name ?? 'System' }}
+                                </td>
+                                <td>
+                                    @if($log->action === 'grant')
+                                    <span class="badge badge-success"><i class="fas fa-plus mr-1"></i>Granted</span>
+                                    @elseif($log->action === 'revoke')
+                                    <span class="badge badge-danger"><i class="fas fa-minus mr-1"></i>Revoked</span>
+                                    @elseif($log->action === 'bulk_update')
+                                    <span class="badge badge-info"><i class="fas fa-sync mr-1"></i>Bulk Update</span>
+                                    @elseif($log->action === 'sync_permissions')
+                                    <span class="badge badge-secondary"><i class="fas fa-database mr-1"></i>Sync</span>
+                                    @else
+                                    <span class="badge badge-secondary">{{ ucfirst($log->action) }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($log->permission_key)
+                                    <code class="text-primary">{{ $log->permission_key }}</code>
+                                    @else
+                                    <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($log->role_name)
+                                    <span class="badge badge-outline-primary">{{ $log->role_name }}</span>
+                                    @else
+                                    <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($log->reason)
+                                    <small>{{ Str::limit($log->reason, 50) }}</small>
+                                    @else
+                                    <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ $log->ip_address ?? '-' }}</small>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="7" class="text-center py-4">
+                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted mb-0">No audit logs found</p>
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @if($logs->hasPages())
+            <div class="card-footer">
+                {{ $logs->appends(request()->query())->links() }}
+            </div>
+            @endif
+        </div>
+@endsection

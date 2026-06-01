@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" width="160" height="110">
+  <rect width="160" height="110" fill="white"/>
+  <polygon points="30,20 55,20 55,60 30,80" fill="none" stroke="#003566" stroke-width="4"/>
+  <polygon points="38,28 47,28 47,55 38,68" fill="#003566" opacity="0.25"/>
+  <text x="100" y="48" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="22" font-weight="900" fill="#003566">DBC</text>
+  <text x="100" y="65" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="bold" fill="#003566">Band OLT</text>
+</svg>

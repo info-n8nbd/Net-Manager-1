@@ -1,0 +1,43 @@
+@extends('layouts.admin')
+
+@section('title', 'Start New Migration')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-primary">
+                        <h3 class="card-title"><i class="fas fa-rocket"></i> Initialize Migration</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="callout callout-warning">
+                            <h5><i class="fas fa-exclamation-triangle"></i> Important</h5>
+                            <ul class="mb-0">
+                                <li>This wizard will guide you through migrating clients from your old billing system</li>
+                                <li>No data will be deleted from your MikroTik routers during this process</li>
+                                <li>All actions are logged and reversible</li>
+                                <li>You can pause and resume at any phase</li>
+                            </ul>
+                        </div>
+
+                        <form action="{{ route('admin.migration.store') }}" method="POST">
+                            @csrf
+                            <div class="form-group">
+                                <label>Migration Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" value="ISP Migration - {{ now()->format('d-m-Y') }}" required>
+                                <small class="text-muted">Give this migration a descriptive name</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg btn-block">
+                                <i class="fas fa-play"></i> Start Migration Wizard
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@endsection

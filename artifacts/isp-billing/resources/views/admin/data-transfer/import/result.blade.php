@@ -1,0 +1,158 @@
+@extends('layouts.admin')
+
+@section('title', 'Import Result')
+
+@section('content')
+        <div class="row">
+            <div class="col-12">
+                @if($job->status === 'completed')
+                <div class="alert alert-success alert-dismissible">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <i class="fas fa-check-circle mr-2"></i>
+                    <strong>Import Completed!</strong> Successfully imported {{ number_format($stats['imported']) }} records.
+                </div>
+                @else
+                <div class="alert alert-danger alert-dismissible">
+                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <i class="fas fa-times-circle mr-2"></i>
+                    <strong>Import Failed!</strong> {{ $job->error_message }}
+                </div>
+                @endif
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="info-box">
+                    <span class="info-box-icon bg-info"><i class="fas fa-list"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Total Rows</span>
+                        <span class="info-box-number">{{ number_format($stats['total']) }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="info-box">
+                    <span class="info-box-icon bg-success"><i class="fas fa-check"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Imported</span>
+                        <span class="info-box-number">{{ number_format($stats['imported']) }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="info-box">
+                    <span class="info-box-icon bg-danger"><i class="fas fa-times"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Failed</span>
+                        <span class="info-box-number">{{ number_format($stats['failed']) }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 col-12">
+                <div class="info-box">
+                    <span class="info-box-icon bg-warning"><i class="fas fa-forward"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Skipped</span>
+                        <span class="info-box-number">{{ number_format($stats['skipped']) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Import Details</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Name:</dt>
+                            <dd class="col-sm-8">{{ $job->name }}</dd>
+                            <dt class="col-sm-4">Data Type:</dt>
+                            <dd class="col-sm-8">{{ ucfirst($job->data_type) }}</dd>
+                            <dt class="col-sm-4">Source:</dt>
+                            <dd class="col-sm-8">{{ $job->source_software ?? 'Not specified' }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Started:</dt>
+                            <dd class="col-sm-8">{{ $job->started_at?->format('d-m-y H:i:s') ?? '-' }}</dd>
+                            <dt class="col-sm-4">Completed:</dt>
+                            <dd class="col-sm-8">{{ $job->completed_at?->format('d-m-y H:i:s') ?? '-' }}</dd>
+                            <dt class="col-sm-4">Duration:</dt>
+                            <dd class="col-sm-8">
+                                @if($job->started_at && $job->completed_at)
+                                {{ $job->started_at->diffForHumans($job->completed_at, true) }}
+                                @else
+                                -
+                                @endif
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                @if($stats['imported'] > 0)
+                <div class="progress" style="height: 30px;">
+                    <div class="progress-bar bg-success" style="width: {{ ($stats['imported'] / $stats['total']) * 100 }}%">
+                        Imported: {{ number_format(($stats['imported'] / $stats['total']) * 100, 1) }}%
+                    </div>
+                    @if($stats['failed'] > 0)
+                    <div class="progress-bar bg-danger" style="width: {{ ($stats['failed'] / $stats['total']) * 100 }}%">
+                        Failed
+                    </div>
+                    @endif
+                    @if($stats['skipped'] > 0)
+                    <div class="progress-bar bg-warning" style="width: {{ ($stats['skipped'] / $stats['total']) * 100 }}%">
+                        Skipped
+                    </div>
+                    @endif
+                </div>
+                @endif
+            </div>
+        </div>
+
+        @if($failedLogs->count() > 0)
+        <div class="card card-danger card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exclamation-triangle mr-2"></i>Failed Records</h3>
+            </div>
+            <div class="card-body table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Row</th>
+                            <th>Error</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($failedLogs as $log)
+                        <tr>
+                            <td>{{ $log->row_number }}</td>
+                            <td class="text-danger">{{ $log->error_message }}</td>
+                            <td><small>{{ json_encode(array_slice($log->mapped_data ?? [], 0, 3)) }}</small></td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @endif
+
+        <div class="card">
+            <div class="card-body">
+                <a href="{{ route('admin.data-transfer.import.report', $job->id) }}" class="btn btn-info">
+                    <i class="fas fa-download mr-1"></i> Download Report
+                </a>
+                <a href="{{ route('admin.data-transfer.import.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-list mr-1"></i> View All Imports
+                </a>
+                <a href="{{ route('admin.data-transfer.import.create') }}" class="btn btn-primary">
+                    <i class="fas fa-plus mr-1"></i> New Import
+                </a>
+            </div>
+        </div>
+@endsection

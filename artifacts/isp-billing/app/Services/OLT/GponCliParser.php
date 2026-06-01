@@ -1,0 +1,537 @@
+<?php
+
+namespace App\Services\OLT;
+
+class GponCliParser
+{
+    // ─────────────────────────────────────────────────────────
+    // show gpon onu-information  (no argument — ALL ONUs)
+    //
+    // BDCOM GP3600 actual output:
+    //   GPON0/1:3   HWTC  HG8310M  HWTC:C812864E  N/A  active   success  2026-05-15 11:27:01
+    //   GPON0/1:1   GPTF  N/A      GPTF:00D588D0  N/A  off-line N/A      N/A
+    // ─────────────────────────────────────────────────────────
+    public static function parseOnuInformationTable(string $output): array
+    {
+        $onus = [];
+        $ONLINE  = ['active', 'online', 'working', 'up', 'mibreday', 'mibready'];
+        $OFFLINE = ['off-line', 'offline', 'los', 'link-fail', 'dying-gasp',
+                    'power-off', 'deactivate', 'deregistered', 'blocked',
+                    'losi', 'lofi', 'loami'];
+
+        foreach (explode("\n", $output) as $line) {
+            $line = rtrim($line);
+
+            // ── Pattern A (primary): BDCOM GP3600 actual format ──────────
+            // "GPON0/1:3   HWTC   HG8310M   HWTC:C812864E   N/A   active ..."
+            // "GPON0/8:35  RCMG   N/A       RCMG:12345678   N/A   off-line ..."
+            if (preg_match(
+                '/^(GPON\d+)\/(\d+):(\d+)\s+(\S+)\s+(.*?)\s+([A-Za-z0-9]{4}:[A-Za-z0-9]{8,})\s+\S+\s+(\S+)\s+(\S+)(.*)/i',
+                $line, $m
+            )) {
+                $portNum      = (int)$m[2];
+                $onuId        = (int)$m[3];
+                $model        = trim($m[5]);
+                $serial       = strtoupper(str_replace(':', '', $m[6]));
+                $rawSt     = strtolower($m[7]);
+                $remainder = trim($m[9]);
+                $isOnline  = in_array($rawSt, $ONLINE);
+                // Detect if col8 is a GPON offline reason (LOS, LOFI, LOSI, etc.)
+                // vs config-status (success, failed). BDCOM may output:
+                //   GPON0/1:1  GPTF  N/A  SN  N/A  off-line  LOS  N/A
+                $knownGponReasons = ['los','losi','lofi','loami','link-fail',
+                                     'dying-gasp','power-off','deactivate',
+                                     'deregistered','blocked'];
+                $col8lower = strtolower(trim($m[8]));
+                if (!$isOnline && in_array($col8lower, $knownGponReasons)) {
+                    $configStatus   = null;
+                    $reasonFromCol8 = strtoupper(trim($m[8]));
+                } else {
+                    $configStatus   = (strtoupper($m[8]) !== 'N/A' && $m[8] !== '') ? $m[8] : null;
+                    $reasonFromCol8 = null;
+                }
+
+                $onlineTime = $offlineTime = $duration = $offlineReason = null;
+                if (preg_match('/^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+(\S+)(?:\s+(\S.*))?$/', $remainder, $rm)) {
+                    $onlineTime    = $rm[1];
+                    $offlineTime   = $rm[2];
+                    $duration      = $rm[3];
+                    $offlineReason = isset($rm[4]) && $rm[4] !== '' ? trim($rm[4]) : null;
+                } elseif ($remainder !== '' && strtoupper($remainder) !== 'N/A') {
+                    $offlineReason = $remainder;
+                }
+
+                $key = "{$portNum}/{$onuId}";
+                $onus[$key] = array_merge(self::emptyOnu(1, $portNum, $onuId), [
+                    'serial_number'      => $serial,
+                    'model'              => ($model && $model !== 'N/A') ? $model : null,
+                    'status'             => $isOnline ? 'online' : 'offline',
+                    'config_status'      => $configStatus,
+                    'down_reason'        => $isOnline ? null : (
+                        $reasonFromCol8
+                            ? strtolower($reasonFromCol8)
+                            : (in_array($rawSt, $OFFLINE) ? $rawSt : 'unknown')
+                    ),
+                    'olt_offline_reason' => $reasonFromCol8
+                        ?? (($offlineReason && strtoupper($offlineReason) !== 'N/A') ? strtoupper($offlineReason) : null),
+                    'olt_online_time'    => $onlineTime,
+                    'olt_offline_time'   => $offlineTime,
+                    'olt_duration'       => $duration,
+                ]);
+                continue;
+            }
+
+            // ── Pattern B: gpon-onu_1/1:2 interface style ────────────────
+            // "gpon-onu_1/1:2   online   auto   GPTF00D588D0   HG8010H"
+            if (preg_match(
+                '/gpon-onu_(\d+)\/(\d+):(\d+)\s+(\S+)(?:\s+\S+)?\s+([A-Za-z0-9:]{8,20})/i',
+                $line, $m
+            )) {
+                $slot   = (int)$m[1];
+                $port   = (int)$m[2];
+                $onuId  = (int)$m[3];
+                $rawSt  = strtolower($m[4]);
+                $serial = strtoupper(str_replace(':', '', $m[5]));
+                $isOnline = in_array($rawSt, $ONLINE);
+
+                $rxPower = $txPower = $distance = null;
+                if (preg_match('/([A-Za-z0-9:]{8,20})\s+([-\d.]+|N\/A)\s+([-\d.]+|N\/A)(?:\s+([\d.]+))?/', $line, $opt)) {
+                    $rxPower = ($opt[2] !== 'N/A') ? (float)$opt[2] : null;
+                    $txPower = ($opt[3] !== 'N/A') ? (float)$opt[3] : null;
+                    $distance = isset($opt[4]) ? (float)$opt[4] : null;
+                }
+
+                $key = "{$port}/{$onuId}";
+                $onus[$key] = array_merge(self::emptyOnu($slot, $port, $onuId), [
+                    'serial_number' => $serial,
+                    'status'        => $isOnline ? 'online' : 'offline',
+                    'down_reason'   => $isOnline ? null : $rawSt,
+                    'rx_power'      => $rxPower,
+                    'tx_power'      => $txPower,
+                    'distance'      => $distance,
+                ]);
+                continue;
+            }
+
+            // ── Pattern C: numeric 1/1/1 style ───────────────────────────
+            if (preg_match(
+                '/^\s*(\d+)\/(\d+)\/(\d+)\s+([A-Za-z0-9:]{8,20})\s+([-\d.]+|N\/A)\s+([-\d.]+|N\/A)(?:\s+([\d.]+))?\s+(\S+)/',
+                $line, $m
+            )) {
+                $slot = (int)$m[1]; $port = (int)$m[2]; $onuId = (int)$m[3];
+                $serial  = strtoupper(str_replace(':', '', $m[4]));
+                $rxPower = ($m[5] !== 'N/A') ? (float)$m[5] : null;
+                $txPower = ($m[6] !== 'N/A') ? (float)$m[6] : null;
+                $rawSt   = strtolower($m[8]);
+                $isOnline = in_array($rawSt, $ONLINE);
+                $key = "{$port}/{$onuId}";
+                if (!isset($onus[$key])) {
+                    $onus[$key] = array_merge(self::emptyOnu($slot, $port, $onuId), [
+                        'serial_number' => $serial,
+                        'status'        => $isOnline ? 'online' : 'offline',
+                        'rx_power'      => $rxPower,
+                        'tx_power'      => $txPower,
+                    ]);
+                }
+                continue;
+            }
+
+            // ── Pattern D: numeric 1/1/1 no optical ─────────────────────
+            if (preg_match('/^\s*(\d+)\/(\d+)\/(\d+)\s+([A-Za-z0-9:]{8,20})\s+(\S+)/', $line, $m)) {
+                $slot = (int)$m[1]; $port = (int)$m[2]; $onuId = (int)$m[3];
+                $serial = strtoupper(str_replace(':', '', $m[4]));
+                $rawSt  = strtolower($m[5]);
+                $isOnline = in_array($rawSt, $ONLINE);
+                $key = "{$port}/{$onuId}";
+                if (!isset($onus[$key])) {
+                    $onus[$key] = array_merge(self::emptyOnu($slot, $port, $onuId), [
+                        'serial_number' => $serial,
+                        'status'        => $isOnline ? 'online' : 'offline',
+                    ]);
+                }
+            }
+        }
+
+        return array_values($onus);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // show gpon onu-optical-transceiver-diagnosis interface GPON0/X
+    //
+    // Output format:
+    //  IntfName     Temp(degree)  Volt(V)  Bias(mA)  RxPow(dBm)  TxPow(dBm)
+    //  gpon0/1:3    41.0          3.3      18.0      -18.1       2.3
+    //  gpon0/1:1    --            --       --        --          --
+    // ─────────────────────────────────────────────────────────
+    public static function parseGponOpticalTransceiver(string $output): array
+    {
+        $map = [];
+        foreach (explode("\n", $output) as $line) {
+            $line = trim($line);
+            // "gpon0/1:3  41.0  3.3  18.0  -18.1  2.3"
+            if (preg_match(
+                '/^gpon\d+\/(\d+):(\d+)\s+([-\d.]+|--)\s+([-\d.]+|--)\s+([-\d.]+|--)\s+([-\d.]+|--)\s+([-\d.]+|--)/i',
+                $line, $m
+            )) {
+                $portNum = (int)$m[1];
+                $onuId   = (int)$m[2];
+                $key = "{$portNum}/{$onuId}";
+                $map[$key] = [
+                    'temperature' => ($m[3] !== '--') ? (float)$m[3] : null,
+                    'voltage'     => ($m[4] !== '--') ? (float)$m[4] : null,
+                    'tx_bias'     => ($m[5] !== '--') ? (float)$m[5] : null,
+                    'rx_power'    => ($m[6] !== '--') ? (float)$m[6] : null,
+                    'tx_power'    => ($m[7] !== '--') ? (float)$m[7] : null,
+                ];
+            }
+        }
+        return $map;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // show gpon active-onu
+    // ─────────────────────────────────────────────────────────
+    /**
+     * Parse "show gpon active-onu" output to extract per-ONU distance.
+     * Returns map: "portNum/onuId" => distanceInMeters (float)
+     * Format:
+     *   IntfName       SN               LOID   Active Time         Active Duration Distance(m)
+     *   GPON0/1:3      HWTC:C812864E    N/A    2026-05-15 ...      0007d:16:47:54  133.6
+     */
+    public static function parseActiveOnuDistance(string $output): array
+    {
+        $map = [];
+        foreach (explode("\n", $output) as $line) {
+            $line = rtrim($line);
+            // Match: GPON0/port:onuId  SN  LOID  ActiveTime (date time) Duration  Distance
+            // IntfName format: GPON0/1:3 or GPON0/1/1:3
+            if (preg_match(
+                '/^\s*(GPON\d+\/(?:\d+\/)?)(\d+):(\d+)\s+\S+\s+\S+\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+\S+\s+(\d+(?:\.\d+)?)\s*$/i',
+                $line, $m
+            )) {
+                $portNum = (int)$m[2];
+                $onuId   = (int)$m[3];
+                $dist    = (float)$m[4];
+                if ($dist > 0) {
+                    $map["{$portNum}/{$onuId}"] = $dist;
+                }
+                continue;
+            }
+            // Alternate: GPON0/1:3  SN  LOID  ActiveTime  Duration  Distance (without date-space-time)
+            if (preg_match(
+                '/^\s*(GPON\d+\/(?:\d+\/)?)(\d+):(\d+)\s+\S+\s+\S+\s+\S+\s+\S+\s+(\d+(?:\.\d+)?)\s*$/i',
+                $line, $m
+            )) {
+                $portNum = (int)$m[2];
+                $onuId   = (int)$m[3];
+                $dist    = (float)$m[4];
+                if ($dist > 0) {
+                    $map["{$portNum}/{$onuId}"] = $dist;
+                }
+            }
+        }
+        return $map;
+    }
+
+        // show gpon onu distance interface GPON0/{portNum}
+    // ─────────────────────────────────────────────────────────
+    /**
+     * Returns map: "portNum/onuId" => distanceInMeters (float)
+     * Handles BDCOM formats:
+     *   "gpon-onu_0/1:3   distance:1245m"
+     *   "gpon0/1:3   1245"
+     *   "  3    1245"
+     */
+    public static function parseGponDistance(string $output, int $portNum): array
+    {
+        $map = [];
+        \Illuminate\Support\Facades\Log::debug("GponCliParser::parseGponDistance port={$portNum} raw=" . substr($output, 0, 500));
+
+        foreach (explode("\n", $output) as $line) {
+            $line = trim($line);
+            if ($line === '' || preg_match('/^[-=]+$/', $line)) {
+                continue;
+            }
+            // Skip header lines
+            if (stripos($line, 'ONU-ID') !== false || stripos($line, 'Interface') !== false || stripos($line, 'Distance') !== false) {
+                continue;
+            }
+            // Skip error/info lines
+            if (stripos($line, '%') !== false || stripos($line, 'Invalid') !== false || stripos($line, 'Error') !== false) {
+                continue;
+            }
+
+            // Format 1: "gpon-onu_0/X:ID  distance:VALm" or "gpon-onu_0/X:ID  VAL"
+            if (preg_match('/gpon-onu_\d+\/\d+:(\d+)\s+(?:distance:)?\s*(\d+(?:\.\d+)?)\s*m?/i', $line, $m)) {
+                $map[$portNum . '/' . (int)$m[1]] = (float)$m[2];
+                continue;
+            }
+            // Format 2: "GPON0/X:ID  VAL" or "gpon0/X:ID  VAL"
+            if (preg_match('/(?:GPON|gpon)\d+\/\d+:(\d+)\s+(\d+(?:\.\d+)?)\s*m?/i', $line, $m)) {
+                $map[$portNum . '/' . (int)$m[1]] = (float)$m[2];
+                continue;
+            }
+            // Format 3: "  ID   VAL m" (bare numbers with optional m)
+            if (preg_match('/^\s*(\d{1,3})\s+(\d{2,6})\s*m?\s*$/', $line, $m) && (int)$m[2] > 0) {
+                $map[$portNum . '/' . (int)$m[1]] = (float)$m[2];
+                continue;
+            }
+            // Format 4: "  ID   VAL m  extra" — ONU-ID then distance in metres anywhere on line
+            if (preg_match('/^\s*(\d{1,3})\s+.*?(\d{3,6})\s*m\b/i', $line, $m) && (int)$m[2] > 0) {
+                $map[$portNum . '/' . (int)$m[1]] = (float)$m[2];
+                continue;
+            }
+        }
+
+        \Illuminate\Support\Facades\Log::debug("GponCliParser::parseGponDistance port={$portNum} parsed=" . count($map) . " ONUs");
+        return $map;
+    }
+    // ─────────────────────────────────────────────────────────
+    // show gpon onu state gpon-onu_X/Y
+    // ─────────────────────────────────────────────────────────
+    public static function parseOnuState(string $output, int $portSlot, int $portId): array
+    {
+        $onus  = [];
+        $OFFLINE_REASONS = [
+            'los', 'link-fail', 'dying-gasp', 'power-off', 'deactivate',
+            'deregistered', 'blocked', 'losi', 'lofi', 'loami',
+        ];
+
+        foreach (explode("\n", $output) as $line) {
+            $line = rtrim($line);
+            if (preg_match('/^\s*(\d+)\s+gpon-onu_\d+\/\d+:(\d+)\s+([A-Za-z0-9:]{8,18})\s+(\S+)/', $line, $m)) {
+                $onuId  = (int)$m[2];
+                $serial = strtoupper(str_replace(':', '', $m[3]));
+                $rawSt  = strtolower($m[4]);
+                $isOnline = in_array($rawSt, ['online', 'working', 'active']);
+                $onus[$onuId] = self::emptyOnu($portSlot, $portId, $onuId);
+                $onus[$onuId]['serial_number'] = $serial;
+                $onus[$onuId]['status']        = $isOnline ? 'online' : 'offline';
+                $onus[$onuId]['down_reason']   = $isOnline ? null :
+                    (in_array($rawSt, $OFFLINE_REASONS) ? $rawSt : 'unknown');
+                continue;
+            }
+            if (preg_match('/^\s*(\d+)\s+([A-Za-z0-9:]{8,18})\s+(\S+)/', $line, $m)) {
+                $onuId  = (int)$m[1];
+                $serial = strtoupper(str_replace(':', '', $m[2]));
+                $rawSt  = strtolower($m[3]);
+                $isOnline = in_array($rawSt, ['online', 'working', 'active']);
+                $onus[$onuId] = array_merge(self::emptyOnu($portSlot, $portId, $onuId), [
+                    'serial_number' => $serial,
+                    'status'        => $isOnline ? 'online' : 'offline',
+                    'down_reason'   => $isOnline ? null :
+                        (in_array($rawSt, $OFFLINE_REASONS) ? $rawSt : 'unknown'),
+                ]);
+            }
+        }
+        return array_values($onus);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // show gpon onu detail-info gpon-onu_X/Y/Z
+    // ─────────────────────────────────────────────────────────
+    public static function parseOnuDetailInfo(string $output): array
+    {
+        $data = [];
+        $map = [
+            'serial'      => '/SN\s*:\s*(\S+)/i',
+            'serial2'     => '/Serial\s*(?:Number)?\s*:\s*(\S+)/i',
+            'mac'         => '/MAC\s*(?:Address)?\s*:\s*([0-9A-Fa-f:.\-]{11,17})/i',
+            'status'      => '/Status\s*:\s*(\S+)/i',
+            'distance'    => '/Dist(?:ance)?\s*:\s*([\d.]+)\s*m?/i',
+            'rx_power'    => '/Rx[\s\-]?Power\s*[:(]\s*([-\d.]+)/i',
+            'tx_power'    => '/Tx[\s\-]?Power\s*[:(]\s*([-\d.]+)/i',
+            'temperature' => '/Temp(?:erature)?\s*:\s*([\d.]+)/i',
+            'voltage'     => '/Voltage?\s*:\s*([\d.]+)/i',
+            'description' => '/Desc(?:ription)?\s*:\s*(.+)/i',
+            'model'       => '/(?:ONU\s)?Model\s*:\s*(\S+)/i',
+            'uptime'      => '/Uptime\s*:\s*(.+)/i',
+        ];
+        foreach ($map as $key => $pattern) {
+            if (preg_match($pattern, $output, $m)) {
+                $data[$key === 'serial2' ? 'serial' : $key] = trim($m[1]);
+            }
+        }
+        $result = [];
+        if (!empty($data['serial']))      $result['serial_number'] = strtoupper($data['serial']);
+        if (!empty($data['mac']))          $result['mac_address']   = self::normaliseMac($data['mac']);
+        if (!empty($data['status']))       $result['status']        = in_array(strtolower($data['status']), ['online','active']) ? 'online' : 'offline';
+        if (!empty($data['distance']))     $result['distance']      = (float)$data['distance'];
+        if (!empty($data['rx_power']))     $result['rx_power']      = (float)$data['rx_power'];
+        if (!empty($data['tx_power']))     $result['tx_power']      = (float)$data['tx_power'];
+        if (!empty($data['temperature']))  $result['temperature']   = (float)$data['temperature'];
+        if (!empty($data['voltage']))      $result['voltage']       = (float)$data['voltage'];
+        if (!empty($data['description']))  $result['description']   = $data['description'];
+        if (!empty($data['model']))         $result['model']         = $data['model'];
+        if (!empty($data['uptime']))       $result['uptime_seconds']= self::parseUptime($data['uptime']);
+        return $result;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // show gpon onu optical-info gpon-onu_X/Y
+    // ─────────────────────────────────────────────────────────
+    public static function parseOpticalInfo(string $output): array
+    {
+        $map = [];
+        foreach (explode("\n", $output) as $line) {
+            $line = trim($line);
+            if (preg_match('/^\s*(\d+)\s+gpon-onu_\d+\/\d+:(\d+)\s+(?:\S+\s+)?([-\d.]+)\s+([-\d.]+)(?:\s+([-\d.]+))?(?:\s+([-\d.]+))?/', $line, $m)) {
+                $onuId = (int)$m[2];
+                $map[$onuId] = [
+                    'rx_power'    => (float)$m[3],
+                    'tx_power'    => (float)$m[4],
+                    'temperature' => (isset($m[5]) && $m[5] !== '') ? (float)$m[5] : null,
+                    'voltage'     => (isset($m[6]) && $m[6] !== '') ? (float)$m[6] : null,
+                    'distance'    => null,
+                ];
+                continue;
+            }
+            if (preg_match('/^\s*(\d+)\s+([-\d.]+)\s+([-\d.]+)(?:\s+([-\d.]+))?(?:\s+([-\d.]+))?(?:\s+([\d.]+))?/', $line, $m)) {
+                $onuId = (int)$m[1];
+                $map[$onuId] = [
+                    'rx_power'    => isset($m[2]) ? (float)$m[2] : null,
+                    'tx_power'    => isset($m[3]) ? (float)$m[3] : null,
+                    'temperature' => isset($m[4]) ? (float)$m[4] : null,
+                    'voltage'     => isset($m[5]) ? (float)$m[5] : null,
+                    'distance'    => isset($m[6]) ? (float)$m[6] : null,
+                ];
+            }
+        }
+        return $map;
+    }
+
+    public static function parseMacTable(string $output): array
+    {
+        $map = [];
+        foreach (explode("\n", $output) as $line) {
+            $line = trim($line);
+            if (preg_match('/(\d+)\s+([0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}|[0-9A-Fa-f:]{17})/', $line, $m)) {
+                $onuId = (int)$m[1];
+                if (!isset($map[$onuId])) $map[$onuId] = self::normaliseMac($m[2]);
+            }
+        }
+        return $map;
+    }
+
+    public static function parseTraffic(string $output): array
+    {
+        $map = [];
+        foreach (explode("\n", $output) as $line) {
+            $line = trim($line);
+            if (preg_match('/(\d+)\s+([\d.]+)\s+([\d.]+)/', $line, $m)) {
+                $onuId = (int)$m[1];
+                $map[$onuId] = [
+                    'traffic_in'  => (int)((float)$m[2]),
+                    'traffic_out' => (int)((float)$m[3]),
+                ];
+            }
+        }
+        return $map;
+    }
+
+    public static function normaliseMac(string $raw): string
+    {
+        $clean = strtoupper(preg_replace('/[^0-9A-Fa-f]/', '', $raw));
+        if (strlen($clean) === 12) return implode(':', str_split($clean, 2));
+        return strtoupper($raw);
+    }
+
+    public static function parseUptime(string $raw): ?int
+    {
+        $seconds = 0;
+        if (preg_match('/(\d+)\s*day/i',  $raw, $m)) $seconds += (int)$m[1] * 86400;
+        if (preg_match('/(\d+)\s*hour/i', $raw, $m)) $seconds += (int)$m[1] * 3600;
+        if (preg_match('/(\d+)\s*min/i',  $raw, $m)) $seconds += (int)$m[1] * 60;
+        if (preg_match('/(\d+)\s*sec/i',  $raw, $m)) $seconds += (int)$m[1];
+        if (preg_match('/(\d+):(\d+):(\d+)/', $raw, $m)) {
+            $seconds += (int)$m[1] * 3600 + (int)$m[2] * 60 + (int)$m[3];
+        }
+        return $seconds > 0 ? $seconds : null;
+    }
+
+    private static function emptyOnu(int $slot, int $port, int $onuId): array
+    {
+        return [
+            'pon_port'            => "GPON0/{$port}",
+            'onu_number'          => $onuId,
+            'serial_number'       => null,
+            'mac_address'         => null,
+            'status'              => 'offline',
+            'config_status'       => null,
+            'down_reason'         => null,
+            'olt_offline_reason'  => null,
+            'olt_online_time'     => null,
+            'olt_offline_time'    => null,
+            'olt_duration'        => null,
+            'model'               => null,
+            'rx_power'            => null,
+            'tx_power'            => null,
+            'distance'            => null,
+            'temperature'         => null,
+            'voltage'             => null,
+            'uptime_seconds'      => null,
+            'description'         => null,
+            'traffic_in'          => null,
+            'traffic_out'         => null,
+        ];
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // show gpon optical-transceiver interface GPON0/X
+    //
+    // Actual BDCOM GP3600 output format (two tables):
+    //  Table 1 — OLT port module:
+    //   interface    Temperature(degree)    Voltage(V)    Current(mA)    TxPower(dBm)
+    //   gpon0/1      44.0                   3.3           14.7           8.0
+    //
+    //  Table 2 — Per-ONU RxPower (ignored here, handled separately):
+    //   interface    RxPower(dBm)
+    //   gpon0/1:3    -22.3
+    // ─────────────────────────────────────────────────────────
+    public static function parseGponPortTransceiver(string $output): ?array
+    {
+        $result = [
+            'temperature' => null,
+            'voltage'     => null,
+            'tx_bias'     => null,
+            'tx_power'    => null,
+        ];
+        $found = false;
+
+        foreach (explode("\n", $output) as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
+
+            // Skip ONU-level lines (contain colon between port and ONU id: "gpon0/1:3")
+            if (preg_match('/gpon\d+\/\d+:\d+/i', $line)) continue;
+
+            // Port-level tabular: "gpon0/1  44.0  3.3  14.7  8.0"
+            // Columns: interface  Temperature  Voltage  Current(Bias)  TxPower
+            if (preg_match(
+                '/^\s*gpon\d+\/\d+\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)/i',
+                $line, $m
+            )) {
+                $result['temperature'] = (float)$m[1];
+                $result['voltage']     = (float)$m[2];
+                $result['tx_bias']     = (float)$m[3];
+                $result['tx_power']    = (float)$m[4];
+                $found = true;
+                break;
+            }
+
+            // Key-value format (alternative output style)
+            if (preg_match('/Temp[a-z]*\s*[:(]\s*([-\d.]+)/i', $line, $m)) {
+                $result['temperature'] = (float)$m[1]; $found = true;
+            } elseif (preg_match('/Volt[a-z]*\s*[:(]\s*([-\d.]+)/i', $line, $m)) {
+                $result['voltage'] = (float)$m[1]; $found = true;
+            } elseif (preg_match('/(?:Current|TX\s*Bias|Bias)\s*[:(]\s*([-\d.]+)/i', $line, $m)) {
+                $result['tx_bias'] = (float)$m[1]; $found = true;
+            } elseif (preg_match('/TX\s*Pow[a-z]*\s*[:(]\s*([-\d.]+)/i', $line, $m)) {
+                $result['tx_power'] = (float)$m[1]; $found = true;
+            }
+        }
+
+        return $found ? $result : null;
+    }
+
+}

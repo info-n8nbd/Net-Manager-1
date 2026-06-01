@@ -1,0 +1,352 @@
+@extends('layouts.admin')
+
+@section('title', 'Application Details')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        @if(session('mikrotik_error'))
+        <div class="alert alert-warning alert-dismissible">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <i class="fas fa-exclamation-triangle mr-1"></i> <strong>MikroTik Warning:</strong> {{ session('mikrotik_error') }}
+            <br><small>Client has been created successfully but MikroTik user needs to be created manually or by setting the correct MikroTik Profile in Package settings.</small>
+        </div>
+        @endif
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Application Status</h3>
+                        <span class="badge {{ $application->status_badge_class }} float-right" style="font-size: 1em;">{{ $application->status_label }}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Personal Information</h5>
+                                <table class="table table-sm table-bordered">
+                                    @php
+                                        $nameParts = explode(' ', $application->full_name_english, 2);
+                                        $firstName = $nameParts[0] ?? '';
+                                        $lastName = $nameParts[1] ?? '';
+                                    @endphp
+                                    <tr><th>First Name</th><td>{{ $firstName }}</td></tr>
+                                    <tr><th>Last Name</th><td>{{ $lastName ?: '—' }}</td></tr>
+                                    <tr><th>Father/Husband</th><td>{{ $application->father_husband_name ?? '-' }}</td></tr>
+                                    <tr><th>Mother</th><td>{{ $application->mother_name ?? '-' }}</td></tr>
+                                    <tr><th>Date of Birth</th><td>{{ $application->date_of_birth?->format('d-m-Y') ?? '-' }}</td></tr>
+                                    <tr><th>Gender</th><td>{{ ucfirst($application->gender) }}</td></tr>
+                                    <tr><th>Occupation</th><td>{{ $application->occupation ?? '—' }}</td></tr>
+                                    <tr><th>Mobile</th><td>{{ $application->mobile_number }}</td></tr>
+                                    <tr><th>Alt Mobile</th><td>{{ $application->alternative_mobile ?? '-' }}</td></tr>
+                                    <tr><th>Email</th><td>{{ $application->email ?? '-' }}</td></tr>
+                                </table>
+
+                                <h5 class="mt-3">Address</h5>
+                                <table class="table table-sm table-bordered">
+                                    <tr><th width="35%">Division</th><td>{{ $application->division ?? '-' }}</td></tr>
+                                    <tr><th>District</th><td>{{ ($application->district_id ? \App\Models\District::find($application->district_id)?->name : null) ?? $application->district ?? '-' }}</td></tr>
+                                    <tr><th>Thana/Upazila</th><td>{{ ($application->upazila_id ? \App\Models\Upazila::find($application->upazila_id)?->name : null) ?? $application->thana_upazila ?? '-' }}</td></tr>
+                                    <tr><th>Zone</th><td>{{ $application->zone?->name ?? '-' }}</td></tr>
+                                    <tr><th>Sub Zone</th><td>{{ $application->subZone?->name ?? '-' }}</td></tr>
+                                    <tr><th>TJ Box</th><td>{{ $application->box?->name ?? '-' }}</td></tr>
+                                    <tr><th>Address</th><td>{{ $application->house_road_floor ?? '-' }}</td></tr>
+                                    <tr><th>Landmark</th><td>{{ $application->nearby_landmark ?? '-' }}</td></tr>
+                                    <tr>
+                                        <th>Location</th>
+                                        <td>
+                                            @if($application->latitude && $application->longitude)
+                                                <a href="https://www.google.com/maps?q={{ $application->latitude }},{{ $application->longitude }}" target="_blank" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-map-marker-alt mr-1"></i>View Map
+                                                </a>
+                                            @else
+                                                <span class="text-muted">No location</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Connection Details</h5>
+                                <table class="table table-sm table-bordered">
+                                    <tr><th width="40%">Type</th><td>{{ ucfirst($application->connection_type) }}</td></tr>
+                                    <tr><th>Package</th><td>{{ $application->package?->name ?? '-' }} @if($application->package?->price) <small class="text-muted">— ৳{{ number_format($application->package->price, 2) }}</small> @endif</td></tr>
+                                    <tr><th>MikroTik Profile</th><td>{{ $application->mikrotik_profile_name ?: '-' }}</td></tr>
+                                    <tr><th>Connection Type</th><td>{{ ucfirst($application->ip_type) }}</td></tr>
+                                    <tr><th>Billing Cycle</th><td>{{ ucfirst(str_replace('_', ' ', $application->billing_cycle)) }}</td></tr>
+                                    <tr><th>Installation Charge</th><td>৳{{ number_format($application->installation_charge) }}</td></tr>
+                                    <tr><th>Free Client</th><td>{!! $application->is_free ? '<span class="badge badge-info"><i class="fas fa-gift mr-1"></i>FREE — ' . e($application->free_reason ?: 'No reason') . '</span>' : '<span class="text-muted">No</span>' !!}</td></tr>
+                                    <tr><th>ISP ONU</th><td>{!! $application->onu_required ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-secondary">No</span>' !!}</td></tr>
+                                    <tr><th>ISP Router</th><td>{!! $application->router_required ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-secondary">No</span>' !!}</td></tr>
+                                    <tr><th>ISP Fiber/UTP Cable</th><td>{!! ($application->fiber_required ?? true) ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-secondary">No</span>' !!}</td></tr>
+                                    <tr><th>Cable Type</th><td>{{ $application->connection_medium == 'fiber' ? 'Optical Fiber' : 'UTP Cable' }}</td></tr>
+                                    <tr><th>Cable Length</th><td>{{ $application->cable_length_meters ?? '-' }} meters</td></tr>
+                                    <tr><th>Fiber Brand</th><td>{{ $application->fiber_vendor ?: '—' }}</td></tr>
+                                    <tr><th>Fiber Code</th><td>{{ $application->fiber_code ?: '—' }}</td></tr>
+                                    <tr><th>Fiber Core Type</th><td>{{ $application->fiber_core_type ?: '—' }}</td></tr>
+                                    <tr><th>Fiber Color</th><td>{{ $application->fiber_color ?: '—' }}</td></tr>
+                                    <tr><th>Splitter Number</th><td>{{ $application->splitter_number ?: '—' }}</td></tr>
+                                    <tr><th>Splitter Color</th><td>{{ $application->splitter_color ?: '—' }}</td></tr>
+                                    <tr><th>ONU Brand</th><td>{{ $application->onu_brand ?: '—' }}</td></tr>
+                                    <tr><th>ONU MAC/Serial</th><td>{{ $application->onu_mac ?: '—' }}</td></tr>
+                                    @php $appAgent = $application->agent_id ? \App\Models\Agent::find($application->agent_id) : null; @endphp
+                                    <tr><th>Referral Partner</th><td>{{ $appAgent ? $appAgent->name . ($appAgent->personal_contact ? ' (' . $appAgent->personal_contact . ')' : '') : '—' }}</td></tr>
+                                    <tr><th>Commission (%)</th><td>{{ $application->commission_percent !== null ? number_format($application->commission_percent, 2) . '%' : '—' }}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-danger">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-id-card"></i> NID Verification</h3>
+                        <span class="badge badge-{{ $application->nid_verification_status == 'verified' ? 'success' : ($application->nid_verification_status == 'rejected' ? 'danger' : 'warning') }} float-right">
+                            {{ ucfirst($application->nid_verification_status) }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>NID Number:</strong> {{ $application->nid_number }}
+                            </div>
+                            <div class="col-md-4">
+                                <h6>NID Front</h6>
+                                @if($application->nid_front_image)
+                                <a href="{{ asset('storage/' . $application->nid_front_image) }}">
+                                    <img src="{{ asset('storage/' . $application->nid_front_image) }}" class="img-fluid img-thumbnail" style="max-height: 150px;">
+                                </a>
+                                @else
+                                <p class="text-muted">Not uploaded</p>
+                                @endif
+                            </div>
+                            <div class="col-md-4">
+                                <h6>NID Back</h6>
+                                @if($application->nid_back_image)
+                                <a href="{{ asset('storage/' . $application->nid_back_image) }}">
+                                    <img src="{{ asset('storage/' . $application->nid_back_image) }}" class="img-fluid img-thumbnail" style="max-height: 150px;">
+                                </a>
+                                @else
+                                <p class="text-muted">Not uploaded</p>
+                                @endif
+                            </div>
+                        </div>
+                        @if($application->nid_verification_status == 'pending' && $application->canBeApproved())
+                        <hr>
+                        <form action="{{ route('admin.applications.verify-nid', $application) }}" method="POST" class="form-inline">
+                            @csrf
+                            <select name="verification_status" class="form-control mr-2" required>
+                                <option value="verified">Verify NID</option>
+                                <option value="rejected">Reject NID</option>
+                            </select>
+                            <input type="text" name="verification_note" class="form-control mr-2" placeholder="Note (optional)">
+                            <button type="submit" class="btn btn-primary">Update NID Status</button>
+                        </form>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-history"></i> Status History</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Action</th>
+                                    <th>By</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($application->statusLogs as $log)
+                                <tr>
+                                    <td>{{ $log->created_at->format('d-m-y H:i') }}</td>
+                                    <td>{{ $log->action_label }}</td>
+                                    <td>{{ $log->changedByUser?->name ?? 'System' }}</td>
+                                    <td>{{ Str::limit($log->note, 80) }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                @if($application->canBeApproved())
+                <div class="card card-success">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-check-circle"></i> Admin Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        @if($application->status == 'submitted')
+                        <form action="{{ route('admin.applications.under-review', $application) }}" method="POST" class="mb-3">
+                            @csrf
+                            <button type="submit" class="btn btn-info btn-block">
+                                <i class="fas fa-search"></i> Take Under Review
+                            </button>
+                        </form>
+                        @endif
+
+                        <form action="{{ route('admin.applications.approve', $application) }}" method="POST" class="mb-3">
+                            @csrf
+                            <div class="form-group">
+                                <label><i class="fas fa-server mr-1"></i> MikroTik Router <span class="text-danger">*</span></label>
+                                <select name="mikrotik_device_id" class="form-control" required>
+                                    <option value="">-- Select Router --</option>
+                                    @foreach($mikrotikDevices as $device)
+                                    <option value="{{ $device->id }}">
+                                        {{ $device->name }} ({{ $device->ip_address ?? $device->host }})
+                                    </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Select which router this client will be connected to</small>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-tachometer-alt mr-1"></i> MikroTik Profile <span class="text-danger">*</span></label>
+                                <select name="mikrotik_profile_name" class="form-control" id="approve_profile" required>
+                                    <option value="">-- Select Profile --</option>
+                                    @foreach($availableProfiles ?? [] as $profile)
+                                    <option value="{{ $profile }}" {{ $application->mikrotik_profile_name == $profile ? 'selected' : '' }}>{{ $profile }}</option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Select speed profile for this client on MikroTik router.</small>
+                            </div>
+                            @php $nextClientCode = \App\Models\Client::generateClientId(); @endphp
+                            <div class="form-group">
+                                <label>Client Code / ComID <span class="text-danger">*</span></label>
+                                <input type="text" name="client_code" id="client_code_field" class="form-control" value="{{ $nextClientCode }}" required>
+                                <small class="text-muted">Leave as-is for auto-generated, or customize as needed.</small>
+                            </div>
+                            <div class="form-group">
+                                <label>PPPoE Username <span class="text-danger">*</span></label>
+                                <input type="text" name="username" class="form-control" value="{{ strtolower(preg_replace('/[^a-zA-Z]/', '', $application->full_name_english)) }}" required>
+                                <small class="text-muted">e.g. masud42</small>
+                            </div>
+                            <div class="form-group">
+                                <label>PPPoE Password <span class="text-danger">*</span></label>
+                                <input type="text" name="password" id="pppoe_password_field" class="form-control" value="{{ $nextClientCode }}" required>
+                                <small class="text-muted">Matches Client Code by default.</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Admin Note (Optional)</label>
+                                <textarea name="admin_note" class="form-control" rows="2"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-block" onclick="return confirm('Approve this application? This will create a new client and MikroTik user.')">
+                                <i class="fas fa-check"></i> Approve Application
+                            </button>
+                        </form>
+
+                        <a href="{{ route('admin.applications.edit', $application) }}" class="btn btn-warning btn-block mb-3">
+                            <i class="fas fa-edit"></i> Edit Application
+                        </a>
+
+                        <hr>
+
+                        <form action="{{ route('admin.applications.request-correction', $application) }}" method="POST" class="mb-3">
+                            @csrf
+                            <div class="form-group">
+                                <label>Correction Required</label>
+                                <textarea name="correction_note" class="form-control" rows="2" placeholder="Correction details..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-warning btn-block">
+                                <i class="fas fa-edit"></i> Request Correction
+                            </button>
+                        </form>
+
+                        <hr>
+
+                        <form action="{{ route('admin.applications.reject', $application) }}" method="POST">
+                            @csrf
+                            <div class="form-group">
+                                <label>Rejection Reason</label>
+                                <textarea name="rejection_reason" class="form-control" rows="2" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-danger btn-block" onclick="return confirm('Reject this application?')">
+                                <i class="fas fa-times"></i> Reject Application
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                @endif
+
+                @if($application->status == 'approved')
+                <div class="card card-success">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-check-circle"></i> Approval Details</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Approved By:</strong> {{ $application->approver?->name }}</p>
+                        <p><strong>Approved At:</strong> {{ $application->approved_at?->format('d-m-y H:i') }}</p>
+                        @if($application->admin_note)
+                        <p><strong>Admin Note:</strong> {{ $application->admin_note }}</p>
+                        @endif
+                        <hr>
+                        @if($application->createdClient)
+                        <p><strong>Client ID:</strong> 
+                            <a href="{{ route('admin.clients.show', $application->createdClient) }}">{{ $application->createdClient->client_id }}</a>
+                        </p>
+                        @endif
+                        @if($application->mikrotik_created)
+                        <p><strong>MikroTik User:</strong> {{ $application->mikrotik_username }}</p>
+                        <p><strong>Device:</strong> {{ $application->mikrotikDevice?->name }}</p>
+                        @else
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> MikroTik user not created
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
+                @if($application->status == 'rejected')
+                <div class="card card-danger">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-times-circle"></i> Rejection Details</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Rejected By:</strong> {{ $application->reviewer?->name }}</p>
+                        <p><strong>Rejected At:</strong> {{ $application->reviewed_at?->format('d-m-y H:i') }}</p>
+                        <p><strong>Reason:</strong> {{ $application->rejection_reason }}</p>
+                    </div>
+                </div>
+                @endif
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-user-cog"></i> Technician Info</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Technician:</strong> {{ $application->technician?->name }}</p>
+                        <p><strong>Submitted:</strong> {{ $application->created_at->format('d-m-y H:i') }}</p>
+                        <p><strong>Feasibility:</strong> 
+                            @if($application->installation_feasibility)
+                            <span class="badge badge-success">Feasible</span>
+                            @else
+                            <span class="badge badge-danger">Not Feasible</span>
+                            @endif
+                        </p>
+                        @if($application->technician_note)
+                        <p><strong>Note:</strong> {{ $application->technician_note }}</p>
+                        @endif
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var codeField = document.getElementById('client_code_field');
+    var passField = document.getElementById('pppoe_password_field');
+    if (codeField && passField) {
+        codeField.addEventListener('input', function() {
+            passField.value = this.value;
+        });
+    }
+});
+</script>
+@endsection

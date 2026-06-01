@@ -1,0 +1,170 @@
+@extends('layouts.admin')
+
+@section('title', 'Field Mapping')
+
+@section('content')
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <strong>Import:</strong> {{ $job->name }} | 
+                    <strong>File:</strong> {{ $job->file_name }} | 
+                    <strong>Total Rows:</strong> {{ number_format($totalRows) }} |
+                    <strong>Data Type:</strong> {{ ucfirst($job->data_type) }}
+                </div>
+            </div>
+        </div>
+
+        <form action="{{ route('admin.data-transfer.import.save-mapping', $job->id) }}" method="POST">
+            @csrf
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">Map Your Fields</h3>
+                            @if($templates->count() > 0)
+                            <div class="card-tools">
+                                <select id="template-selector" class="form-control form-control-sm" style="width: auto; display: inline-block;">
+                                    <option value="">-- Load Template --</option>
+                                    @foreach($templates as $template)
+                                    <option value="{{ $template->id }}" data-mapping='@json($template->mapping)'>
+                                        {{ $template->name }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @endif
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted">Match each system field to a column from your file:</p>
+                            
+                            <h5 class="text-danger">Required Fields</h5>
+                            <div class="row mb-4">
+                                @foreach($targetFields['required'] as $field)
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>{{ ucfirst(str_replace('_', ' ', $field)) }} <span class="text-danger">*</span></label>
+                                        <select name="mapping[{{ $field }}]" class="form-control field-mapping" data-field="{{ $field }}" required>
+                                            <option value="">-- Select Source Column --</option>
+                                            @foreach($sourceHeaders as $header)
+                                            <option value="{{ $header }}" {{ strtolower($header) === strtolower($field) ? 'selected' : '' }}>
+                                                {{ $header }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+
+                            <h5 class="text-secondary">Optional Fields</h5>
+                            <div class="row">
+                                @foreach($targetFields['optional'] as $field)
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>{{ ucfirst(str_replace('_', ' ', $field)) }}</label>
+                                        <select name="mapping[{{ $field }}]" class="form-control field-mapping" data-field="{{ $field }}">
+                                            <option value="">-- Not Mapped --</option>
+                                            @foreach($sourceHeaders as $header)
+                                            <option value="{{ $header }}" {{ strtolower($header) === strtolower($field) ? 'selected' : '' }}>
+                                                {{ $header }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+
+                            <hr>
+
+                            <div class="form-group">
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="save_template" name="save_template" value="1">
+                                    <label class="custom-control-label" for="save_template">Save this mapping as a template</label>
+                                </div>
+                            </div>
+
+                            <div class="form-group" id="template-name-group" style="display: none;">
+                                <label for="template_name">Template Name</label>
+                                <input type="text" class="form-control" id="template_name" name="template_name" placeholder="e.g., XYZ Software Client Mapping">
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check mr-1"></i> Validate & Continue
+                            </button>
+                            <a href="{{ route('admin.data-transfer.import.cancel', $job->id) }}" class="btn btn-danger" 
+                               onclick="return confirm('Are you sure you want to cancel this import?')">
+                                Cancel Import
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card card-secondary">
+                        <div class="card-header">
+                            <h3 class="card-title">Sample Data Preview</h3>
+                        </div>
+                        <div class="card-body table-responsive" style="max-height: 500px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        @foreach($sourceHeaders as $header)
+                                        <th class="text-nowrap">{{ $header }}</th>
+                                        @endforeach
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($sampleRows as $row)
+                                    <tr>
+                                        @foreach($sourceHeaders as $header)
+                                        <td class="text-nowrap">{{ $row[$header] ?? '-' }}</td>
+                                        @endforeach
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card card-info">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-lightbulb mr-1"></i> Tips</h3>
+                        </div>
+                        <div class="card-body">
+                            <ul class="pl-3 mb-0">
+                                <li>Fields are auto-matched when names are similar</li>
+                                <li>Required fields must be mapped</li>
+                                <li>Optional fields can be left unmapped</li>
+                                <li>Save templates for future use with same source</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+@push('scripts')
+<script>
+document.getElementById('save_template').addEventListener('change', function() {
+    document.getElementById('template-name-group').style.display = this.checked ? 'block' : 'none';
+});
+
+document.getElementById('template-selector')?.addEventListener('change', function() {
+    if (this.value) {
+        var mapping = JSON.parse(this.options[this.selectedIndex].dataset.mapping);
+        document.querySelectorAll('.field-mapping').forEach(function(select) {
+            var field = select.dataset.field;
+            if (mapping[field]) {
+                select.value = mapping[field];
+            }
+        });
+    }
+});
+</script>
+@endpush
+@endsection

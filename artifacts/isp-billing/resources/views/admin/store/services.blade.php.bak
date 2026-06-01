@@ -1,0 +1,389 @@
+@extends('layouts.admin')
+@section('title', 'Service Charges')
+@section('breadcrumb')<li class="breadcrumb-item active">Service Charges</li>@endsection
+
+@section('content')
+@php
+    $authUser   = auth()->user();
+    $canAddSvc    = $authUser->isAdmin() || \App\Services\MenuPermissionService::canAccessMenu($authUser, 'sales', 'services');
+    $canEditSvc   = $authUser->isAdmin() || \App\Services\MenuPermissionService::canAccessMenu($authUser, 'sales', 'services.edit');
+    $canDeleteSvc = $authUser->isAdmin() || \App\Services\MenuPermissionService::canAccessMenu($authUser, 'sales', 'services.delete');
+@endphp
+<div class="row">
+    @if($canAddSvc)
+    <div class="col-md-4">
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-plus mr-1"></i> Add Service Charge</h3>
+            </div>
+            <form action="{{ route('admin.sales.services.store') }}" method="POST">
+                @csrf
+                <div class="card-body">
+                    @include('admin.partials.client-search', [
+                        'inputId' => 'svcClientSearch',
+                        'hiddenId' => 'svcClientSearchId',
+                        'fieldName' => 'client_id',
+                        'label' => 'Client',
+                        'required' => true,
+                    ])
+                    <div class="form-group">
+                        <label>Charge Type <span class="text-danger">*</span></label>
+                        <select name="charge_type" class="form-control" id="chargeTypeSelect" required>
+                            <option value="">Select Type</option>
+                            @foreach(\App\Models\DropdownOption::getOptions('service_charge_types') as $opt)
+                            <option value="{{ $opt }}" {{ old('charge_type') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group" id="customChargeType" style="display: none;">
+                        <label>Custom Charge Type</label>
+                        <input type="text" name="custom_charge_type" class="form-control" placeholder="Enter charge type">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (৳) <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" class="form-control" value="{{ old('amount') }}" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-credit-card mr-1"></i>Payment Method</label>
+                        <select name="payment_method" class="form-control" id="svcPaymentMethod" onchange="toggleSvcPaymentFields()" style="border-radius: 8px;">
+                            @foreach(auth()->user()->allowedPaymentMethods() as $method)
+                            <option value="{{ strtolower($method->name) }}" data-name="{{ strtolower($method->name) }}" {{ old('payment_method') == strtolower($method->name) ? 'selected' : '' }}>{{ $method->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div id="svc_online_fields" style="display: none;">
+                        <div class="form-group">
+                            <label><i class="fas fa-hashtag mr-1"></i>Transaction ID</label>
+                            <input type="text" name="transaction_id" class="form-control" placeholder="Enter transaction ID" style="border-radius: 8px;">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-phone mr-1"></i><span id="svc_number_label">Sender Number</span></label>
+                            <input type="text" name="sender_number" class="form-control" placeholder="Enter sender number" style="border-radius: 8px;">
+                        </div>
+                    </div>
+                    <div class="form-group" id="svc_receipt_field" style="display: none;">
+                        <label><i class="fas fa-receipt mr-1"></i>Money Receipt No.</label>
+                        <input type="text" name="money_receipt_no" class="form-control" placeholder="Enter money receipt number" style="border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" name="charge_date" class="form-control" value="{{ old('charge_date', date('Y-m-d')) }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Optional note">{{ old('description') }}</textarea>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="submit" class="btn btn-primary btn-block"><i class="fas fa-save mr-1"></i> Save Charge</button>
+                </div>
+            </form>
+        </div>
+    @endif
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list mr-1"></i> Service Charge History</h3>
+                <div class="card-tools">
+                    <form method="GET" class="form-inline">
+                        <select name="charge_type" class="form-control form-control-sm mr-1">
+                            <option value="">All Types</option>
+                            @foreach(\App\Models\DropdownOption::getOptions('service_charge_types') as $opt)
+                            <option value="{{ $opt }}" {{ request('charge_type') == $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                            @endforeach
+                        </select>
+                        <select name="status" class="form-control form-control-sm mr-1">
+                            <option value="">All Status</option>
+                            <option value="due" {{ request('status') == 'due' ? 'selected' : '' }}>Due</option>
+                            <option value="partial" {{ request('status') == 'partial' ? 'selected' : '' }}>Partial</option>
+                            <option value="paid" {{ request('status') == 'paid' ? 'selected' : '' }}>Paid</option>
+                            <option value="free" {{ request('status') == 'free' ? 'selected' : '' }}>Free</option>
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-default"><i class="fas fa-filter"></i></button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body table-responsive p-0">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Client</th>
+                            <th>Charge Type</th>
+                            <th class="text-right">Amount</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Paid By</th>
+                            <th>Description</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($charges as $charge)
+                        <tr>
+                            <td>{{ $charge->charge_date ? $charge->charge_date->format('d-m-Y') : $charge->created_at->format('d-m-Y') }}</td>
+                            <td>
+                                <a href="{{ route('admin.clients.show', $charge->client_id) }}">
+                                    {{ $charge->client->name ?? '—' }}
+                                </a>
+                                <br><small class="text-muted">{{ $charge->client->client_id ?? '' }}</small>
+                            </td>
+                            <td><span class="badge badge-info">{{ $charge->charge_type }}</span></td>
+                            <td class="text-right font-weight-bold">৳{{ number_format($charge->amount) }}</td>
+
+                            <td>
+                                @if(is_null($charge->paid_by))
+                                    <span class="badge badge-danger">Due</span>
+                                @else
+                                    <span class="badge badge-success">Paid</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($charge->paid_by)
+                                    {{ ucfirst($charge->payment_method ?? 'Cash') }}
+                                    @if($charge->money_receipt_no)
+                                        <br><small class="text-muted"><i class="fas fa-receipt"></i> {{ $charge->money_receipt_no }}</small>
+                                    @endif
+                                    @if($charge->transaction_id)
+                                        <br><small class="text-muted"><i class="fas fa-hashtag"></i> {{ $charge->transaction_id }}</small>
+                                    @endif
+                                    @if($charge->sender_number)
+                                        <br><small class="text-muted"><i class="fas fa-phone"></i> {{ $charge->sender_number }}</small>
+                                    @endif
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td>
+                                @if($charge->paid_by)
+                                    {{ $charge->paidByUser->name ?? '—' }}
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td><small>{{ $charge->description ?: '—' }}</small></td>
+                            <td class="text-nowrap">
+                                @if($canEditSvc)
+                                <button type="button" class="btn btn-xs btn-info edit-charge-btn" title="Edit Charge"
+                                    data-id="{{ $charge->id }}"
+                                    data-charge-type="{{ $charge->charge_type }}"
+                                    data-amount="{{ $charge->amount }}"
+                                    data-description="{{ $charge->description }}"
+                                    data-payment-method="{{ strtolower($charge->payment_method ?? 'cash') }}"
+                                    data-charge-date="{{ $charge->charge_date ? $charge->charge_date->format('Y-m-d') : '' }}"
+                                    data-transaction-id="{{ $charge->transaction_id }}"
+                                    data-sender-number="{{ $charge->sender_number }}"
+                                    data-money-receipt="{{ $charge->money_receipt_no }}"
+                                    data-is-base="0"
+                                ><i class="fas fa-edit"></i></button>
+                                @endif
+                                @if($canDeleteSvc)
+                                <form action="{{ route('admin.sales.services.delete', $charge) }}" method="POST" onsubmit="return confirm('Delete this service charge?')" style="display: inline;">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-xs btn-danger" title="Delete"><i class="fas fa-trash"></i></button>
+                                </form>
+                                @endif
+                                @if(!$canEditSvc && !$canDeleteSvc)
+                                    <span class="text-muted small">—</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="9" class="text-center text-muted py-4">No service charges recorded yet.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @if($charges->hasPages())
+            <div class="card-footer">{{ $charges->links() }}</div>
+            @endif
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="editChargeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: #fff; border-radius: 12px 12px 0 0; padding: 14px 20px;">
+                <h5 class="modal-title edit-modal-title" style="font-weight: 700;"><i class="fas fa-edit mr-2"></i>Edit Service Charge</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <form id="editChargeForm" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-body" style="padding: 20px;">
+                    <div class="form-group" id="editChargeTypeGroup">
+                        <label style="font-size: 13px; font-weight: 600;">Charge Type <span class="text-danger">*</span></label>
+                        <select name="charge_type" class="form-control" id="editChargeType" required style="border-radius: 8px;">
+                            <option value="">Select Type</option>
+                            @foreach(\App\Models\DropdownOption::getOptions('service_charge_types') as $opt)
+                            <option value="{{ $opt }}">{{ $opt }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group" id="editCustomChargeType" style="display: none;">
+                        <label style="font-size: 13px; font-weight: 600;">Custom Charge Type</label>
+                        <input type="text" name="custom_charge_type" class="form-control" id="editCustomChargeInput" placeholder="Enter charge type" style="border-radius: 8px;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 13px; font-weight: 600;">Amount (৳) <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" id="editAmount" class="form-control" min="0" step="0.01" required style="border-radius: 8px;">
+                        <small class="text-muted" id="editAmountHint" style="display: none;">Set to 0 to mark as Free</small>
+                    </div>
+                    <div class="form-group" id="editPaymentMethodGroup">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-credit-card mr-1"></i>Payment Method</label>
+                        <select name="payment_method" class="form-control" id="editPaymentMethod" onchange="toggleEditPaymentFields()" style="border-radius: 8px;">
+                            @foreach(auth()->user()->allowedPaymentMethods() as $method)
+                            <option value="{{ strtolower($method->name) }}" data-name="{{ strtolower($method->name) }}">{{ $method->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div id="edit_online_fields" style="display: none;">
+                        <div class="form-group">
+                            <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-hashtag mr-1"></i>Transaction ID</label>
+                            <input type="text" name="transaction_id" id="editTransactionId" class="form-control" placeholder="Enter transaction ID" style="border-radius: 8px;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-phone mr-1"></i><span id="edit_number_label">Sender Number</span></label>
+                            <input type="text" name="sender_number" id="editSenderNumber" class="form-control" placeholder="Enter sender number" style="border-radius: 8px;">
+                        </div>
+                    </div>
+                    <div class="form-group" id="edit_receipt_field" style="display: none;">
+                        <label style="font-size: 13px; font-weight: 600;"><i class="fas fa-receipt mr-1"></i>Money Receipt No.</label>
+                        <input type="text" name="money_receipt_no" id="editMoneyReceipt" class="form-control" placeholder="Enter money receipt number" style="border-radius: 8px;">
+                    </div>
+                    <div class="form-group" id="editChargeDateGroup">
+                        <label style="font-size: 13px; font-weight: 600;">Date</label>
+                        <input type="date" name="charge_date" id="editChargeDate" class="form-control" style="border-radius: 8px;">
+                    </div>
+                    <div class="form-group mb-0" id="editDescriptionGroup">
+                        <label style="font-size: 13px; font-weight: 600;">Description</label>
+                        <textarea name="description" id="editDescription" class="form-control" rows="2" placeholder="Optional note" style="border-radius: 8px;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid #f1f3f5;">
+                    <button type="button" class="btn btn-light" data-dismiss="modal" style="border-radius: 8px;">Cancel</button>
+                    <button type="submit" class="btn btn-info" style="border-radius: 8px; font-weight: 600;"><i class="fas fa-save mr-1"></i> Update Charge</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@endsection
+
+@push('scripts')
+<script>
+$(function() {
+    $('#chargeTypeSelect').on('change', function() {
+        $('#customChargeType').toggle($(this).val() === 'Other');
+    });
+    toggleSvcPaymentFields();
+
+    $(document).on('click', '.edit-charge-btn', function() {
+        var id = $(this).data('id');
+        var chargeType = $(this).data('charge-type');
+        var amount = $(this).data('amount');
+        var description = $(this).data('description') || '';
+        var paymentMethod = $(this).data('payment-method') || 'cash';
+        var chargeDate = $(this).data('charge-date') || '';
+        var transactionId = $(this).data('transaction-id') || '';
+        var senderNumber = $(this).data('sender-number') || '';
+        var moneyReceipt = $(this).data('money-receipt') || '';
+        var isBase = $(this).data('is-base') == '1';
+
+        $('#editChargeForm').attr('action', '{{ url("admin/sales/services") }}/' + id);
+        $('#editAmount').val(amount);
+        $('#editDescription').val(description);
+        $('#editChargeDate').val(chargeDate);
+        $('#editTransactionId').val(transactionId);
+        $('#editSenderNumber').val(senderNumber);
+        $('#editMoneyReceipt').val(moneyReceipt);
+
+        if (isBase) {
+            $('#editChargeTypeGroup, #editCustomChargeType, #editPaymentMethodGroup, #edit_online_fields, #edit_receipt_field, #editChargeDateGroup, #editDescriptionGroup').hide();
+            $('#editAmountHint').show();
+            $('#editAmount').attr('min', '0');
+            $('#editChargeType').removeAttr('required');
+            $('.edit-modal-title').html('<i class="fas fa-edit mr-2"></i>Edit Installation Charge Amount');
+        } else {
+            $('#editChargeTypeGroup, #editChargeDateGroup, #editDescriptionGroup').show();
+            $('#editPaymentMethodGroup').show();
+            $('#editAmountHint').hide();
+            $('#editAmount').attr('min', '0');
+            $('#editChargeType').attr('required', 'required');
+            $('.edit-modal-title').html('<i class="fas fa-edit mr-2"></i>Edit Service Charge');
+
+            var typeFound = false;
+            $('#editChargeType option').each(function() {
+                if ($(this).val() === chargeType) {
+                    typeFound = true;
+                }
+            });
+            if (typeFound) {
+                $('#editChargeType').val(chargeType);
+                $('#editCustomChargeType').hide();
+            } else {
+                $('#editChargeType').val('Other');
+                $('#editCustomChargeType').show();
+                $('#editCustomChargeInput').val(chargeType);
+            }
+
+            $('#editPaymentMethod option').each(function() {
+                if ($(this).val() === paymentMethod || $(this).attr('data-name') === paymentMethod) {
+                    $(this).prop('selected', true);
+                }
+            });
+
+            toggleEditPaymentFields();
+        }
+
+        $('#editChargeModal').modal('show');
+    });
+
+    $('#editChargeType').on('change', function() {
+        $('#editCustomChargeType').toggle($(this).val() === 'Other');
+    });
+
+
+});
+
+function toggleSvcPaymentFields() {
+    var sel = document.getElementById('svcPaymentMethod');
+    var name = sel.options[sel.selectedIndex]?.getAttribute('data-name') || '';
+    var isCash = name.indexOf('cash') !== -1;
+    var isOnline = !isCash && name !== '';
+
+    document.getElementById('svc_online_fields').style.display = isOnline ? 'block' : 'none';
+    document.getElementById('svc_receipt_field').style.display = isCash ? 'block' : 'none';
+
+    if (isOnline) {
+        var label = 'Sender Number';
+        if (name.indexOf('bkash') !== -1) label = 'bKash Number';
+        else if (name.indexOf('nagad') !== -1) label = 'Nagad Number';
+        else if (name.indexOf('rocket') !== -1) label = 'Rocket Number';
+        document.getElementById('svc_number_label').textContent = label;
+    }
+}
+
+
+function toggleEditPaymentFields() {
+    var sel = document.getElementById('editPaymentMethod');
+    if (!sel) return;
+    var name = sel.options[sel.selectedIndex]?.getAttribute('data-name') || '';
+    var isCash = name.indexOf('cash') !== -1;
+    var isOnline = !isCash && name !== '';
+
+    document.getElementById('edit_online_fields').style.display = isOnline ? 'block' : 'none';
+    document.getElementById('edit_receipt_field').style.display = isCash ? 'block' : 'none';
+
+    if (isOnline) {
+        var label = 'Sender Number';
+        if (name.indexOf('bkash') !== -1) label = 'bKash Number';
+        else if (name.indexOf('nagad') !== -1) label = 'Nagad Number';
+        else if (name.indexOf('rocket') !== -1) label = 'Rocket Number';
+        document.getElementById('edit_number_label').textContent = label;
+    }
+}
+</script>
+@endpush

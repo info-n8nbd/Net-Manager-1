@@ -1,0 +1,475 @@
+.text-success,
+.text-green,
+[class*="text-success"] {
+    color: #000000 !important;
+}
+
+[style*="color: #28a745"],
+[style*="color:#28a745"],
+[style*="color: #22c55e"],
+[style*="color:#22c55e"],
+[style*="color: #10b981"],
+[style*="color:#10b981"],
+[style*="color: green"],
+[style*="color:green"] {
+    color: #000000 !important;
+}
+
+.table td strong,
+.table-sm td strong,
+.table-striped td strong,
+table td strong,
+.card-body table td strong,
+.content-wrapper table td strong {
+    font-weight: 400 !important;
+    font-size: 0.85rem !important;
+}
+
+:root {
+    --theme-p1: #1e3c72;
+    --theme-p2: #2a5298;
+    --primary-blue: #1e3c72;
+    --secondary-blue: #2a5298;
+    --accent-blue: #0ea5e9;
+    --light-blue: #38bdf8;
+    --primary-red: #ef4444;
+    --secondary-red: #f87171;
+    --accent-red: #fca5a5;
+    --dark-bg: #1e3c72;
+    --sidebar-bg: #12234e;
+}
+
+.status-online {
+    color: #28a745;
+}
+
+.status-offline {
+    color: #dc3545;
+}
+
+.status-pending {
+    color: #ffc107;
+}
+
+.currency-bdt {
+    font-weight: bold;
+    color: var(--theme-p1);
+}
+
+.currency-bdt.negative {
+    color: #dc3545;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: var(--theme-p1);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: var(--theme-p2);
+    border-radius: 3px;
+}
+
+.select2-container--default .select2-selection--single {
+    border-color: #ddd;
+    height: 30px;
+    padding: 2px 8px;
+}
+
+.chart-container {
+    position: relative;
+    height: 200px;
+}
+
+.quick-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.bg-dark,
+thead.bg-dark,
+.table thead.bg-dark,
+.bg-dark.text-white {
+    background: var(--theme-p1) !important;
+    color: #ffffff !important;
+}
+
+.table thead th {
+    border-bottom: none;
+}
+
+.form-control,
+.form-control-sm,
+.custom-select,
+.input-group .form-control,
+.input-group-text {
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.form-control:focus,
+.form-control-sm:focus,
+.custom-select:focus {
+    border-color: var(--theme-p1) !important;
+    box-shadow: 0 0 0 2px rgba(30,60,114,0.15) !important;
+    outline: none !important;
+}
+
+.input-group > .form-control {
+    border-radius: 6px !important;
+}
+
+.input-group > .input-group-prepend > .input-group-text {
+    border-right: none !important;
+    border-radius: 6px 0 0 6px !important;
+    background: #f8f9fa !important;
+    color: #6b7280 !important;
+}
+
+.input-group > .input-group-prepend + .form-control {
+    border-left: none !important;
+    border-radius: 0 6px 6px 0 !important;
+}
+
+.input-group > .input-group-append > .input-group-text,
+.input-group > .input-group-append > .btn {
+    border-left: none !important;
+    border-radius: 0 6px 6px 0 !important;
+}
+
+select.form-control,
+select.form-control-sm {
+    appearance: auto;
+}
+
+.global-search-container .form-control,
+.global-search-container .input-group-text,
+.main-header .form-control,
+.main-header .input-group-text {
+    border: none !important;
+    background: rgba(255,255,255,0.15) !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+.global-search-container .input-group-text {
+    border-radius: 25px 0 0 25px !important;
+}
+
+.global-search-container .form-control {
+    border-radius: 0 25px 25px 0 !important;
+    color: white !important;
+}
+
+.main-header .form-control:focus,
+.global-search-container .form-control:focus {
+    background: rgba(255,255,255,0.25) !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.table-sm td,
+.table-sm th {
+    vertical-align: middle;
+    padding: 5px 8px;
+}
+
+.btn-xs {
+    padding: 2px 6px;
+    font-size: 11px;
+    line-height: 1.5;
+    border-radius: 3px;
+}
+
+
+
+
+
+/* ════════════════════════════════════════════════════════
+   GLOBAL FONT SIZE — Desktop only, text-only, no layout break
+   Mobile (<=991px) stays unchanged
+════════════════════════════════════════════════════════ */
+
+@media (min-width: 992px) {
+
+    /* Body base */
+    body { font-size: 15px; }
+
+    /* General text content only — no * selector */
+    p, span, li, a,
+    td, th,
+    label, .form-label, .col-form-label,
+    input, select, textarea,
+    .form-control,
+    .input-group-text,
+    .dropdown-item,
+    .list-group-item,
+    .alert,
+    .breadcrumb-item,
+    .nav-link,
+    .nav-sidebar .nav-link,
+    .nav-treeview .nav-link,
+    .tab-content,
+    .card-body,
+    .box-body,
+    .modal-body,
+    .popover-body {
+        font-size: 15px;
+    }
+
+    /* Table cells — slightly larger, won't break layout */
+    .table td, .table th,
+    .table-sm td, .table-sm th,
+    table.dataTable td, table.dataTable th {
+        font-size: 14px;
+    }
+
+    /* Card / box headings */
+    .card-title, .box-title,
+    .card-header h3, .card-header .card-title {
+        font-size: 15px;
+    }
+
+    /* Page title */
+    .content-header h1 { font-size: 22px; }
+
+    /* Small stat boxes — number and label */
+    .small-box h3   { font-size: 34px; }
+    .small-box p    { font-size: 14px; }
+    .info-box-number { font-size: 20px; }
+    .info-box-text   { font-size: 14px; }
+
+    /* Buttons — only normal, not xs */
+    .btn:not(.btn-xs):not(.btn-sm) { font-size: 14px; }
+    .btn-sm { font-size: 13px; }
+
+    /* Small/muted text */
+    small, .small, .text-muted,
+    .help-block { font-size: 13px; }
+
+    /* Badges */
+    .badge { font-size: 12px; }
+
+    /* Headings */
+    h1 { font-size: 24px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 18px; }
+    h4 { font-size: 16px; }
+    h5 { font-size: 15px; }
+    h6 { font-size: 14px; }
+
+    /* Modal */
+    .modal-title { font-size: 16px; }
+
+    /* DataTables info */
+    .dataTables_info,
+    .dataTables_length label,
+    .dataTables_filter label { font-size: 14px; }
+
+    /* Select2 */
+    .select2-container--default .select2-results__option,
+    .select2-container--default .select2-selection__rendered { font-size: 15px; }
+
+    /* Breadcrumb */
+    .breadcrumb-item, .breadcrumb-item a { font-size: 14px; }
+
+    /* Pagination */
+    .page-link { font-size: 14px; }
+
+    /* SweetAlert */
+    .swal2-title          { font-size: 18px !important; }
+    .swal2-html-container { font-size: 15px !important; }
+    .swal2-actions .btn   { font-size: 14px !important; }
+
+    /* Toast */
+    .toast-title   { font-size: 15px; }
+    .toast-message { font-size: 14px; }
+
+    /* User panel in sidebar */
+    .user-panel .info a,
+    .user-panel .info p { font-size: 15px; }
+
+    /* Sidebar badge counts */
+    .nav-sidebar .badge { font-size: 11px; }
+
+    /* Sidebar icon — don't grow icons */
+    .nav-icon { font-size: 17px; }
+
+}
+/* mobile: no changes — keeps original AdminLTE sizes */
+
+/* ── Global: Summary bar badges — desktop only (all pages) ────────────────── */
+/* Targets .badge.px-2.py-1 OUTSIDE tables only */
+@media (min-width: 768px) {
+    .badge.px-2.py-1 {
+        font-size: 13px !important;
+        padding: 5px 10px !important;
+        line-height: 1.5 !important;
+        border-radius: 5px !important;
+    }
+    /* Table/card badges: uniform small size — beats .badge.px-2.py-1 via specificity */
+    table .badge,
+    .table .badge,
+    td .badge,
+    th .badge,
+    table .badge.px-2,
+    table .badge.py-1,
+    table .badge.px-2.py-1,
+    td .badge.px-2.py-1,
+    .card-body table .badge {
+        font-size: 11px !important;
+        padding: 3px 8px !important;
+        line-height: 1.4 !important;
+        border-radius: 4px !important;
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   OUTLINE BUTTONS — Fix icon/text visibility
+   Added after theme removal to restore outline button colors
+═══════════════════════════════════════════════════════ */
+.btn-outline-primary {
+    color: var(--theme-p1, #1e3c72) !important;
+    border-color: var(--theme-p1, #1e3c72) !important;
+    background: transparent !important;
+}
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+    background: var(--theme-p1, #1e3c72) !important;
+    color: #fff !important;
+}
+.btn-outline-success {
+    color: #2a8a5e !important;
+    border-color: #2a8a5e !important;
+    background: transparent !important;
+}
+.btn-outline-success:hover,
+.btn-outline-success:focus {
+    background: #2a8a5e !important;
+    color: #fff !important;
+}
+.btn-outline-danger {
+    color: #c45050 !important;
+    border-color: #c45050 !important;
+    background: transparent !important;
+}
+.btn-outline-danger:hover,
+.btn-outline-danger:focus {
+    background: #c45050 !important;
+    color: #fff !important;
+}
+.btn-outline-warning {
+    color: #c87830 !important;
+    border-color: #c87830 !important;
+    background: transparent !important;
+}
+.btn-outline-warning:hover,
+.btn-outline-warning:focus {
+    background: #c87830 !important;
+    color: #fff !important;
+}
+.btn-outline-info {
+    color: #2e7d9c !important;
+    border-color: #2e7d9c !important;
+    background: transparent !important;
+}
+.btn-outline-info:hover,
+.btn-outline-info:focus {
+    background: #2e7d9c !important;
+    color: #fff !important;
+}
+.btn-outline-secondary {
+    color: #4a7088 !important;
+    border-color: #4a7088 !important;
+    background: transparent !important;
+}
+.btn-outline-secondary:hover,
+.btn-outline-secondary:focus {
+    background: #4a7088 !important;
+    color: #fff !important;
+}
+
+/* ===== TOGGLE SWITCH FIX ===== */
+label.toggle-switch,
+.toggle-switch {
+    position: relative !important;
+    display: inline-block !important;
+    width: 50px !important;
+    height: 26px !important;
+    overflow: hidden !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    vertical-align: middle !important;
+}
+label.toggle-switch .toggle-slider,
+.toggle-switch .toggle-slider,
+.toggle-switch > span.toggle-slider {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ===== COPY BUTTON STYLES ===== */
+.btn-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    background: #f0f4f8;
+    border: 1px solid #d1d9e0;
+    border-radius: 4px;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    vertical-align: middle;
+    line-height: 1;
+}
+.btn-copy:hover {
+    background: #e2ebf5;
+    border-color: #4a90d9;
+    color: #1a6ec7;
+    transform: scale(1.08);
+}
+.btn-copy.copied {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #28a745;
+}
+.btn-copy svg {
+    display: block;
+    pointer-events: none;
+}
+
+/* ===== FORM SELECT (Bootstrap 5) WHITE BACKGROUND FIX ===== */
+.form-select,
+.form-select-sm {
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: #374151 !important;
+}
+.form-select:focus,
+.form-select-sm:focus {
+    background-color: #ffffff !important;
+    border-color: var(--theme-p1, #1e3c72) !important;
+    box-shadow: 0 0 0 2px rgba(30,60,114,0.15) !important;
+    outline: none !important;
+}

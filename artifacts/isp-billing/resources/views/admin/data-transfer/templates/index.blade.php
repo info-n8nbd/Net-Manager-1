@@ -1,0 +1,118 @@
+@extends('layouts.admin')
+
+@section('title', 'Mapping Templates')
+
+@section('content')
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Saved Field Mapping Templates</h3>
+            </div>
+            <div class="card-body table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Data Type</th>
+                            <th>Source Software</th>
+                            <th>Usage Count</th>
+                            <th>Created By</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($templates as $template)
+                        <tr>
+                            <td>{{ $template->id }}</td>
+                            <td>{{ $template->name }}</td>
+                            <td>{{ ucfirst($template->data_type) }}</td>
+                            <td>{{ $template->source_software ?? '-' }}</td>
+                            <td>{{ $template->usage_count }}</td>
+                            <td>{{ $template->creator->name ?? '-' }}</td>
+                            <td>{{ $template->created_at->format('d-m-Y') }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-info" 
+                                        onclick="viewMapping({{ $template->id }})" title="View Mapping">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <form action="{{ route('admin.data-transfer.templates.delete', $template->id) }}" 
+                                      method="POST" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" 
+                                            onclick="return confirm('Are you sure you want to delete this template?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">No templates saved yet. Templates are created during the import process.</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-1">
+    <div class="d-flex align-items-center">
+        <label class="small text-muted mb-0 mr-2" style="white-space:nowrap;">SHOW</label>
+        <select class="form-control form-control-sm bulk-show-entries" style="width:80px;">
+            <option value="20" {{ request('per_page',20)==20?'selected':'' }}>20</option>
+            <option value="50" {{ request('per_page',20)==50?'selected':'' }}>50</option>
+            <option value="100" {{ request('per_page',20)==100?'selected':'' }}>100</option>
+            <option value="200" {{ request('per_page',20)==200?'selected':'' }}>200</option>
+        </select>
+        <label class="small text-muted mb-0 ml-2" style="white-space:nowrap;">ENTRIES</label>
+    </div>
+    <div>
+        {{ $templates->appends(request()->query())->links() }}
+    </div>
+</div>
+<script>
+(function(){
+    var sel = document.querySelector('.bulk-show-entries');
+    if(sel){ sel.addEventListener('change',function(){
+        var p=new URLSearchParams(window.location.search);
+        p.set('per_page',this.value); p.delete('page');
+        window.location=window.location.pathname+'?'+p.toString();
+    }); }
+})();
+</script>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="modal fade" id="mappingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Field Mapping</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="mappingContent" class="bg-light p-3" style="max-height: 400px; overflow-y: auto;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+function viewMapping(templateId) {
+    fetch('/admin/data-transfer/templates/' + templateId + '/mapping')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('mappingContent').textContent = JSON.stringify(data, null, 2);
+            $('#mappingModal').modal('show');
+        });
+}
+</script>
+@endpush
+@endsection

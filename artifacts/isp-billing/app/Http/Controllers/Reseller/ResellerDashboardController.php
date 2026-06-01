@@ -1,0 +1,1744 @@
+<?php
+
+namespace App\Http\Controllers\Reseller;
+
+use App\Http\Controllers\Controller;
+use App\Models\Client;
+use App\Models\Bill;
+use App\Models\Payment;
+use App\Models\Package;
+use App\Models\Zone;
+use App\Models\Area;
+use App\Models\MikrotikDevice;
+use App\Models\Reseller;
+use App\Models\ResellerBill;
+use App\Models\ResellerWalletTransaction;
+use App\Services\BillingService;
+use App\Services\MikroTikService;
+use App\Services\PaymentGatewayService;
+use App\Services\TelegramService;
+use App\Models\PaymentGatewayTransaction;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use App\Models\EmployeeSelfieAttendance;
+use App\Models\Employee;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
+class ResellerDashboardController extends Controller
+{
+    protected function getReseller()
+    {
+        return Reseller::where('user_id', Auth::id())->firstOrFail();
+    }
+
+    protected function requireMacReseller()
+    {
+        $reseller = $this->getReseller();
+        if ($reseller->type === 'bandwidth') {
+            abort(403, 'This feature is only available for MAC binding resellers.');
+        }
+        return $reseller;
+    }
+
+    public function bandwidthDashboard()
+    {
+        $reseller = $this->getReseller();
+        if ($reseller->type !== 'bandwidth') {
+            return redirect()->route('reseller.dashboard')->with('error', 'This dashboard is only for bandwidth resellers.');
+        }
+
+        $currentMonth = now()->month;
+        $currentYear  = now()->year;
+
+        $bills = \App\Models\ResellerBill::where('reseller_id', $reseller->id)
+            ->orderBy('bill_year', 'desc')
+            ->orderBy('bill_month', 'desc')
+            ->limit(12)
+            ->get();
+
+        $latestBill = $bills->first();
+        $totalDue   = $latestBill ? max(0, $latestBill->closing_balance) : 0;
+
+        $walletTransactions = \App\Models\ResellerWalletTransaction::where('reseller_id', $reseller->id)
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        // Mid-month adjustments (view expects $midMonthAdjustments)
+        $midMonthAdjustments = \App\Models\BandwidthAdjustment::where('reseller_id', $reseller->id)
+            ->whereMonth('effective_date', $currentMonth)
+            ->whereYear('effective_date', $currentYear)
+            ->orderBy('effective_date')
+            ->get();
+
+        // Recent payments (view expects $recentPayments)
+        $recentPayments = $latestBill
+            ? \App\Models\ResellerBillPayment::where('reseller_bill_id', $latestBill->id)
+                ->with('receivedByUser')
+                ->orderBy('payment_date', 'desc')
+                ->get()
+            : collect();
+
+        return view('reseller.bandwidth-dashboard', compact(
+            'reseller', 'bills', 'latestBill', 'totalDue',
+            'walletTransactions', 'midMonthAdjustments', 'recentPayments'
+        ));
+    }
+
+
+    public function bandwidthInvoice(\App\Models\ResellerBill $bill)
+    {
+        $reseller = $this->getReseller();
+        abort_if($bill->reseller_id !== $reseller->id, 403);
+        $ctrl = app(\App\Http\Controllers\Admin\ResellerController::class);
+        return view("admin.reseller.invoice", $ctrl->buildInvoiceData($bill));
+    }
+
+    public function bandwidthInvoiceDownload(\App\Models\ResellerBill $bill)
+    {
+        $reseller = $this->getReseller();
+        abort_if($bill->reseller_id !== $reseller->id, 403);
+        $ctrl = app(\App\Http\Controllers\Admin\ResellerController::class);
+        $data = $ctrl->buildInvoiceData($bill);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView("admin.reseller.invoice", $data)->setPaper("a4", "portrait");
+        $month = \Carbon\Carbon::createFromDate($bill->bill_year, $bill->bill_month, 1)->format("M-Y");
+        return $pdf->download("invoice-{$bill->bill_no}-{$month}.pdf");
+    }
+
+    public function index()
+    {
+        $reseller = $this->getReseller();
+
+        // Bandwidth resellers use a simpler portal
+        if ($reseller->type === 'bandwidth') {
+            return redirect()->route('reseller.bandwidth-dashboard');
+        }
+        
+        $totalClients = $reseller->clients()->count();
+        $activeClients = $reseller->clients()->where('status', 'active')->count();
+        $inactiveClients = $reseller->clients()->where('status', '!=', 'active')->count();
+        
+        $thisMonthCollection = Payment::whereIn('client_id', $reseller->clients()->pluck('id'))
+            ->whereMonth('payment_date', now()->month)
+            ->whereYear('payment_date', now()->year)
+            ->sum('amount');
+        
+        $totalCollection = Payment::whereIn('client_id', $reseller->clients()->pluck('id'))->sum('amount');
+        
+        $dueAmount = $reseller->clients()->where('status', 'active')->sum('due_amount');
+        $resellerDue = \App\Services\ResellerBillingService::getResellerDueToAdmin($reseller);
+
+        // Current month bill summary for dashboard alert
+        $currentMonthBill = \App\Models\ResellerBill::where('reseller_id', $reseller->id)
+            ->where('bill_month', now()->month)
+            ->where('bill_year', now()->year)
+            ->first();
+        
+        $recentPayments = Payment::with('client')
+            ->whereIn('client_id', $reseller->clients()->pluck('id'))
+            ->latest('payment_date')
+            ->limit(10)
+            ->get();
+        
+        $recentClients = $reseller->clients()
+            ->with('package')
+            ->latest()
+            ->limit(5)
+            ->get();
+        
+        return view('reseller.dashboard', compact(
+            'reseller', 'totalClients', 'activeClients', 'inactiveClients',
+            'thisMonthCollection', 'totalCollection', 'dueAmount', 'resellerDue',
+            'recentPayments', 'recentClients', 'currentMonthBill'
+        ));
+    }
+
+    public function clients(Request $request)
+    {
+        // Store last list page for redirect after payment
+        session(['last_client_list_url' => url()->current()]);
+        
+        $reseller = $this->getReseller();
+        
+        $query = $reseller->clients()->withoutGlobalScope('exclude_deleted')->with(['package', 'zone', 'area', 'box', 'mikrotikDevice']);
+
+        if ($request->status !== 'deleted') {
+            $query->where('status', '!=', 'deleted');
+        }
+
+        if ($request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('client_id', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('username', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
+        
+        if ($request->status === 'due') {
+            $query->where('due_amount', '>', 0);
+        } elseif ($request->status) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->zone_id) {
+            $query->where('zone_id', $request->zone_id);
+        }
+
+        if ($request->area_id) {
+            $query->where('area_id', $request->area_id);
+        }
+
+        if ($request->package_id) {
+            $query->where('package_id', $request->package_id);
+        }
+
+        if ($request->connection_type) {
+            $query->where('connection_type', $request->connection_type);
+        }
+
+        if ($request->connection_medium) {
+            $query->where('connection_medium', $request->connection_medium);
+        }
+
+        if ($request->mikrotik_device_id) {
+            $query->where('mikrotik_device_id', $request->mikrotik_device_id);
+        }
+
+        if ($request->billing_date) {
+            $query->where('billing_date', $request->billing_date);
+        }
+
+        if ($request->due_filter == 'with_due') {
+            $query->where('due_amount', '>', 0);
+        } elseif ($request->due_filter == 'no_due') {
+            $query->where(function($q) {
+                $q->where('due_amount', '<=', 0)->orWhereNull('due_amount');
+            });
+        }
+
+        if ($request->mac_filter == 'with_mac') {
+            $query->whereNotNull('mac_address')->where('mac_address', '!=', '');
+        } elseif ($request->mac_filter == 'no_mac') {
+            $query->where(function($q) {
+                $q->whereNull('mac_address')->orWhere('mac_address', '');
+            });
+        }
+
+        if ($request->free_filter == 'free') {
+            $query->where('is_free', true);
+        } elseif ($request->free_filter == 'paid') {
+            $query->where(function($q) {
+                $q->where('is_free', false)->orWhereNull('is_free');
+            });
+        }
+
+        if ($request->onu_filter) {
+            if ($request->onu_filter == 'company') {
+                $query->where('onu_required', true);
+            } elseif ($request->onu_filter == 'client') {
+                $query->where(function($q) {
+                    $q->where('onu_required', false)->orWhereNull('onu_required');
+                });
+            }
+        }
+
+        if ($request->billing_status) {
+            $currentMonth = now()->month;
+            $currentYear = now()->year;
+            if ($request->billing_status == 'generated') {
+                $query->whereHas('bills', function($q) use ($currentMonth, $currentYear) {
+                    $q->whereMonth('bill_date', $currentMonth)->whereYear('bill_date', $currentYear);
+                });
+            } elseif ($request->billing_status == 'not_generated') {
+                $query->whereDoesntHave('bills', function($q) use ($currentMonth, $currentYear) {
+                    $q->whereMonth('bill_date', $currentMonth)->whereYear('bill_date', $currentYear);
+                });
+            }
+        }
+
+        if ($request->payment_status) {
+            switch ($request->payment_status) {
+                case 'paid':
+                    $query->where(function($q) { $q->where('due_amount', '<=', 0)->orWhereNull('due_amount'); });
+                    break;
+                case 'unpaid':
+                    $query->where('due_amount', '>', 0);
+                    break;
+                case 'partial':
+                    $query->where('due_amount', '>', 0)->where('balance', '>', 0);
+                    break;
+                case 'advance':
+                    $query->where('balance', '>', 0)->where(function($q) { $q->where('due_amount', '<=', 0)->orWhereNull('due_amount'); });
+                    break;
+                case 'overdue':
+                    $query->where('due_amount', '>', 0)->where('status', 'active');
+                    break;
+            }
+        }
+
+        if ($request->client_type) {
+            $query->where('client_type', $request->client_type);
+        }
+
+        if ($request->expire_from) {
+            $query->whereDate('expire_date', '>=', $request->expire_from);
+        }
+        if ($request->expire_to) {
+            $query->whereDate('expire_date', '<=', $request->expire_to);
+        }
+        
+        $perPage = in_array($request->per_page, [20, 50, 100, 200]) ? (int)$request->per_page : 20;
+        $clients = $query->orderBy('name')->paginate($perPage);
+
+        $zones = Zone::withoutGlobalScopes(['tenant', 'hide-reseller-zones'])
+            ->where('reseller_id', $reseller->id)
+            ->where('is_active', true)
+            ->orderBy('name')->get();
+        $resellerPackageIds = \App\Models\ResellerPackage::where('reseller_id', $reseller->id)
+            ->where('is_active', true)->pluck('package_id');
+        $packages = Package::withoutGlobalScope('tenant')->whereIn('id', $resellerPackageIds)->where('is_active', true)->orderBy('name')->get();
+        $resellerDeviceIds = $reseller->clients()->whereNotNull('mikrotik_device_id')->pluck('mikrotik_device_id')->unique()->values();
+        $mikrotikDevices = $resellerDeviceIds->isNotEmpty()
+            ? MikrotikDevice::whereIn('id', $resellerDeviceIds)->where('is_active', true)->orderBy('name')->get()
+            : collect();
+        $resellerZoneIds = $zones->pluck('id');
+        $areas = ($request->zone_id && $resellerZoneIds->contains($request->zone_id))
+            ? Area::withoutGlobalScopes(['tenant', 'hide-reseller-zones'])
+                ->where('zone_id', $request->zone_id)
+                ->where('reseller_id', $reseller->id)
+                ->where('is_active', true)->get()
+            : collect();
+
+        $allFilterKeys = ['zone_id','area_id','package_id','connection_type','connection_medium','mikrotik_device_id','billing_status','payment_status','client_type','billing_date','due_filter','mac_filter','free_filter','onu_filter','expire_from','expire_to','per_page'];
+        $activeFilterCount = collect($allFilterKeys)->filter(fn($f) => $request->filled($f))->count();
+        $filteredCount = $activeFilterCount > 0 ? $clients->total() : null;
+
+        $totalClients = $reseller->clients()->count();
+        $activeClients = $reseller->clients()->where('status', 'active')->count();
+        $inactiveClients = $reseller->clients()->where('status', 'inactive')->count();
+        $deletedClients = $reseller->clients()->withoutGlobalScope('exclude_deleted')->where('status', 'deleted')->count();
+        $dueClients = $reseller->clients()->where('due_amount', '>', 0)->count();
+        $onlineClients = $reseller->clients()->where('connection_status', 'online')->count();
+        $offlineClients = $totalClients - $onlineClients;
+        $paymentMethods = auth()->user()->allowedPaymentMethods();
+
+        return view('reseller.clients', compact('reseller', 'clients', 'zones', 'packages', 'mikrotikDevices', 'areas', 'filteredCount', 'activeFilterCount', 'perPage', 'totalClients', 'activeClients', 'inactiveClients', 'deletedClients', 'dueClients', 'onlineClients', 'offlineClients', 'paymentMethods'));
+    }
+
+    public function showClient(Client $client)
+    {
+        $reseller = $this->getReseller();
+        
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+        
+        $client->load(['package', 'zone', 'area', 'box', 'district', 'upazila', 'assignedTo', 'oltDevice', 'application.technician', 'bills.payments.paymentMethod', 'bills.payments.collectedBy', 'payments.paymentMethod', 'payments.collectedBy', 'activityLogs.performedByUser']);
+        $canEditClient = auth()->user()->can('reseller.client_edit');
+        $canDeviceControl = auth()->user()->can('reseller.device_control');
+
+        $resellerPackages = $reseller->packages()->with('package')->where('is_active', true)->get();
+
+        $clientTotalDue = $client->due_amount ?? 0;
+        $remainingAdvance = $client->balance ?? 0;
+        $showReseller = $reseller;
+
+        // Live ONU data from onus table
+        $onuLive = null;
+        if ($client->olt_device_id && $client->onu_serial) {
+            $onuLive = \Illuminate\Support\Facades\DB::table('onus')
+                ->where('olt_device_id', $client->olt_device_id)
+                ->where('serial_number', $client->onu_serial)
+                ->first();
+        }
+
+        return view('reseller.client-show', compact('reseller', 'client', 'canEditClient', 'canDeviceControl', 'resellerPackages', 'clientTotalDue', 'remainingAdvance', 'showReseller', 'onuLive'));
+    }
+
+    public function paymentHistory(Client $client)
+    {
+        $reseller = $this->getReseller();
+        
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+        
+        $bills = $client->bills()
+            ->with(['payments.paymentMethod', 'payments.collectedBy'])
+            ->orderBy('bill_date', 'desc')
+            ->get();
+        
+        $totalPaid = $client->payments()->sum('amount');
+        $totalBills = $client->bills()->sum('total_amount');
+        
+        return view('reseller.payment-history', compact('reseller', 'client', 'bills', 'totalPaid', 'totalBills'));
+    }
+
+    public function dueClients(Request $request)
+    {
+        // Store last list page for redirect after payment
+        session(['last_client_list_url' => url()->current()]);
+        
+        $reseller = $this->getReseller();
+        
+        $query = $reseller->clients()->with(['zone', 'area', 'package'])
+            ->where('due_amount', '>', 0);
+        
+        if ($request->search) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('client_id', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+        
+        $clients = $query->orderBy('due_amount', 'desc')->paginate(20);
+        
+        $totalDue = $reseller->clients()->where('due_amount', '>', 0)->sum('due_amount');
+        $dueCount = $reseller->clients()->where('due_amount', '>', 0)->count();
+        
+        return view('reseller.due-clients', compact('reseller', 'clients', 'totalDue', 'dueCount'));
+    }
+
+    public function wallet()
+    {
+        $reseller = $this->getReseller();
+        
+        $transactions = $reseller->walletTransactions()
+            ->latest()
+            ->paginate(20);
+        
+        $thisMonthCredits = $reseller->walletTransactions()
+            ->where('type', 'credit')
+            ->whereMonth('created_at', now()->month)
+            ->sum('amount');
+        
+        $thisMonthDebits = $reseller->walletTransactions()
+            ->where('type', 'debit')
+            ->whereMonth('created_at', now()->month)
+            ->sum('amount');
+        
+        $monthlyBill = ResellerBill::where('reseller_id', $reseller->id)
+            ->where('bill_month', now()->month)
+            ->where('bill_year', now()->year)
+            ->first();
+        
+        return view('reseller.wallet', compact('reseller', 'transactions', 'thisMonthCredits', 'thisMonthDebits', 'monthlyBill'));
+    }
+
+    public function collectionReport(Request $request)
+    {
+        $reseller = $this->getReseller();
+        
+        $startDate = $request->start_date ? Carbon::parse($request->start_date) : now()->startOfMonth();
+        $endDate = $request->end_date ? Carbon::parse($request->end_date) : now()->endOfMonth();
+        
+        $payments = Payment::with('client')
+            ->whereIn('client_id', $reseller->clients()->pluck('id'))
+            ->whereBetween('payment_date', [$startDate, $endDate])
+            ->latest('payment_date')
+            ->get();
+        
+        $totalCollection = $payments->sum('amount');
+        $paymentCount = $payments->count();
+        
+        return view('reseller.collection-report', compact(
+            'reseller', 'payments', 'startDate', 'endDate', 'totalCollection', 'paymentCount'
+        ));
+    }
+
+    public function dueReport()
+    {
+        $reseller = $this->getReseller();
+        
+        $clients = $reseller->clients()
+            ->with('package')
+            ->where('due_amount', '>', 0)
+            ->orderByDesc('due_amount')
+            ->get();
+        
+        $totalDue = $clients->sum('due_amount');
+        
+        return view('reseller.due-report', compact('reseller', 'clients', 'totalDue'));
+    }
+
+    public function packages()
+    {
+        $reseller = $this->getReseller();
+        
+        $packages = $reseller->packages()->with('package')->get();
+        
+        return view('reseller.packages', compact('reseller', 'packages'));
+    }
+
+    public function chartData()
+    {
+        $reseller = $this->getReseller();
+        $clientIds = $reseller->clients()->pluck('id');
+        
+        // Daily collection for last 30 days
+        $dailyCollection = Payment::whereIn('client_id', $clientIds)
+            ->where('payment_date', '>=', now()->subDays(30))
+            ->selectRaw('DATE(payment_date) as date, SUM(amount) as total')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->pluck('total', 'date')
+            ->toArray();
+        
+        // Fill missing days
+        $dates = [];
+        $amounts = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $dates[] = now()->subDays($i)->format('d M');
+            $amounts[] = $dailyCollection[$date] ?? 0;
+        }
+        
+        // Monthly collection for last 6 months
+        $monthlyCollection = Payment::whereIn('client_id', $clientIds)
+            ->where('payment_date', '>=', now()->subMonths(6))
+            ->selectRaw('EXTRACT(YEAR FROM payment_date) as year, EXTRACT(MONTH FROM payment_date) as month, SUM(amount) as total')
+            ->groupBy('year', 'month')
+            ->orderBy('year')
+            ->orderBy('month')
+            ->get();
+        
+        $monthLabels = [];
+        $monthAmounts = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $monthLabels[] = $date->format('M Y');
+            $found = $monthlyCollection->first(function($item) use ($date) {
+                return $item->year == $date->year && $item->month == $date->month;
+            });
+            $monthAmounts[] = $found ? $found->total : 0;
+        }
+        
+        // Client status distribution
+        $statusDistribution = [
+            'active' => $reseller->clients()->where('status', 'active')->count(),
+            'inactive' => $reseller->clients()->where('status', 'inactive')->count(),
+        ];
+        
+        // Package distribution
+        $packageDistribution = $reseller->clients()
+            ->with('package')
+            ->get()
+            ->groupBy('package.name')
+            ->map->count()
+            ->toArray();
+        
+        return response()->json([
+            'daily' => ['labels' => $dates, 'data' => $amounts],
+            'monthly' => ['labels' => $monthLabels, 'data' => $monthAmounts],
+            'status' => $statusDistribution,
+            'packages' => $packageDistribution,
+        ]);
+    }
+
+    public function liveStats()
+    {
+        $reseller = $this->getReseller();
+        
+        $todayCollection = Payment::whereIn('client_id', $reseller->clients()->pluck('id'))
+            ->whereDate('payment_date', today())
+            ->sum('amount');
+        
+        $todayPaymentsCount = Payment::whereIn('client_id', $reseller->clients()->pluck('id'))
+            ->whereDate('payment_date', today())
+            ->count();
+        
+        $activeClients = $reseller->clients()->where('status', 'active')->count();
+        $inactiveClients = $reseller->clients()->where('status', '!=', 'active')->count();
+        $totalDue = $reseller->clients()->sum('due_amount');
+        $resellerDue = \App\Services\ResellerBillingService::getResellerDueToAdmin($reseller);
+        
+        $recentPayments = Payment::with(['client', 'collectedBy'])
+            ->whereIn('client_id', $reseller->clients()->pluck('id'))
+            ->orderBy('payment_date', 'desc')
+            ->take(10)
+            ->get()
+            ->map(function($payment) {
+                $collector = $payment->collectedBy;
+                return [
+                    'client_name' => $payment->client->name ?? 'N/A',
+                    'client_id' => $payment->client->client_id ?? 'N/A',
+                    'amount' => $payment->amount,
+                    'amount_formatted' => '৳' . number_format($payment->amount, 0),
+                    'date' => $payment->payment_date->format('d-m-Y'),
+                    'time' => $payment->created_at->format('h:i A'),
+                    'month' => $payment->payment_date->format('F'),
+                    'year' => $payment->payment_date->format('Y'),
+                    'method' => ucfirst($payment->payment_method ?? 'Cash'),
+                    'received_by' => $payment->receiver_name ?? ($collector ? $collector->name : 'Office'),
+                    'submitted_at' => $payment->submitted_at ? $payment->submitted_at->format('d-m-y h:i:s A') : $payment->created_at->format('d-m-y h:i:s A'),
+                ];
+            });
+        
+        return response()->json([
+            'today_collection' => $todayCollection,
+            'today_collection_formatted' => '৳' . number_format($todayCollection, 0),
+            'today_payments_count' => $todayPaymentsCount,
+            'active_clients' => $activeClients,
+            'inactive_clients' => $inactiveClients,
+            'total_due' => $totalDue,
+            'total_due_formatted' => '৳' . number_format($totalDue, 0),
+            'wallet_balance' => $reseller->wallet_balance,
+            'wallet_formatted' => '৳' . number_format($reseller->wallet_balance, 0),
+            'reseller_due' => $resellerDue,
+            'reseller_due_formatted' => '৳' . number_format($resellerDue, 0),
+            'recent_payments' => $recentPayments,
+            'timestamp' => now()->format('h:i:s A'),
+            'server_time' => now()->format('d-m-y h:i:s A') . ' (BDT)',
+        ]);
+    }
+
+    public function tickets()
+    {
+        $reseller = $this->getReseller();
+
+        // Bandwidth resellers have their own ticket flow - no client-based filtering
+        if ($reseller->type === 'bandwidth') {
+            return $this->bandwidthTickets($reseller);
+        }
+
+        $clientIds = $reseller->clients()->pluck('id');
+        
+        $tickets = \App\Models\Ticket::with(['client', 'category'])
+            ->where(function($q) use ($clientIds) {
+                $q->whereIn('client_id', $clientIds)
+                  ->orWhereNull('client_id');
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+        
+        $openTickets = \App\Models\Ticket::whereIn('client_id', $clientIds)->where('status', 'open')->count();
+        $inProgressTickets = \App\Models\Ticket::whereIn('client_id', $clientIds)->where('status', 'in_progress')->count();
+        $resolvedTickets = \App\Models\Ticket::whereIn('client_id', $clientIds)->where('status', 'resolved')->count();
+
+        $clients = $reseller->clients()->where('status', 'active')->orderBy('name')->get();
+        $categories = \App\Models\TicketCategory::where('is_active', true)->get();
+        $technicians = \App\Models\User::role(['technician'])->where('company_id', $reseller->company_id)->get();
+        $resellerPkgIds = \App\Models\ResellerPackage::where('reseller_id', $reseller->id)
+            ->where('is_active', true)->pluck('package_id');
+        $packages = Package::withoutGlobalScope('tenant')
+            ->whereIn('id', $resellerPkgIds)->where('is_active', true)->orderBy('name')->get();
+        
+        return view('reseller.tickets', compact('tickets', 'openTickets', 'inProgressTickets', 'resolvedTickets', 'clients', 'categories', 'technicians', 'packages'));
+    }
+
+    private function bandwidthTickets($reseller)
+    {
+        // Bandwidth resellers submit tickets to upstream - filter by company and null client_id
+        // or those associated via metadata reseller_id
+        $tickets = \App\Models\Ticket::with(['category', 'assignedTo'])
+            ->where('company_id', $reseller->company_id)
+            ->whereNull('client_id')
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        $openTickets       = $tickets->where('status', 'open')->count();
+        $inProgressTickets = $tickets->where('status', 'in_progress')->count();
+        $resolvedTickets   = $tickets->where('status', 'resolved')->count();
+
+        $categories = \App\Models\TicketCategory::where('is_active', true)->get();
+        $technicians = collect();
+
+        return view('reseller.tickets', compact(
+            'tickets', 'openTickets', 'inProgressTickets', 'resolvedTickets',
+            'categories', 'technicians'
+        ) + ['isBandwidth' => true, 'clients' => collect(), 'packages' => collect(), 'reseller' => $reseller]);
+    }
+
+    public function createTicket(Request $request)
+    {
+        $reseller = $this->getReseller();
+
+        // Bandwidth resellers submit tickets without client or technician
+        if ($reseller->type === 'bandwidth') {
+            $request->validate([
+                'category_id' => 'required|exists:ticket_categories,id',
+                'subject'     => 'required|string|max:255',
+                'description' => 'required|string',
+                'priority'    => 'required|in:low,medium,high,critical',
+            ]);
+            $ticket = \App\Models\Ticket::create([
+                'category_id' => $request->category_id,
+                'subject'     => $request->subject,
+                'description' => $request->description,
+                'priority'    => $request->priority,
+                'status'      => 'open',
+                'client_id'   => null,
+                'company_id'  => $reseller->company_id,
+            ]);
+            return redirect()->back()->with('success', 'Ticket #' . $ticket->ticket_no . ' submitted successfully.');
+        }
+
+        $category = \App\Models\TicketCategory::find($request->category_id);
+        $isNewConnection = $category && (
+            stripos($category->name, 'new connection') !== false || 
+            stripos($category->name, 'installation') !== false
+        );
+
+        if ($isNewConnection) {
+            $validated = $request->validate([
+                'category_id' => 'required|exists:ticket_categories,id',
+                'priority' => 'required|in:low,medium,high,critical',
+                'technician_ids' => 'required|array|min:1',
+                'technician_ids.*' => 'exists:users,id',
+                'new_customer_name' => 'nullable|string|max:255',
+                'new_customer_phone' => 'nullable|string|max:20',
+                'new_customer_address' => 'nullable|string',
+                'package_id' => 'nullable|exists:packages,id',
+                'installation_charge' => 'nullable|string|max:100',
+                'connection_time' => 'nullable|date',
+            ]);
+        } else {
+            $validated = $request->validate([
+                'client_id' => 'required|exists:clients,id',
+                'category_id' => 'required|exists:ticket_categories,id',
+                'subject' => 'required|string|max:255',
+                'description' => 'required|string',
+                'priority' => 'required|in:low,medium,high,critical',
+                'technician_ids' => 'required|array|min:1',
+                'technician_ids.*' => 'exists:users,id',
+            ]);
+            $clientBelongsToReseller = \App\Models\Client::where('id', $validated['client_id'])
+                ->where('reseller_id', $reseller->id)
+                ->exists();
+            if (!$clientBelongsToReseller) {
+                return back()->withErrors(['client_id' => 'Invalid client selected.']);
+            }
+        }
+
+        if ($isNewConnection) {
+            $packageName = null;
+            if (!empty($validated['package_id'])) {
+                $package = \App\Models\Package::find($validated['package_id']);
+                $packageName = $package ? $package->name : null;
+            }
+            
+            $metadata = [
+                'customer_name' => $validated['new_customer_name'] ?? null,
+                'customer_phone' => $validated['new_customer_phone'] ?? null,
+                'customer_address' => $validated['new_customer_address'] ?? null,
+                'package_id' => $validated['package_id'] ?? null,
+                'package' => $packageName,
+                'installation_charge' => $validated['installation_charge'] ?? null,
+                'connection_time' => $validated['connection_time'] ?? null,
+            ];
+            
+            $ticket = \App\Models\Ticket::create([
+                'client_id' => null,
+                'category_id' => $validated['category_id'],
+                'subject' => 'New Connection',
+                'description' => 'New connection request for: ' . ($validated['new_customer_name'] ?? 'N/A'),
+                'priority' => $validated['priority'],
+                'status' => 'open',
+                'metadata' => json_encode($metadata),
+            ]);
+            
+            $clientName = $validated['new_customer_name'] ?? 'N/A';
+            $clientPhone = $validated['new_customer_phone'] ?? 'N/A';
+            $clientAddress = $validated['new_customer_address'] ?? 'N/A';
+            $clientId = null;
+        } else {
+            $ticket = \App\Models\Ticket::create([
+                'client_id' => $validated['client_id'],
+                'category_id' => $validated['category_id'],
+                'subject' => $validated['subject'],
+                'description' => $validated['description'],
+                'priority' => $validated['priority'],
+                'status' => 'open',
+            ]);
+            
+            $client = Client::find($validated['client_id']);
+            $clientName = $client->name ?? 'N/A';
+            $clientPhone = $client->phone ?? 'N/A';
+            $clientAddress = $client->address ?? 'N/A';
+            $clientId = $client->client_id ?? 'N/A';
+        }
+
+        $ticket->setSlaDeadline();
+
+        $companyTechIds = \App\Models\User::role(['technician'])
+            ->where('company_id', $reseller->company_id)->pluck('id');
+        $technicianIds = collect($validated['technician_ids'])->filter(fn($id) => $companyTechIds->contains($id))->values()->all();
+        foreach ($technicianIds as $techId) {
+            \App\Models\TechnicianAssignment::create([
+                'ticket_id' => $ticket->id,
+                'technician_id' => $techId,
+                'assigned_at' => now(),
+                'status' => 'assigned',
+            ]);
+        }
+
+        $ticket->technician_id = $technicianIds[0];
+        $ticket->status = 'in_progress';
+        $ticket->save();
+
+        $packageName = null;
+        if (!empty($validated['package_id'])) {
+            $package = Package::find($validated['package_id']);
+            $packageName = $package ? $package->name . ' - ৳' . number_format($package->price) : null;
+        }
+
+        $ticketData = [
+            'ticket_no' => $ticket->ticket_no,
+            'client_name' => $clientName,
+            'user_id' => $clientId,
+            'pppoe_user' => isset($client) ? ($client->username ?? '') : '',
+            'subject' => $isNewConnection ? 'New Connection' : $validated['subject'],
+            'description' => $isNewConnection ? '' : ($validated['description'] ?? ''),
+            'address' => $clientAddress,
+            'phone' => $clientPhone,
+            'priority' => $validated['priority'],
+            'opened_by' => auth()->user()->name ?? 'System',
+            'installation_charge' => $validated['installation_charge'] ?? 0,
+            'package' => $packageName,
+            'connection_time' => !empty($validated['connection_time']) 
+                ? Carbon::parse($validated['connection_time'])->timezone('Asia/Dhaka')->format('d-m-y h:i A') 
+                : null,
+        ];
+
+        $notificationService = app(\App\Services\NotificationService::class);
+        if ($isNewConnection) {
+            $notificationService->sendNewConnectionTicketNotification($technicianIds, $ticketData);
+        } else {
+            $notificationService->sendMultiTechnicianTicketNotification($technicianIds, $ticketData);
+        }
+
+        return redirect()->back()->with('success', 'Ticket created successfully.');
+    }
+
+    public function profile()
+    {
+        $reseller = $this->getReseller();
+        $user = Auth::user();
+        
+        return view('reseller.profile', compact('reseller', 'user'));
+    }
+
+    public function editClient(Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+        $client->load(['zone', 'area', 'package']);
+        $resellerPkgIds = \App\Models\ResellerPackage::where('reseller_id', $reseller->id)
+            ->where('is_active', true)->pluck('package_id');
+        $packages = \App\Models\Package::withoutGlobalScope('tenant')
+            ->whereIn('id', $resellerPkgIds)->where('is_active', true)->orderBy('name')->get();
+        return view('reseller.client-edit', compact('reseller', 'client', 'packages'));
+    }
+
+    public function updateClient(Request $request, Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'address' => 'required|string|max:500',
+            'google_map_lat' => 'nullable|numeric|between:-90,90',
+            'google_map_lng' => 'nullable|numeric|between:-180,180',
+        ]);
+        $client->update($request->only(['name', 'phone', 'email', 'address', 'alt_phone', 'remarks', 'google_map_lat', 'google_map_lng']));
+        return redirect()->route('reseller.clients.show', $client)->with('success', 'Client updated successfully.');
+    }
+
+    public function syncClient(Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+        $deviceService = app(\App\Services\DeviceControlService::class);
+        $mikrotikResult = $deviceService->syncClientFromMikrotik($client);
+        $oltResult = $deviceService->syncClientFromOlt($client);
+        return back()->with($mikrotikResult['success'] || $oltResult['success'] ? 'success' : 'error', 
+            $mikrotikResult['success'] || $oltResult['success'] ? 'Client synced successfully.' : 'Sync failed.');
+    }
+
+    public function enableClient(Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+        $oldStatus = $client->status;
+        $deviceService = app(\App\Services\DeviceControlService::class);
+        $result = $deviceService->enableClient($client);
+        if ($result['success']) {
+            $client->refresh();
+            \App\Services\ClientActivityService::logStatusChange($client, $oldStatus, $client->status, 'Manual enable by reseller', 'manual');
+            
+            $telegram = new TelegramService();
+            $telegram->sendClientConnected($client->client_id ?? $client->id, null, 'Online', $client->name ?? '', $client->username ?? '');
+        }
+        return back()->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function disableClient(Request $request, Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+        $oldStatus = $client->status;
+        $reason = $request->input('reason', 'Manual disable by reseller');
+        $deviceService = app(\App\Services\DeviceControlService::class);
+        $result = $deviceService->disableClient($client, $reason);
+        if ($result['success']) {
+            $client->refresh();
+            \App\Services\ClientActivityService::logStatusChange($client, $oldStatus, $client->status, $reason, 'manual');
+            
+            $telegram = new TelegramService();
+            $telegram->sendClientDisconnected($client->client_id ?? $client->id, $reason, null, 'Offline', 'Account disabled', $client->name ?? '', $client->username ?? '');
+        }
+        return back()->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function disconnectClient(Request $request, Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+        $reason = $request->input('reason', 'Manual disconnect by reseller');
+        $deviceService = app(\App\Services\DeviceControlService::class);
+        $result = $deviceService->disconnectClient($client, $reason);
+        if ($result['success']) {
+            \App\Services\ClientActivityService::log($client, 'disconnected', $client->connection_status, 'offline', $reason, 'manual');
+            
+            $telegram = new TelegramService();
+            $telegram->sendClientDisconnected($client->client_id ?? $client->id, $reason, null, 'Offline', 'Manual disconnect', $client->name ?? '', $client->username ?? '');
+        }
+        return back()->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function changePackage(Request $request, Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $request->validate([
+            'package_id' => 'required|exists:packages,id',
+        ]);
+
+        $newPackageId = $request->package_id;
+
+        $resellerPackage = $reseller->packages()
+            ->where('package_id', $newPackageId)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$resellerPackage) {
+            return back()->with('error', 'You are not authorized to assign this package.');
+        }
+
+        $oldPackage = $client->package;
+        $newPackage = Package::findOrFail($newPackageId);
+
+        if ($client->package_id == $newPackageId) {
+            return back()->with('error', 'Client is already on this package.');
+        }
+
+        $client->package_id = $newPackageId;
+        $client->monthly_fee = $resellerPackage->selling_price ?? $newPackage->price;
+        $client->save();
+
+        $mikrotikProfile = $newPackage->mikrotik_profile ?? $newPackage->name;
+        $mikrotikSuccess = false;
+
+        if ($client->username) {
+            try {
+                $device = null;
+                if ($client->mikrotik_device_id) {
+                    $device = MikrotikDevice::find($client->mikrotik_device_id);
+                } elseif ($client->zone && $client->zone->mikrotik_device_id) {
+                    $device = MikrotikDevice::find($client->zone->mikrotik_device_id);
+                }
+                if (!$device) {
+                    $device = MikrotikDevice::where('is_active', true)->first();
+                }
+
+                if ($device) {
+                    $mikrotik = MikroTikService::fromDevice($device);
+                    $connection = $mikrotik->connect();
+                    if ($connection !== false) {
+                        $mikrotikSuccess = $mikrotik->changePPPoEProfile($client->username, $mikrotikProfile);
+                        $mikrotik->disconnect();
+                    }
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('MikroTik package change failed: ' . $e->getMessage());
+            }
+        }
+
+        \App\Services\ClientActivityService::log(
+            $client, 'package_changed',
+            $oldPackage->name ?? 'N/A',
+            $newPackage->name,
+            'Package changed by reseller from ' . ($oldPackage->name ?? 'N/A') . ' to ' . $newPackage->name,
+            'manual'
+        );
+
+        $message = 'Package changed to ' . $newPackage->name . ' successfully.';
+        if (!$mikrotikSuccess && $client->username) {
+            $message .= ' (MikroTik sync may have failed - please verify on router)';
+        }
+
+        return back()->with('success', $message);
+    }
+
+    public function collectPayment(Request $request, Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'payment_method_id' => 'required|exists:payment_methods,id',
+            'bill_id' => 'nullable|exists:bills,id',
+            'notes' => 'nullable|string|max:500',
+        ]);
+        
+        // Get the bill - if not provided, auto-select oldest unpaid bill (Quick Pay mode)
+        $bill = null;
+        if ($request->bill_id) {
+            $bill = \App\Models\Bill::where('id', $request->bill_id)
+                ->where('client_id', $client->id)
+                ->firstOrFail();
+        } else {
+            $bill = \App\Models\Bill::where('client_id', $client->id)
+                ->where('is_cancelled', false)
+                ->whereIn('status', ['unpaid', 'partial'])
+                ->orderBy('billing_month', 'asc')
+                ->first();
+            // If no unpaid bill, payment will be recorded as advance
+        }
+
+        // Combine notes from reason and details
+        $notes = $request->notes_reason ? $request->notes_reason : '';
+        if ($request->notes) {
+            $notes .= ($notes ? ' - ' : '') . $request->notes;
+        }
+        if ($request->filled('mobile_payment_number')) {
+            $methodName = \App\Models\PaymentMethod::find($request->payment_method_id)?->name ?? 'Mobile';
+            $mobileInfo = "{$methodName} Number: {$request->mobile_payment_number}";
+            $notes = $notes ? "{$mobileInfo} | {$notes}" : $mobileInfo;
+        }
+
+        try {
+            $payment = \Illuminate\Support\Facades\DB::transaction(function () use ($client, $request, $notes, $bill) {
+                $billingService = app(\App\Services\BillingService::class);
+                
+                $payment = $billingService->recordPayment($client, [
+                    'amount' => $request->amount,
+                    'payment_method_id' => $request->payment_method_id,
+                    'payment_date' => now(),
+                    'remarks' => $notes ?: ($bill ? null : 'Advance Payment'),
+                    'reason' => $request->filled('notes_reason') ? $request->notes_reason : null,
+                    'bill_id' => $bill ? $bill->id : null,
+                    'transaction_id' => $request->transaction_id,
+                    'money_receipt_no' => $request->money_receipt_no ?: null,
+                ], Auth::id(), 'reseller');
+
+                app(\App\Services\LedgerService::class)->createPaymentEntry($payment, Auth::id(), 'reseller');
+                
+                return $payment;
+            });
+
+            // Send SMS notification
+            $sendSms = $request->boolean('send_sms', true);
+            app(\App\Services\SmsService::class)->sendPaymentConfirmation($client, $request->amount, $payment->payment_no ?? '', $sendSms);
+
+            // Reseller SMS: Payment Received
+            try {
+                $resellerForSms = \App\Models\Reseller::where('id', $client->reseller_id)->first();
+                if ($resellerForSms) {
+                    (new \App\Services\ResellerSmsService($resellerForSms))->sendToClient($client, 'payment_received', [
+                        'amount' => $request->amount,
+                        'due'    => max(0, ($client->due_amount ?? 0) - $request->amount),
+                    ]);
+                }
+            } catch (\Throwable $smsErr) {
+                \Illuminate\Support\Facades\Log::warning('Reseller SMS (payment_received) failed: ' . $smsErr->getMessage());
+            }
+
+            $dateTime = now()->format('d-m-y h:i:s A') . ' (BDT GMT+6)';
+            
+            // Return JSON for AJAX requests (instant receipt)
+            if ($request->ajax() || $request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment of ৳' . number_format($request->amount) . ' collected successfully',
+                    'payment_id' => $payment->id,
+                    'payment_no' => $payment->payment_no,
+                    'thermal_url' => route('admin.payments.receipt.thermal', $payment),
+                    'print_url' => route('admin.payments.receipt.print', $payment),
+                ]);
+            }
+            
+            $successMsg = 'Payment of ৳' . number_format($request->amount) . ' collected successfully on ' . $dateTime;
+            
+            $redirectTo = $request->input('redirect_to');
+            if ($redirectTo && !empty($redirectTo) && $this->isSafeRedirect($redirectTo)) {
+                return redirect()->to($redirectTo)->with('success', $successMsg);
+            }
+            
+            return redirect()->to(route('reseller.clients'))->with('success', $successMsg);
+        } catch (\Exception $e) {
+            if ($request->ajax() || $request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            }
+            return back()->with('error', 'Payment failed: ' . $e->getMessage());
+        }
+    }
+
+    public function generateClientBill(Request $request, Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            return back()->with('error', 'Access denied.');
+        }
+
+        $request->validate([
+            'billing_month' => 'required|integer|min:1|max:12',
+            'billing_year' => 'required|integer|min:2020',
+        ]);
+
+        $month = $request->billing_month;
+        $year = $request->billing_year;
+
+        try {
+            $billingService = app(BillingService::class);
+            $bill = $billingService->generateBill($client, $month, $year);
+            
+            $message = "Bill generated successfully for {$month}/{$year}";
+            if ($bill->advance_used > 0) {
+                $message .= " (৳" . number_format($bill->advance_used) . " auto-paid from advance)";
+            }
+
+            // Reseller SMS: Bill Generated
+            try {
+                (new \App\Services\ResellerSmsService($reseller))->sendToClient($client, 'bill_generated', [
+                    'amount'   => $bill->total_amount ?? 0,
+                    'due_date' => $bill->due_date ? \Carbon\Carbon::parse($bill->due_date)->format('d-m-Y') : '',
+                    'bill_no'  => $bill->bill_no ?? '',
+                    'month'    => \Carbon\Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y'),
+                ]);
+            } catch (\Throwable $smsErr) {
+                \Illuminate\Support\Facades\Log::warning('Reseller SMS (bill_generated) failed: ' . $smsErr->getMessage());
+            }
+
+            return back()->with('success', $message);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error generating bill: ' . $e->getMessage());
+        }
+    }
+
+    public function onlineClients()
+    {
+        $reseller = $this->getReseller();
+        $clients = $reseller->clients()->with(['package', 'zone', 'mikrotikDevice'])->get();
+
+        $onlineClients = collect();
+        $resellerDeviceIds = $clients->pluck('mikrotik_device_id')->filter()->unique()->values();
+        $devices = $resellerDeviceIds->isNotEmpty()
+            ? MikrotikDevice::whereIn('id', $resellerDeviceIds)->where('is_active', true)->get()
+            : collect();
+
+        foreach ($devices as $device) {
+            try {
+                $mikrotik = \App\Services\MikroTikService::fromDevice($device);
+                $connection = $mikrotik->connect();
+                if ($connection === false) continue;
+
+                $activeSessions = $mikrotik->getActiveSessions();
+                $clientUsernames = $clients->pluck('username')->filter()->toArray();
+
+                foreach ($activeSessions as $session) {
+                    $sessionName = $session['name'] ?? '';
+                    if (in_array($sessionName, $clientUsernames)) {
+                        $client = $clients->firstWhere('username', $sessionName);
+                        if ($client) {
+                            $onlineClients->push([
+                                'client' => $client,
+                                'session' => $session,
+                                'device' => $device,
+                            ]);
+                        }
+                    }
+                }
+
+                $mikrotik->disconnect();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning("Failed to fetch sessions from {$device->name}: " . $e->getMessage());
+            }
+        }
+
+        return view('reseller.online-clients', compact('reseller', 'onlineClients', 'clients'));
+    }
+
+    public function onlineClientsApi()
+    {
+        $reseller = $this->getReseller();
+        $clients = $reseller->clients()->with(['package', 'zone', 'mikrotikDevice'])->get();
+
+        $onlineClients = [];
+        $resellerDeviceIds = $clients->pluck('mikrotik_device_id')->filter()->unique()->values();
+        $devices = $resellerDeviceIds->isNotEmpty()
+            ? MikrotikDevice::whereIn('id', $resellerDeviceIds)->where('is_active', true)->get()
+            : collect();
+
+        foreach ($devices as $device) {
+            try {
+                $mikrotik = \App\Services\MikroTikService::fromDevice($device);
+                $connection = $mikrotik->connect();
+                if ($connection === false) continue;
+
+                $activeSessions = $mikrotik->getActiveSessions();
+                $clientUsernames = $clients->pluck('username')->filter()->toArray();
+
+                foreach ($activeSessions as $session) {
+                    $sessionName = $session['name'] ?? '';
+                    if (in_array($sessionName, $clientUsernames)) {
+                        $client = $clients->firstWhere('username', $sessionName);
+                        if ($client) {
+                            $onlineClients[] = [
+                                'id' => $client->id,
+                                'client_id' => $client->client_id,
+                                'name' => $client->name,
+                                'username' => $client->username,
+                                'package' => $client->package->name ?? '-',
+                                'zone' => $client->zone->name ?? '-',
+                                'ip' => $session['address'] ?? '-',
+                                'mac' => $session['caller-id'] ?? $client->mac_address ?? '-',
+                                'uptime' => $session['uptime'] ?? '-',
+                                'download' => $session['bytes-in'] ?? '0',
+                                'upload' => $session['bytes-out'] ?? '0',
+                                'device_name' => $device->name,
+                            ];
+                        }
+                    }
+                }
+
+                $mikrotik->disconnect();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning("Failed to fetch sessions from {$device->name}: " . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'online_count' => count($onlineClients),
+            'total_clients' => $clients->count(),
+            'clients' => $onlineClients,
+            'timestamp' => now()->format('h:i:s A'),
+        ]);
+    }
+
+    public function changePppoePassword(Request $request, Client $client)
+    {
+        $reseller = $this->getReseller();
+        if ($client->reseller_id !== $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $request->validate([
+            'new_password' => 'required|string|min:4|max:50',
+        ]);
+
+        $newPassword = $request->new_password;
+
+        $device = null;
+        if ($client->mikrotik_device_id) {
+            $device = MikrotikDevice::find($client->mikrotik_device_id);
+        } elseif ($client->zone && $client->zone->mikrotik_device_id) {
+            $device = MikrotikDevice::find($client->zone->mikrotik_device_id);
+        }
+        if (!$device) {
+            $device = MikrotikDevice::where('is_active', true)->where('company_id', $reseller->company_id)->first();
+        }
+
+        $mikrotikSuccess = false;
+        if ($device && $client->username) {
+            try {
+                $mikrotik = \App\Services\MikroTikService::fromDevice($device);
+                $connection = $mikrotik->connect();
+                if ($connection !== false) {
+                    $mikrotikSuccess = $mikrotik->updatePPPoEUser($client->username, ['password' => $newPassword]);
+                    $mikrotik->disconnect();
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("PPPoE password change failed: " . $e->getMessage());
+            }
+        }
+
+        if (!$mikrotikSuccess && $device) {
+            return back()->with('error', 'MikroTik sync failed. Password was NOT changed to prevent mismatch. Please try again or contact admin.');
+        }
+
+        $client->update(['pppoe_password' => $newPassword]);
+
+        \App\Services\ClientActivityService::log(
+            $client, 'pppoe_password_changed', null, null,
+            'PPPoE password changed by reseller', 'manual'
+        );
+
+        if ($mikrotikSuccess) {
+            return back()->with('success', 'PPPoE password changed successfully and synced with MikroTik.');
+        } else {
+            return back()->with('success', 'PPPoE password updated successfully (no router configured).');
+        }
+    }
+
+    public function initiateRecharge(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:10|max:100000',
+            'gateway' => 'required|in:bkash,nagad,rocket',
+        ]);
+
+        $reseller = $this->getReseller();
+        $amount = (float) $request->amount;
+        $gateway = $request->gateway;
+        $paymentGatewayService = app(PaymentGatewayService::class);
+
+        $transactionId = 'RW-' . strtoupper($gateway) . '-' . Str::upper(Str::random(10));
+
+        if ($gateway === 'bkash') {
+            if (!$paymentGatewayService->isGatewayEnabled('bkash')) {
+                return back()->with('error', 'bKash payment gateway is currently disabled.');
+            }
+
+            $isDemoMode = env('PAYMENT_DEMO_MODE', true) || empty(\App\Models\SystemSetting::get('bkash_app_key'));
+
+            if ($isDemoMode) {
+                $demoPaymentId = 'DEMO-' . Str::upper(Str::random(8));
+
+                PaymentGatewayTransaction::create([
+                    'transaction_id' => $transactionId,
+                    'gateway' => 'bkash',
+                    'client_id' => null,
+                    'bill_id' => null,
+                    'amount' => $amount,
+                    'status' => 'initiated',
+                    'gateway_response' => [
+                        'paymentID' => $demoPaymentId,
+                        'demo' => true,
+                        'reseller_id' => $reseller->id,
+                        'type' => 'reseller_wallet_recharge',
+                    ],
+                ]);
+
+                return redirect()->route('reseller.wallet.recharge.demo', ['transaction_id' => $transactionId]);
+            }
+
+            try {
+                $token = $this->getBkashTokenForRecharge($paymentGatewayService);
+
+                $bkashConfig = $this->getBkashConfig();
+                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                    'Authorization' => $token,
+                    'X-APP-Key' => $bkashConfig['app_key'],
+                ])->post($bkashConfig['base_url'] . '/tokenized/checkout/create', [
+                    'mode' => '0011',
+                    'payerReference' => $reseller->reseller_id,
+                    'callbackURL' => route('reseller.wallet.recharge.callback'),
+                    'amount' => $amount,
+                    'currency' => 'BDT',
+                    'intent' => 'sale',
+                    'merchantInvoiceNumber' => 'RW-' . $reseller->reseller_id . '-' . time(),
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+
+                    PaymentGatewayTransaction::create([
+                        'transaction_id' => $transactionId,
+                        'gateway' => 'bkash',
+                        'client_id' => null,
+                        'bill_id' => null,
+                        'amount' => $amount,
+                        'status' => 'initiated',
+                        'gateway_response' => array_merge($data, [
+                            'reseller_id' => $reseller->id,
+                            'type' => 'reseller_wallet_recharge',
+                        ]),
+                    ]);
+
+                    if (!empty($data['bkashURL'])) {
+                        return redirect()->away($data['bkashURL']);
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Reseller bKash Recharge Error: ' . $e->getMessage());
+            }
+
+            return back()->with('error', 'Failed to initiate bKash payment. Please try again.');
+
+        } elseif ($gateway === 'nagad') {
+            if (!$paymentGatewayService->isGatewayEnabled('nagad')) {
+                return back()->with('error', 'Nagad payment gateway is currently disabled.');
+            }
+
+            PaymentGatewayTransaction::create([
+                'transaction_id' => $transactionId,
+                'gateway' => 'nagad',
+                'client_id' => null,
+                'bill_id' => null,
+                'amount' => $amount,
+                'status' => 'initiated',
+                'gateway_response' => [
+                    'reseller_id' => $reseller->id,
+                    'type' => 'reseller_wallet_recharge',
+                ],
+            ]);
+
+            return redirect()->route('reseller.wallet.recharge.demo', ['transaction_id' => $transactionId]);
+
+        } elseif ($gateway === 'rocket') {
+            $rocketMerchant = \App\Models\SystemSetting::get('rocket_merchant_number', '');
+
+            PaymentGatewayTransaction::create([
+                'transaction_id' => $transactionId,
+                'gateway' => 'rocket',
+                'client_id' => null,
+                'bill_id' => null,
+                'amount' => $amount,
+                'status' => 'initiated',
+                'gateway_response' => [
+                    'reseller_id' => $reseller->id,
+                    'type' => 'reseller_wallet_recharge',
+                    'merchant_number' => $rocketMerchant,
+                ],
+            ]);
+
+            return redirect()->route('reseller.wallet.recharge.demo', ['transaction_id' => $transactionId]);
+        }
+
+        return back()->with('error', 'Invalid payment gateway selected.');
+    }
+
+    public function rechargeDemo(string $transaction_id)
+    {
+        $reseller = $this->getReseller();
+
+        $transaction = PaymentGatewayTransaction::where('transaction_id', $transaction_id)
+            ->where('status', 'initiated')
+            ->first();
+
+        if (!$transaction) {
+            return redirect()->route('reseller.wallet')->with('error', 'Transaction not found or already processed.');
+        }
+
+        $gatewayResponse = $transaction->gateway_response ?? [];
+        if (($gatewayResponse['reseller_id'] ?? null) != $reseller->id) {
+            abort(403, 'Unauthorized access');
+        }
+
+        return view('reseller.wallet-recharge-confirm', compact('reseller', 'transaction'));
+    }
+
+    public function rechargeDemoConfirm(string $transaction_id)
+    {
+        $isDemoMode = env('PAYMENT_DEMO_MODE', true) || empty(\App\Models\SystemSetting::get('bkash_app_key'));
+        if (!$isDemoMode) {
+            abort(403, 'Demo recharge is not available in production mode.');
+        }
+
+        $reseller = $this->getReseller();
+
+        return DB::transaction(function () use ($reseller, $transaction_id) {
+            $transaction = PaymentGatewayTransaction::where('transaction_id', $transaction_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$transaction) {
+                return redirect()->route('reseller.wallet')->with('error', 'Transaction not found.');
+            }
+
+            if ($transaction->status === 'completed') {
+                return redirect()->route('reseller.wallet')->with('info', 'This recharge has already been processed.');
+            }
+
+            if ($transaction->status !== 'initiated') {
+                return redirect()->route('reseller.wallet')->with('error', 'Invalid transaction status.');
+            }
+
+            $gatewayResponse = $transaction->gateway_response ?? [];
+            if (($gatewayResponse['reseller_id'] ?? null) != $reseller->id) {
+                abort(403, 'Unauthorized access');
+            }
+
+            $transaction->update([
+                'status' => 'completed',
+                'verified_at' => now(),
+                'gateway_response' => array_merge($gatewayResponse, [
+                    'completed_at' => now()->toIso8601String(),
+                ]),
+            ]);
+
+            $reseller->creditWallet(
+                $transaction->amount,
+                'Online recharge via ' . ucfirst($transaction->gateway),
+                $transaction->transaction_id,
+                Auth::id()
+            );
+
+            try {
+                (new \App\Services\TelegramService())->sendResellerRechargeNotification(
+                    $reseller->name ?? $reseller->reseller_id ?? 'N/A',
+                    $transaction->transaction_id ?? 'N/A',
+                    'Wallet Recharge',
+                    (float) $transaction->amount,
+                    'Online (' . ucfirst($transaction->gateway ?? 'Demo') . ')'
+                );
+            } catch (\Throwable $e) {
+            }
+
+            return redirect()->route('reseller.wallet')->with('success', 'Wallet recharged successfully! ৳' . number_format($transaction->amount, 2) . ' added to your balance.');
+        });
+    }
+
+    public function rechargeCallback(Request $request)
+    {
+        $reseller = $this->getReseller();
+        $paymentId = $request->get('paymentID');
+        $status = $request->get('status');
+
+        if ($status !== 'success' || !$paymentId) {
+            return redirect()->route('reseller.wallet')->with('error', 'Payment was cancelled or failed.');
+        }
+
+        $transaction = PaymentGatewayTransaction::where('gateway_response->paymentID', $paymentId)
+            ->where('status', 'initiated')
+            ->first();
+
+        if (!$transaction) {
+            return redirect()->route('reseller.wallet')->with('error', 'Transaction not found.');
+        }
+
+        $gatewayResponse = $transaction->gateway_response ?? [];
+        if (($gatewayResponse['reseller_id'] ?? null) != $reseller->id) {
+            return redirect()->route('reseller.wallet')->with('error', 'Unauthorized transaction.');
+        }
+
+        return DB::transaction(function () use ($reseller, $transaction, $paymentId) {
+            $transaction = PaymentGatewayTransaction::where('id', $transaction->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($transaction->status === 'completed') {
+                return redirect()->route('reseller.wallet')->with('info', 'This recharge has already been processed.');
+            }
+
+            $paymentGatewayService = app(PaymentGatewayService::class);
+            $executeResult = $paymentGatewayService->executeBkashPayment($paymentId);
+
+            if (!$executeResult['success']) {
+                $transaction->update(['status' => 'failed']);
+                return redirect()->route('reseller.wallet')->with('error', 'Payment verification failed.');
+            }
+
+            $transaction->update([
+                'status' => 'completed',
+                'verified_at' => now(),
+                'gateway_response' => array_merge($transaction->gateway_response ?? [], $executeResult['data'] ?? []),
+            ]);
+
+            $reseller->creditWallet(
+                $transaction->amount,
+                'Online recharge via bKash (TrxID: ' . ($executeResult['data']['trxID'] ?? $transaction->transaction_id) . ')',
+                $transaction->transaction_id,
+                Auth::id()
+            );
+
+            try {
+                (new \App\Services\TelegramService())->sendResellerRechargeNotification(
+                    $reseller->name ?? $reseller->reseller_id ?? 'N/A',
+                    $transaction->transaction_id ?? 'N/A',
+                    'Wallet Recharge',
+                    (float) $transaction->amount,
+                    'Online (' . ucfirst($transaction->gateway ?? 'Demo') . ')'
+                );
+            } catch (\Throwable $e) {
+            }
+
+            return redirect()->route('reseller.wallet')->with('success', 'Wallet recharged successfully! ৳' . number_format($transaction->amount, 2) . ' added to your balance.');
+        });
+    }
+
+    protected function getBkashTokenForRecharge(PaymentGatewayService $service)
+    {
+        $reflection = new \ReflectionMethod($service, 'getBkashToken');
+        $reflection->setAccessible(true);
+        return $reflection->invoke($service);
+    }
+
+    protected function getBkashConfig(): array
+    {
+        $bkashAppKey = \App\Models\SystemSetting::get('bkash_app_key') ?: config('services.bkash.app_key');
+        $bkashSandbox = \App\Models\SystemSetting::get('bkash_sandbox', '1') == '1';
+
+        return [
+            'app_key' => $bkashAppKey,
+            'base_url' => $bkashSandbox
+                ? 'https://tokenized.sandbox.bka.sh/v1.2.0-beta'
+                : 'https://tokenized.pay.bka.sh/v1.2.0-beta',
+        ];
+    }
+
+    // ─── Selfie Attendance ──────────────────────────────────────────
+    public function myAttendance()
+    {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $todayCheckin  = EmployeeSelfieAttendance::where('user_id', $user->id)
+            ->whereDate('attendance_date', today())->where('type', 'check_in')->first();
+        $todayCheckout = EmployeeSelfieAttendance::where('user_id', $user->id)
+            ->whereDate('attendance_date', today())->where('type', 'check_out')->first();
+        $history = EmployeeSelfieAttendance::where('user_id', $user->id)
+            ->orderBy('attendance_date', 'desc')->orderBy('check_in_time', 'asc')
+            ->get()->groupBy(fn($r) => $r->attendance_date->format('Y-m-d'));
+        return view('reseller.attendance', compact('todayCheckin', 'todayCheckout', 'history'));
+    }
+
+    public function storeAttendance(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'selfie'           => 'required|string',
+            'latitude'         => 'nullable|numeric',
+            'longitude'        => 'nullable|numeric',
+            'type'             => 'required|in:check_in,check_out',
+            'location_address' => 'nullable|string|max:500',
+        ]);
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $alreadyExists = EmployeeSelfieAttendance::where('user_id', $user->id)
+            ->whereDate('attendance_date', today())->where('type', $request->type)->exists();
+        if ($alreadyExists) {
+            $label = $request->type === 'check_in' ? 'Check In' : 'Check Out';
+            return response()->json(['error' => "You have already done {$label} today."], 422);
+        }
+        $imageData = $request->selfie;
+        if (preg_match('/^data:image\/(\w+);base64,/', $imageData, $m)) {
+            $ext = $m[1];
+            $imageData = substr($imageData, strpos($imageData, ',') + 1);
+        } else { $ext = 'jpg'; }
+        $decoded = base64_decode($imageData);
+        if (!$decoded) {
+            return response()->json(['error' => 'Invalid selfie image data.'], 422);
+        }
+        $fileName = 'selfie_' . $user->id . '_' . now()->format('Ymd_His') . '.' . $ext;
+        $path     = 'attendances/selfies/' . now()->format('Y/m');
+        $fullDir  = storage_path('app/public/' . $path);
+        if (!is_dir($fullDir)) { mkdir($fullDir, 0775, true); @chown($fullDir, 'www-data'); }
+        file_put_contents($fullDir . '/' . $fileName, $decoded);
+        $employee = Employee::where('user_id', $user->id)->first();
+        EmployeeSelfieAttendance::create([
+            'user_id'          => $user->id,
+            'employee_id'      => $employee?->id,
+            'attendance_date'  => today(),
+            'check_in_time'    => now()->format('H:i:s'),
+            'selfie_path'      => $path . '/' . $fileName,
+            'latitude'         => $request->latitude,
+            'longitude'        => $request->longitude,
+            'location_address' => $request->location_address,
+            'ip_address'       => $request->ip(),
+            'device_info'      => substr($request->userAgent() ?? '', 0, 255),
+            'type'             => $request->type,
+            'company_id'       => $user->company_id ?? 1,
+        ]);
+        $typeLabel = $request->type === 'check_in' ? 'Check In' : 'Check Out';
+        return response()->json(['success' => true, 'message' => "{$typeLabel} recorded at " . now()->format('h:i:s A')]);
+    }
+
+
+    public function macBilling()
+    {
+        $reseller = $this->getReseller();
+        $query = \App\Models\ResellerBill::where('reseller_id', $reseller->id);
+        if (request('month')) $query->where('bill_month', request('month'));
+        if (request('year'))  $query->where('bill_year',  request('year'));
+        if (request('status'))$query->where('status', request('status'));
+        $bills = $query->orderBy('bill_year', 'desc')->orderBy('bill_month', 'desc')->paginate(20);
+        $payments = \App\Models\ResellerBillPayment::where('reseller_id', $reseller->id)
+            ->orderBy('payment_date', 'desc')->paginate(20, ['*'], 'ppage');
+        $totalBilled  = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->sum('total_recharge');
+        $totalPaid    = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->sum('total_paid');
+        $totalDue     = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->sum('due_amount');
+        $paidCount    = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->where('status', 'paid')->count();
+        $partialCount = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->where('status', 'partial')->count();
+        $unpaidCount  = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->where('status', 'unpaid')->count();
+        return view('reseller.mac-billing', compact(
+            'reseller', 'bills', 'payments',
+            'totalBilled', 'totalPaid', 'totalDue',
+            'paidCount', 'partialCount', 'unpaidCount'
+        ));
+    }
+
+    public function macInvoice(\App\Models\ResellerBill $bill)
+    {
+        $reseller = $this->getReseller();
+        abort_if($bill->reseller_id !== $reseller->id, 403);
+        $ctrl = app(\App\Http\Controllers\Admin\ResellerController::class);
+        return view('admin.reseller.invoice', $ctrl->buildInvoiceData($bill));
+    }
+
+    public function macInvoiceDownload(\App\Models\ResellerBill $bill)
+    {
+        $reseller = $this->getReseller();
+        abort_if($bill->reseller_id !== $reseller->id, 403);
+        $ctrl = app(\App\Http\Controllers\Admin\ResellerController::class);
+        $data = $ctrl->buildInvoiceData($bill);
+        $data['isPdf'] = true;
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.reseller.invoice', $data)->setPaper('a4', 'portrait');
+        $month = \Carbon\Carbon::createFromDate($bill->bill_year, $bill->bill_month, 1)->format('M-Y');
+        return $pdf->download("mac-invoice-{$bill->bill_no}-{$month}.pdf");
+    }
+
+
+    public function bandwidthBilling()
+    {
+        $reseller = $this->getReseller();
+        if ($reseller->type !== 'bandwidth') {
+            return redirect()->route('reseller.mac-billing');
+        }
+        $query = \App\Models\ResellerBill::where('reseller_id', $reseller->id);
+        if (request('month')) $query->where('bill_month', request('month'));
+        if (request('year'))  $query->where('bill_year',  request('year'));
+        if (request('status'))$query->where('status', request('status'));
+        $bills    = $query->orderBy('bill_year', 'desc')->orderBy('bill_month', 'desc')->paginate(20);
+        $payments = \App\Models\ResellerBillPayment::where('reseller_id', $reseller->id)
+            ->orderBy('payment_date', 'desc')->paginate(20, ['*'], 'ppage');
+        $totalBilled  = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->sum('total_recharge');
+        $totalPaid    = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->sum('total_paid');
+        $totalDue     = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->sum('due_amount');
+        $paidCount    = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->where('status', 'paid')->count();
+        $partialCount = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->where('status', 'partial')->count();
+        $unpaidCount  = \App\Models\ResellerBill::where('reseller_id', $reseller->id)->where('status', 'unpaid')->count();
+        return view('reseller.bandwidth-bills', compact(
+            'reseller', 'bills', 'payments',
+            'totalBilled', 'totalPaid', 'totalDue',
+            'paidCount', 'partialCount', 'unpaidCount'
+        ));
+    }
+
+}

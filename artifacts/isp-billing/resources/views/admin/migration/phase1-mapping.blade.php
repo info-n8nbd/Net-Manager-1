@@ -1,0 +1,113 @@
+@extends('layouts.admin')
+
+@section('title', 'Phase 1: Field Mapping')
+
+@section('content')
+        @include('partials.alerts')
+        @include('admin.migration._phase-steps', ['currentPhase' => 1, 'run' => $run])
+
+        <div class="card">
+            <div class="card-header bg-info">
+                <h3 class="card-title"><i class="fas fa-columns"></i> Map Your Spreadsheet Columns to System Fields</h3>
+            </div>
+            <div class="card-body">
+                <form action="{{ route('admin.migration.phase1-save-mapping', $run) }}" method="POST">
+                    @csrf
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Required Fields</h5>
+                            @foreach($targetFields['required'] as $field)
+                            <div class="form-group row">
+                                <label class="col-sm-4 col-form-label">
+                                    {{ ucwords(str_replace('_', ' ', $field)) }}
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <div class="col-sm-8">
+                                    <select name="mapping[{{ $field }}]" class="form-control">
+                                        <option value="">-- Select Column --</option>
+                                        @foreach($sourceHeaders as $header)
+                                        <option value="{{ $header }}" {{ ($autoMapping[$field] ?? '') === $header ? 'selected' : '' }}>
+                                            {{ $header }}
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            @endforeach
+
+                            <hr>
+                            <h5>Migration Fields</h5>
+                            @foreach(['due_amount', 'advance_balance', 'router_name', 'status', 'connection_type'] as $field)
+                            <div class="form-group row">
+                                <label class="col-sm-4 col-form-label">
+                                    {{ ucwords(str_replace('_', ' ', $field)) }}
+                                </label>
+                                <div class="col-sm-8">
+                                    <select name="mapping[{{ $field }}]" class="form-control">
+                                        <option value="">-- Skip --</option>
+                                        @foreach($sourceHeaders as $header)
+                                        <option value="{{ $header }}" {{ ($autoMapping[$field] ?? '') === $header ? 'selected' : '' }}>
+                                            {{ $header }}
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+
+                        <div class="col-md-6">
+                            <h5>Optional Fields</h5>
+                            @foreach(array_diff($targetFields['optional'], ['due_amount', 'advance_balance', 'router_name', 'status', 'connection_type']) as $field)
+                            <div class="form-group row">
+                                <label class="col-sm-4 col-form-label">
+                                    {{ ucwords(str_replace('_', ' ', $field)) }}
+                                </label>
+                                <div class="col-sm-8">
+                                    <select name="mapping[{{ $field }}]" class="form-control">
+                                        <option value="">-- Skip --</option>
+                                        @foreach($sourceHeaders as $header)
+                                        <option value="{{ $header }}" {{ ($autoMapping[$field] ?? '') === $header ? 'selected' : '' }}>
+                                            {{ $header }}
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    @if(count($sampleRows) > 0)
+                    <hr>
+                    <h5><i class="fas fa-table"></i> Sample Data (First {{ count($sampleRows) }} rows)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="thead-light">
+                                <tr>
+                                    @foreach($sourceHeaders as $header)
+                                    <th>{{ $header }}</th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($sampleRows as $row)
+                                <tr>
+                                    @foreach($sourceHeaders as $header)
+                                    <td>{{ $row[$header] ?? '' }}</td>
+                                    @endforeach
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @endif
+
+                    <button type="submit" class="btn btn-primary btn-lg btn-block mt-3">
+                        <i class="fas fa-arrow-right"></i> Validate & Preview
+                    </button>
+                </form>
+            </div>
+        </div>
+@endsection

@@ -1,0 +1,605 @@
+@extends('layouts.admin')
+
+@section('title', 'OLT Dashboard - ' . $olt->name)
+@section('breadcrumb')
+<li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
+<li class="breadcrumb-item"><a href="{{ route('admin.olt.index') }}">OLT Devices</a></li>
+<li class="breadcrumb-item active">{{ $olt->name }} Dashboard</li>
+@endsection
+
+@section('content')
+@if(isset($showAlarms) && $showAlarms)
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-bell mr-2"></i>Alarms - {{ $olt->name }}</h3>
+        <div class="card-tools">
+            <a href="{{ route('admin.olt.dashboard', $olt) }}" class="btn btn-sm btn-default"><i class="fas fa-arrow-left mr-1"></i>Back to Dashboard</a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+                <thead class="bg-dark text-white">
+                    <tr>
+                        <th>Serial</th>
+                        <th>Type</th>
+                        <th>Severity</th>
+                        <th>Port/ONU</th>
+                        <th>Rx Power</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($alarms as $alarm)
+                    <tr>
+                        <td><code>{{ $alarm->serial_number }}</code></td>
+                        <td><span class="badge badge-warning">{{ $alarm->alarm_type }}</span></td>
+                        <td>
+                            @if($alarm->severity === 'critical')
+                                <span class="badge badge-danger">Critical</span>
+                            @elseif($alarm->severity === 'major')
+                                <span class="badge badge-warning">Major</span>
+                            @else
+                                <span class="badge badge-info">{{ ucfirst($alarm->severity) }}</span>
+                            @endif
+                        </td>
+                        <td>{{ $alarm->pon_port ?? 'N/A' }} / {{ $alarm->onu_number ?? 'N/A' }}</td>
+                        <td>{{ $alarm->rx_power ? $alarm->rx_power . ' dBm' : 'N/A' }}</td>
+                        <td>{{ \Carbon\Carbon::parse($alarm->created_at)->diffForHumans() }}</td>
+                        <td>
+                            @if($alarm->is_resolved)
+                                <span class="badge badge-success">Resolved</span>
+                            @else
+                                <span class="badge badge-danger">Active</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if(!$alarm->is_resolved)
+                            <button class="btn btn-success btn-sm" onclick="resolveAlarm({{ $alarm->id }})">
+                                <i class="fas fa-check"></i> Resolve
+                            </button>
+                            @endif
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="8" class="text-center py-4 text-muted">No alarms found</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if(method_exists($alarms, 'links'))
+    <div class="card-footer">{{ $alarms->links() }}</div>
+    @endif
+</div>
+@elseif(isset($showLogs) && $showLogs)
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-history mr-2"></i>Provision Logs - {{ $olt->name }}</h3>
+        <div class="card-tools">
+            <a href="{{ route('admin.olt.dashboard', $olt) }}" class="btn btn-sm btn-default"><i class="fas fa-arrow-left mr-1"></i>Back to Dashboard</a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+                <thead class="bg-dark text-white">
+                    <tr>
+                        <th>Time</th>
+                        <th>Serial</th>
+                        <th>Action</th>
+                        <th>Port</th>
+                        <th>Profile</th>
+                        <th>VLAN</th>
+                        <th>Result</th>
+                        <th>By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($logs ?? [] as $log)
+                    <tr>
+                        <td>{{ \Carbon\Carbon::parse($log->created_at)->format('d-m-y H:i') }}</td>
+                        <td><code>{{ $log->serial_number }}</code></td>
+                        <td>
+                            @if($log->action === 'provision')
+                                <span class="badge badge-success">Provision</span>
+                            @else
+                                <span class="badge badge-danger">Decommission</span>
+                            @endif
+                        </td>
+                        <td>{{ $log->pon_port }}</td>
+                        <td>{{ $log->service_profile ?? 'N/A' }}</td>
+                        <td>{{ $log->vlan ?? 'N/A' }}</td>
+                        <td>
+                            @if($log->result === 'success')
+                                <span class="badge badge-success">Success</span>
+                            @else
+                                <span class="badge badge-danger">Failed</span>
+                            @endif
+                        </td>
+                        <td>{{ $log->performed_by_name ?? 'System' }}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="8" class="text-center py-4 text-muted">No provision logs found</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@else
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="fas fa-tachometer-alt mr-2"></i>{{ $olt->name }} <small class="text-muted">({{ $olt->vendor_name }} - {{ $olt->ip_address }})</small></h4>
+            <div>
+                <button id="pollDashboardBtn" onclick="pollDashboard({{ $olt->id }})" class="btn btn-success btn-sm"><i class="fas fa-sync-alt mr-1"></i>Refresh Data</button>
+                <a href="{{ route('admin.olt.onus', $olt) }}" class="btn btn-primary btn-sm"><i class="fas fa-list mr-1"></i>Manage ONUs</a>
+                <a href="{{ route('admin.olt.alarms', $olt) }}" class="btn btn-warning btn-sm"><i class="fas fa-bell mr-1"></i>Alarms</a>
+                <a href="{{ route('admin.olt.provision-logs', $olt) }}" class="btn btn-info btn-sm"><i class="fas fa-history mr-1"></i>Logs</a>
+                <a href="{{ route('admin.olt.index') }}" class="btn btn-default btn-sm"><i class="fas fa-arrow-left mr-1"></i>Back</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3>{{ $totalOnus }}</h3>
+                <p>Total ONUs</p>
+            </div>
+            <div class="icon"><i class="fas fa-network-wired"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+            <div class="inner">
+                <h3>{{ $onlineOnus }}</h3>
+                <p>Online ONUs</p>
+            </div>
+            <div class="icon"><i class="fas fa-check-circle"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+            <div class="inner">
+                <h3>{{ $offlineOnus }}</h3>
+                <p>Offline ONUs</p>
+            </div>
+            <div class="icon"><i class="fas fa-times-circle"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+            <div class="inner">
+                <h3>{{ $alarmCount }}</h3>
+                <p>Active Alarms</p>
+            </div>
+            <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h3 class="card-title"><i class="fas fa-server mr-2"></i>OLT System Information</h3>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <td class="font-weight-bold" style="width:40%">Vendor / Model</td>
+                        <td>{{ $olt->vendor_name }} {{ $olt->model ? '/ ' . $olt->model : '' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-weight-bold">PON Type</td>
+                        <td>{{ $olt->pon_type_name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-weight-bold">Management IP</td>
+                        <td><code>{{ $olt->ip_address }}</code></td>
+                    </tr>
+                    <tr>
+                        <td class="font-weight-bold">Connection</td>
+                        <td>{{ ucfirst($olt->connection_type ?? 'N/A') }}{{ $olt->snmp_enabled ? ' + SNMP' : '' }}</td>
+                    </tr>
+                    @if($olt->system_description)
+                    <tr>
+                        <td class="font-weight-bold">System Description</td>
+                        <td><small>{{ \Illuminate\Support\Str::limit($olt->system_description, 120) }}</small></td>
+                    </tr>
+                    @endif
+                    @if($olt->firmware_version)
+                    <tr>
+                        <td class="font-weight-bold">Firmware</td>
+                        <td>{{ $olt->firmware_version }}</td>
+                    </tr>
+                    @endif
+                    <tr>
+                        <td class="font-weight-bold">Uptime</td>
+                        <td>
+                            @php
+                                $uptimeSec = $olt->uptime_seconds ?? ($latestSnmpStat->uptime_seconds ?? null);
+                            @endphp
+                            @if($uptimeSec)
+                                @php
+                                    $days  = floor($uptimeSec / 86400);
+                                    $hours = floor(($uptimeSec % 86400) / 3600);
+                                    $mins  = floor(($uptimeSec % 3600) / 60);
+                                @endphp
+                                {{ $days }}d {{ $hours }}h {{ $mins }}m
+                            @else
+                                <span class="text-muted">N/A <small>(click Refresh Data)</small></span>
+                            @endif
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="font-weight-bold">Last Polled</td>
+                        <td>{{ $olt->last_sync ? \Carbon\Carbon::parse($olt->last_sync)->diffForHumans() : 'Never' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h3 class="card-title"><i class="fas fa-microchip mr-2"></i>OLT Health Metrics</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><i class="fas fa-microchip mr-1"></i>CPU Usage</span>
+                        <strong>{{ $olt->cpu_usage !== null ? round($olt->cpu_usage) . '%' : 'N/A' }}</strong>
+                    </div>
+                    @if($olt->cpu_usage !== null)
+                    <div class="progress progress-sm">
+                        <div class="progress-bar bg-{{ $olt->cpu_usage < 60 ? 'success' : ($olt->cpu_usage < 80 ? 'warning' : 'danger') }}" style="width: {{ min($olt->cpu_usage, 100) }}%"></div>
+                    </div>
+                    @endif
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><i class="fas fa-memory mr-1"></i>Memory Usage</span>
+                        <strong>{{ $olt->memory_usage !== null ? round($olt->memory_usage) . '%' : 'N/A' }}</strong>
+                    </div>
+                    @if($olt->memory_usage !== null)
+                    <div class="progress progress-sm">
+                        <div class="progress-bar bg-{{ $olt->memory_usage < 60 ? 'info' : ($olt->memory_usage < 80 ? 'warning' : 'danger') }}" style="width: {{ min($olt->memory_usage, 100) }}%"></div>
+                    </div>
+                    @endif
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><i class="fas fa-thermometer-half mr-1"></i>Temperature</span>
+                        <strong>{{ $olt->temperature !== null ? round($olt->temperature, 1) . '°C' : 'N/A' }}</strong>
+                    </div>
+                    @if($olt->temperature !== null)
+                    <div class="progress progress-sm">
+                        <div class="progress-bar bg-{{ $olt->temperature < 50 ? 'success' : ($olt->temperature < 65 ? 'warning' : 'danger') }}" style="width: {{ min($olt->temperature, 100) }}%"></div>
+                    </div>
+                    @endif
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><i class="fas fa-signal mr-1"></i>Avg Rx Power</span>
+                        @php
+                            $displayRxPower = $avgRxPower ?? ($latestSnmpStat->avg_rx_power ?? null);
+                        @endphp
+                        <strong>{{ $displayRxPower !== null ? $displayRxPower . ' dBm' : 'N/A' }}</strong>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span><i class="fas fa-location-arrow mr-1"></i>Location</span>
+                    <strong>{{ $olt->location ?: 'N/A' }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if(isset($trafficStats) && $trafficStats->count() > 0)
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-exchange-alt mr-2"></i>Port Traffic Statistics</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Port</th>
+                                <th>Download (In)</th>
+                                <th>Upload (Out)</th>
+                                <th>In Rate</th>
+                                <th>Out Rate</th>
+                                <th>ONUs</th>
+                                <th>Online</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($trafficStats as $ts)
+                            <tr>
+                                <td><strong>Port {{ $ts->port_no }}</strong></td>
+                                <td>{{ number_format($ts->in_octets / 1073741824, 2) }} GB</td>
+                                <td>{{ number_format($ts->out_octets / 1073741824, 2) }} GB</td>
+                                <td>
+                                    @if($ts->in_rate_bps > 1000000)
+                                        {{ number_format($ts->in_rate_bps / 1000000, 1) }} Mbps
+                                    @elseif($ts->in_rate_bps > 1000)
+                                        {{ number_format($ts->in_rate_bps / 1000, 1) }} Kbps
+                                    @else
+                                        {{ $ts->in_rate_bps }} bps
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($ts->out_rate_bps > 1000000)
+                                        {{ number_format($ts->out_rate_bps / 1000000, 1) }} Mbps
+                                    @elseif($ts->out_rate_bps > 1000)
+                                        {{ number_format($ts->out_rate_bps / 1000, 1) }} Kbps
+                                    @else
+                                        {{ $ts->out_rate_bps }} bps
+                                    @endif
+                                </td>
+                                <td>{{ $ts->total_onu }}</td>
+                                <td><span class="text-success">{{ $ts->online_onu }}</span></td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-bar mr-2"></i>Port Utilization</h3>
+                <div class="card-tools">
+                    <button class="btn btn-tool" onclick="refreshPortData()"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="portUtilizationChart">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Port</th>
+                                    <th>Total ONUs</th>
+                                    <th>Online</th>
+                                    <th>Offline</th>
+                                    <th>Utilization</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($portSummary as $port)
+                                <tr>
+                                    <td><strong>Port {{ $port->pon_port }}</strong></td>
+                                    <td>{{ $port->total }}</td>
+                                    <td><span class="text-success">{{ $port->online }}</span></td>
+                                    <td><span class="text-danger">{{ $port->offline }}</span></td>
+                                    <td>
+                                        @php $pct = $port->total > 0 ? round(($port->online / $port->total) * 100) : 0; @endphp
+                                        <div class="progress progress-sm">
+                                            <div class="progress-bar bg-{{ $pct >= 80 ? 'success' : ($pct >= 50 ? 'warning' : 'danger') }}" style="width: {{ $pct }}%"></div>
+                                        </div>
+                                        <small>{{ $pct }}%</small>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr><td colspan="5" class="text-center text-muted">No port data available</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-signal mr-2"></i>Signal Quality</h3>
+            </div>
+            <div class="card-body">
+                @if($signalDistribution)
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><i class="fas fa-circle text-success mr-1"></i>Excellent (≥ -15 dBm)</span>
+                        <strong>{{ $signalDistribution->excellent ?? 0 }}</strong>
+                    </div>
+                    <div class="progress progress-sm">
+                        <div class="progress-bar bg-success" style="width: {{ $totalOnus > 0 ? round((($signalDistribution->excellent ?? 0) / max($totalOnus, 1)) * 100) : 0 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><i class="fas fa-circle text-info mr-1"></i>Good (-20 to -15 dBm)</span>
+                        <strong>{{ $signalDistribution->good ?? 0 }}</strong>
+                    </div>
+                    <div class="progress progress-sm">
+                        <div class="progress-bar bg-info" style="width: {{ $totalOnus > 0 ? round((($signalDistribution->good ?? 0) / max($totalOnus, 1)) * 100) : 0 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><i class="fas fa-circle text-warning mr-1"></i>Fair (-25 to -20 dBm)</span>
+                        <strong>{{ $signalDistribution->fair ?? 0 }}</strong>
+                    </div>
+                    <div class="progress progress-sm">
+                        <div class="progress-bar bg-warning" style="width: {{ $totalOnus > 0 ? round((($signalDistribution->fair ?? 0) / max($totalOnus, 1)) * 100) : 0 }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span><i class="fas fa-circle text-danger mr-1"></i>Poor (< -25 dBm)</span>
+                        <strong>{{ $signalDistribution->poor ?? 0 }}</strong>
+                    </div>
+                    <div class="progress progress-sm">
+                        <div class="progress-bar bg-danger" style="width: {{ $totalOnus > 0 ? round((($signalDistribution->poor ?? 0) / max($totalOnus, 1)) * 100) : 0 }}%"></div>
+                    </div>
+                </div>
+                @else
+                <p class="text-center text-muted">No signal data available</p>
+                @endif
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-bolt mr-2"></i>Quick Actions</h3>
+            </div>
+            <div class="card-body">
+                <a href="{{ route('admin.olt.onus', $olt) }}" class="btn btn-primary btn-block mb-2">
+                    <i class="fas fa-list mr-1"></i>Manage ONUs
+                </a>
+                <a href="{{ route('admin.olt.onus', ['olt' => $olt, 'status' => 'offline']) }}" class="btn btn-danger btn-block mb-2">
+                    <i class="fas fa-times-circle mr-1"></i>View Offline ONUs
+                </a>
+                <a href="{{ route('admin.olt.alarms', $olt) }}" class="btn btn-warning btn-block mb-2">
+                    <i class="fas fa-bell mr-1"></i>View Alarms ({{ $alarmCount }})
+                </a>
+                <a href="{{ route('admin.olt.provision-logs', $olt) }}" class="btn btn-info btn-block mb-2">
+                    <i class="fas fa-history mr-1"></i>Provision History
+                </a>
+                <a href="{{ route('admin.olt.edit', $olt) }}" class="btn btn-secondary btn-block">
+                    <i class="fas fa-cog mr-1"></i>OLT Settings
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-bell mr-2"></i>Recent Alarms</h3>
+                <div class="card-tools">
+                    <a href="{{ route('admin.olt.alarms', $olt) }}" class="btn btn-sm btn-default">View All</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Serial</th>
+                                <th>Type</th>
+                                <th>Severity</th>
+                                <th>Rx Power</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($recentAlarms as $alarm)
+                            <tr>
+                                <td><code>{{ $alarm->serial_number }}</code></td>
+                                <td><span class="badge badge-warning">{{ $alarm->alarm_type }}</span></td>
+                                <td>
+                                    @if($alarm->severity === 'critical')
+                                        <span class="badge badge-danger">Critical</span>
+                                    @elseif($alarm->severity === 'major')
+                                        <span class="badge badge-warning">Major</span>
+                                    @else
+                                        <span class="badge badge-info">{{ ucfirst($alarm->severity) }}</span>
+                                    @endif
+                                </td>
+                                <td>{{ $alarm->rx_power ? $alarm->rx_power . ' dBm' : 'N/A' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($alarm->created_at)->diffForHumans() }}</td>
+                                <td>
+                                    @if($alarm->is_resolved)
+                                        <span class="badge badge-success">Resolved</span>
+                                    @else
+                                        <span class="badge badge-danger">Active</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if(!$alarm->is_resolved)
+                                    <button class="btn btn-success btn-xs" onclick="resolveAlarm({{ $alarm->id }})">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    @endif
+                                </td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="7" class="text-center py-3 text-muted">No recent alarms</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+@endsection
+
+@push('scripts')
+<script>
+function resolveAlarm(alarmId) {
+    smartConfirm({message:'Resolve this alarm?',confirmText:'Resolve'},function(){doResolveAlarmNow();}); return;}
+function doResolveAlarmNow(){
+    $.ajax({
+        url: '/admin/network/olt/alarms/' + alarmId + '/resolve',
+        type: 'POST',
+        headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')},
+        success: function(res) {
+            if (res.success) {
+                location.reload();
+            } else {
+                alert(res.message || 'Failed to resolve alarm');
+            }
+        },
+        error: function() { alert('Error resolving alarm'); }
+    });
+}
+
+function refreshPortData() {
+    $.get('{{ route("admin.olt.port-utilization", $olt) }}', function(res) {
+        if (res.success) {
+            location.reload();
+        }
+    });
+}
+
+function pollDashboard(oltId) {
+    var btn = $('#pollDashboardBtn');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Refreshing...');
+    $.ajax({
+        url: '/admin/network/olt/' + oltId + '/poll-dashboard',
+        type: 'POST',
+        headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')},
+        success: function(res) {
+            if (res.success) {
+                toastr.success(res.message || 'Dashboard data refreshed!');
+                setTimeout(function() { location.reload(); }, 1200);
+            } else {
+                toastr.error(res.message || 'Refresh failed');
+                btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i>Refresh Data');
+            }
+        },
+        error: function() {
+            toastr.error('Failed to refresh dashboard data');
+            btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i>Refresh Data');
+        }
+    });
+}
+</script>
+@endpush

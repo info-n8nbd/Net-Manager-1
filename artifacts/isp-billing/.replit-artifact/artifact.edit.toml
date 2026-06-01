@@ -1,0 +1,21 @@
+kind = "web"
+previewPath = "/"
+title = "ISP Billing - Softynex"
+version = "1.0.0"
+id = "isp-billing-softynex"
+
+[[services]]
+localPort = 8000
+name = "ISP Billing"
+paths = ["/"]
+
+[services.development]
+run = "bash artifacts/isp-billing/start.sh"
+
+[services.production]
+
+[services.production.run]
+args = ["bash", "artifacts/isp-billing/start.sh"]
+
+[services.production.run.env]
+PORT = "8000"

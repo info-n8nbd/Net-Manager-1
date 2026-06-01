@@ -1,0 +1,862 @@
+@extends('layouts.admin')
+
+@section('title', $olt->name . ' ONU Status')
+@section('breadcrumb')
+<li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Home</a></li>
+<li class="breadcrumb-item"><a href="{{ route('admin.olt.index') }}">OLT Devices</a></li>
+<li class="breadcrumb-item"><a href="{{ route('admin.olt.dashboard', $olt) }}">{{ $olt->name }}</a></li>
+<li class="breadcrumb-item active">ONU Status</li>
+@endsection
+
+@push('styles')
+<style>
+.onu-header { background: #343a40; color: #fff; padding: 10px 15px; border-radius: 4px 4px 0 0; }
+.onu-header h4 { margin: 0; font-size: 16px; }
+.onu-header .fa-broadcast-tower { color: #17a2b8; }
+.summary-bar { background: #f8f9fa; padding: 8px 15px; border-bottom: 2px solid #dee2e6; font-size: 13px; font-weight: 500; }
+.summary-bar .label { color: #666; }
+.summary-bar .val-total { color: #17a2b8; font-size: 15px; }
+.summary-bar .val-online { color: #28a745; font-size: 15px; }
+.summary-bar .val-offline { color: #dc3545; font-size: 15px; }
+.onu-table th { font-size: 11px; text-transform: uppercase; white-space: nowrap; padding: 5px 6px !important; }
+.onu-table td { font-size: 11px; padding: 4px 6px !important; vertical-align: middle; white-space: nowrap; }
+.onu-id-link { color: #333; font-weight: 450; text-decoration: none; font-size: 11px; }
+.onu-id-link:hover { text-decoration: underline; }
+.status-online { color: #28a745; font-weight: 500; }
+.status-offline { color: #dc3545; font-weight: 500; }
+.diag-info { font-size: 10px; color: #666; line-height: 1.5; }
+.diag-info span { display: inline-block; margin-right: 3px; }
+.reason-text { font-size: 11px; }
+.reason-wiredown { color: #dc3545; }
+.reason-poweroff { color: #dc3545; }
+.power-excellent { color: #28a745; font-weight: 700; white-space: nowrap; font-size: 13px; }
+.power-good { color: #17a2b8; font-weight: 700; white-space: nowrap; font-size: 13px; }
+.power-fair { color: #ffc107; font-weight: 700; white-space: nowrap; font-size: 13px; }
+.power-poor { color: #dc3545; font-weight: 700; white-space: nowrap; font-size: 13px; }
+.power-problem { color: #dc3545; font-weight: 500; }
+.mac-addr { font-family: monospace; font-size: 13px; color: #333; }
+.found-badge { background: #17a2b8; color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 3px; }
+.action-btn-sm { width: 26px; height: 26px; padding: 0; font-size: 12px; display: inline-flex !important; align-items: center; justify-content: center; }
+.olt-selector-bar { background: #fff; padding: 10px 15px; border: 1px solid #dee2e6; border-top: none; }
+</style>
+@endpush
+
+@section('content')
+<div class="card mb-0">
+    <div class="onu-header d-flex justify-content-between align-items-center">
+        <h4><i class="fas fa-broadcast-tower mr-2"></i>{{ $olt->name }} [{{ $olt->vendor_name }} | {{ $olt->pon_type_name }}] ONU Status</h4>
+        <div>
+            <button class="btn btn-warning btn-sm" onclick="checkAllPower()" id="btnCheckAll">
+                <i class="fas fa-bolt mr-1"></i>Check All ONU Power
+            </button>
+            <span id="powerProgress" class="ml-2 d-none">
+                <span class="badge badge-info" id="powerProgressText">0/0</span>
+                <div class="progress d-inline-block" style="width:150px;height:18px;vertical-align:middle;">
+                    <div class="progress-bar bg-warning progress-bar-striped progress-bar-animated" id="powerProgressBar" style="width:0%"></div>
+                </div>
+            </span>
+            <button class="btn btn-success btn-sm ml-1" onclick="discoverOnus()" id="btnDiscover">
+                <i class="fas fa-search mr-1"></i>Discover ONUs
+            </button>
+            <button class="btn btn-info btn-sm ml-1" onclick="doSyncRefresh()" id="btnSync">
+                <i class="fas fa-sync-alt mr-1"></i>Sync
+            </button>
+            <a href="{{ route('admin.olt.dashboard', $olt) }}" class="btn btn-default btn-sm ml-1">
+                <i class="fas fa-tachometer-alt mr-1"></i>Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="olt-selector-bar">
+        <div class="row align-items-end">
+            <div class="col-md-4">
+                <label class="mb-1" style="font-size: 12px; font-weight: 600;">Select OLT</label>
+                <select id="oltSelector" class="form-control form-control-sm" onchange="switchOlt(this.value)">
+                    @foreach($allOlts as $o)
+                        <option value="{{ $o->id }}" {{ $o->id == $olt->id ? 'selected' : '' }}>
+                            {{ $o->id }}. {{ $o->name }} ({{ $o->vendor_name }} | {{ $o->pon_type_name }})
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="mb-1" style="font-size: 12px; font-weight: 600;">Choose PON</label>
+                <form method="GET" action="{{ route('admin.olt.onus', $olt) }}" id="ponFilterForm">
+                    <select name="port" class="form-control form-control-sm" onchange="document.getElementById('ponFilterForm').submit()">
+                        <option value="">CHOOSE PON</option>
+                        @foreach($ports as $port)
+                            <option value="{{ $port }}" {{ ($filters['port'] ?? '') == $port ? 'selected' : '' }}>PON {{ last(explode('/', $port)) }}</option>
+                        @endforeach
+                    </select>
+                    @if(!empty($filters['status']))<input type="hidden" name="status" value="{{ $filters['status'] }}">@endif
+                    @if(!empty($filters['search']))<input type="hidden" name="search" value="{{ $filters['search'] }}">@endif
+                </form>
+            </div>
+            <div class="col-md-5 text-right">
+                <input type="text" class="form-control form-control-sm d-inline-block" style="width: 200px;" placeholder="Search MAC, serial..." value="{{ $filters['search'] ?? '' }}" id="searchInput" onkeypress="if(event.keyCode==13) doSearch()">
+            </div>
+        </div>
+    </div>
+
+    <div class="summary-bar d-flex justify-content-start">
+        <span class="mr-4">[ <span class="label">Total Port:</span> <span class="val-total">{{ $olt->total_ports }}</span> ]</span>
+        <span class="mr-4">[ <span class="label">Total Onu:</span> <span class="val-total">{{ $totalOnus }}</span> ]</span>
+        <span class="mr-4">[ <span class="label">Online:</span> <span class="val-online">{{ $onlineOnus }}</span> ]</span>
+        <span class="mr-4">[ <span class="label">Offline:</span> <span class="val-offline">{{ $offlineOnus }}</span> ]</span>
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0 onu-table">
+                <thead style="background: #dc3545; color: #fff;">
+                    <tr>
+                        <th width="35">S/L</th>
+                        <th>ONU ID</th>
+                        <th width="70">Status</th>
+                        <th width="160">Serial / MAC</th>
+                        <th width="70">Model</th>
+                        <th>Description</th>
+                        <th width="105">TX Power</th>
+                        <th width="105">RX Power</th>
+                        <th width="75">Distance</th>
+                        <th width="75">Temp</th>
+                        <th width="65">Volt</th>
+                        <th>Reason</th>
+                        <th width="85" style="text-align:center;">↓ Down</th>
+                        <th width="85" style="text-align:center;">↑ Up</th>
+                        <th width="45">Found</th>
+                        <th width="85" class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php
+if (!function_exists("fmtBytes")) {
+    function fmtBytes($b) {
+        if ($b >= 1073741824) return number_format($b/1073741824,2)."." . " GB";
+        if ($b >= 1048576)    return number_format($b/1048576,2)."." . " MB";
+        if ($b >= 1024)       return number_format($b/1024,1)."." . " KB";
+        return $b > 0 ? $b . " B" : "-";
+    }
+}
+@endphp
+@forelse($onus as $index => $onu)
+                    @php
+                        $ponType = strtoupper($olt->pon_type ?? 'EPON');
+                        $onuIdDisplay = ($onu->pon_port ?: '0/1') . ':' . ($onu->onu_number ?? ($index + 1));
+                        $isOnline = $onu->status === 'online';
+
+                        $rxDbm = $onu->rx_power;
+                        $txDbm = $onu->tx_power;
+                        $rxMw = $rxDbm ? round(pow(10, $rxDbm / 10), 2) : null;
+                        $txMw = $txDbm ? round(pow(10, $txDbm / 10), 2) : null;
+
+                        $rxClass = 'power-poor';
+                        if ($rxDbm !== null) {
+                            if ($rxDbm >= -15) $rxClass = 'power-excellent';
+                            elseif ($rxDbm >= -20) $rxClass = 'power-good';
+                            elseif ($rxDbm >= -25) $rxClass = 'power-fair';
+                        }
+
+                        $txClass = 'power-good';
+                        if ($txDbm !== null) {
+                            if ($txDbm >= -3 && $txDbm <= 5) $txClass = 'power-excellent';
+                            elseif ($txDbm < -5 || $txDbm > 7) $txClass = 'power-poor';
+                        }
+
+                        $reason = '';
+                        $reasonClass = '';
+                        if (!$isOnline) {
+                            $dr = $onu->olt_offline_reason ?? $onu->last_down_reason ?? $onu->down_reason ?? '';
+                            $dr = trim($dr);
+                            if (stripos($dr, 'dying') !== false || stripos($dr, 'dying-gasp') !== false) {
+                                $reason = 'Dying Gasp';
+                                $reasonClass = 'reason-poweroff';
+                            } elseif (stripos($dr, 'power') !== false || $dr === 'power-off') {
+                                $reason = 'Power Off';
+                                $reasonClass = 'reason-poweroff';
+                            } elseif (stripos($dr, 'losi') !== false) {
+                                $reason = 'LOSI';
+                                $reasonClass = 'reason-wiredown';
+                            } elseif (stripos($dr, 'lofi') !== false) {
+                                $reason = 'LOFI';
+                                $reasonClass = 'reason-wiredown';
+                            } elseif (stripos($dr, 'loami') !== false) {
+                                $reason = 'LOAMI';
+                                $reasonClass = 'reason-wiredown';
+                            } elseif (stripos($dr, 'los') !== false) {
+                                $reason = 'LOS';
+                                $reasonClass = 'reason-wiredown';
+                            } elseif (stripos($dr, 'wire') !== false || stripos($dr, 'link') !== false || stripos($dr, 'fiber') !== false) {
+                                $reason = 'Wire/Link Down';
+                                $reasonClass = 'reason-wiredown';
+                            } elseif (stripos($dr, 'deactivat') !== false || stripos($dr, 'deregist') !== false || stripos($dr, 'blocked') !== false) {
+                                $reason = 'Deregistered';
+                                $reasonClass = 'reason-wiredown';
+                            } elseif (stripos($dr, 'off-line') !== false || $dr === 'offline') {
+                                $reason = 'No Signal';
+                                $reasonClass = 'reason-wiredown';
+                            } elseif ($dr) {
+                                $reason = strtoupper(str_replace(['-','_'], ' ', $dr));
+                                $reasonClass = 'reason-wiredown';
+                            } else {
+                                $reason = 'Unknown';
+                                $reasonClass = 'reason-wiredown';
+                            }
+                        }
+
+                        $clientCount = 0;
+                        if ($onu->client_id) $clientCount = 1;
+                    @endphp
+                    <tr data-onu-id="{{ $onu->id }}" data-serial="{{ $onu->serial_number }}">
+                        <td class="text-center">{{ $onus->firstItem() + $index }}.</td>
+                        <td>
+                            <a href="{{ route('admin.olt.onu-detail', $onu->id) }}" class="onu-id-link">{{ $onuIdDisplay }}</a>
+                        </td>
+                        <td class="td-status">
+                            @if($isOnline)
+                                <span class="status-online">ONLINE</span>
+                            @else
+                                <span class="status-offline">OFFLINE</span>
+                            @endif
+                        </td>
+                        <td style="line-height:1.6;">
+                            @if($onu->serial_number && !str_starts_with($onu->serial_number, 'SYN-'))
+                                <span style="font-size:13px; font-family:monospace; font-weight:600; color:#333; display:block;">{{ $onu->serial_number }}</span>
+                            @endif
+                            @if($onu->mac_address)
+                                <span style="font-size:12px; font-family:monospace; color:#6c757d; display:block;">{{ $onu->mac_address }}</span>
+                            @elseif(!$onu->serial_number || str_starts_with($onu->serial_number, 'SYN-'))
+                                <span class="text-muted" style="font-size:11px;">-</span>
+                            @endif
+                        </td>
+                        <td>{{ $onu->model ?? '' }}</td>
+                        <td class="td-description">
+                            @if(!empty($onu->client_username))
+                                <span class="text-primary">{{ $onu->client_username }}</span>
+                            @elseif(!empty($onu->client_code))
+                                <span class="text-primary">{{ $onu->client_code }}</span>
+                            @elseif($onu->description)
+                                {{ \Illuminate\Support\Str::limit($onu->description, 30) }}
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+                        <td class="td-tx">
+                            @if($isOnline && $txDbm !== null)
+                                <span class="{{ $txClass }}">{{ number_format($txDbm, 2) }} dBm</span>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+                        <td class="td-rx">
+                            @if($isOnline && $rxDbm !== null)
+                                <span class="{{ $rxClass }}">{{ number_format($rxDbm, 2) }} dBm</span>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+                        <td class="td-distance" style="font-size:12px;">
+                            @if($onu->distance)
+                                {{ $onu->distance }} m
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+                        <td class="td-temp" style="white-space:nowrap;">
+                            @if($isOnline && $onu->temperature !== null)
+                                <span style="font-size:13px; font-weight:700; color:{{ $onu->temperature > 75 ? '#dc3545' : ($onu->temperature > 60 ? '#e67e22' : '#333') }};">{{ number_format($onu->temperature, 1) }} °C</span>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+                        <td class="td-volt" style="white-space:nowrap;">
+                            @if($isOnline && $onu->voltage !== null)
+                                <span style="font-size:13px; font-weight:700; color:{{ $onu->voltage < 3.0 || $onu->voltage > 3.6 ? '#dc3545' : '#333' }};">{{ number_format($onu->voltage, 2) }} V</span>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+        <td class="td-reason">
+                            @if(!$isOnline)
+                                <span class="reason-text {{ $reasonClass }}">{{ $reason }}</span>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+                @php
+                            $inBytes  = $onu->in_octets  ?? 0;
+                            $outBytes = $onu->out_octets ?? 0;
+                        @endphp
+                        <td style="text-align:center; white-space:nowrap;">
+                            @if($isOnline && $inBytes > 0)
+                                <span style="font-size:12px; font-weight:600; color:#28a745;">{{ fmtBytes($inBytes) }}</span>
+                            @else
+                                <span class="text-muted" style="font-size:11px;">-</span>
+                            @endif
+                        </td>
+                        <td style="text-align:center; white-space:nowrap;">
+                            @if($isOnline && $outBytes > 0)
+                                <span style="font-size:12px; font-weight:600; color:#17a2b8;">{{ fmtBytes($outBytes) }}</span>
+                            @else
+                                <span class="text-muted" style="font-size:11px;">-</span>
+                            @endif
+                        </td>
+                        <td class="text-center td-found">
+                            @if($clientCount > 0)
+                                <span class="found-badge">{{ $clientCount }}</span>
+                            @endif
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group">
+                                <a href="{{ route('admin.olt.onu-detail', $onu->id) }}" class="btn btn-outline-info action-btn-sm" title="Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button class="btn btn-outline-success action-btn-sm" title="Refresh Power" onclick="refreshOnuPower({{ $onu->id }}, '{{ $onu->serial_number }}')">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="12" class="text-center py-4">
+                            <i class="fas fa-network-wired fa-3x text-muted mb-3 d-block"></i>
+                            <p class="text-muted mb-0">No ONUs found. Click "Discover ONUs" to find devices.</p>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if($onus->hasPages())
+    <div class="card-footer"><div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-1">
+    <div class="d-flex align-items-center">
+        <label class="small text-muted mb-0 mr-2" style="white-space:nowrap;">SHOW</label>
+        <select class="form-control form-control-sm bulk-show-entries" style="width:80px;">
+            <option value="20" {{ request('per_page',20)==20?'selected':'' }}>20</option>
+            <option value="50" {{ request('per_page',20)==50?'selected':'' }}>50</option>
+            <option value="100" {{ request('per_page',20)==100?'selected':'' }}>100</option>
+            <option value="200" {{ request('per_page',20)==200?'selected':'' }}>200</option>
+        </select>
+        <label class="small text-muted mb-0 ml-2" style="white-space:nowrap;">ENTRIES</label>
+    </div>
+    <div>
+        {{ $onus->appends($filters)->links() }}
+    </div>
+</div>
+<script>
+(function(){
+    var sel = document.querySelector('.bulk-show-entries');
+    if(sel){ sel.addEventListener('change',function(){
+        var p=new URLSearchParams(window.location.search);
+        p.set('per_page',this.value); p.delete('page');
+        window.location=window.location.pathname+'?'+p.toString();
+    }); }
+})();
+</script></div>
+    @endif
+</div>
+
+<div id="discoveredOnusCard" class="card d-none mt-3">
+    <div class="card-header bg-success text-white py-2">
+        <h3 class="card-title"><i class="fas fa-broadcast-tower mr-2"></i>Discovered Unregistered ONUs</h3>
+        <div class="card-tools">
+            <button type="button" class="btn btn-tool text-white" onclick="$('#discoveredOnusCard').addClass('d-none')"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Serial Number</th>
+                        <th>Port</th>
+                        <th>Vendor</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="discoveredOnusBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="provisionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-plus-circle mr-2"></i>Provision ONU</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <form id="provisionForm">
+                    @csrf
+                    <input type="hidden" name="serial" id="provSerial">
+                    <input type="hidden" name="port" id="provPort">
+                    <div class="form-group">
+                        <label>Serial Number</label>
+                        <input type="text" class="form-control" id="provSerialDisplay" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Port</label>
+                        <input type="text" class="form-control" id="provPortDisplay" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Line Profile</label>
+                        <input type="text" name="line_profile" class="form-control" value="default">
+                    </div>
+                    <div class="form-group">
+                        <label>Service Profile</label>
+                        <input type="text" name="service_profile" class="form-control" value="default">
+                    </div>
+                    <div class="form-group">
+                        <label>VLAN</label>
+                        <input type="text" name="vlan" class="form-control" placeholder="VLAN ID (optional)">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" name="description" class="form-control" placeholder="ONU description">
+                    </div>
+                    @include('admin.partials.client-search', [
+                        'inputId' => 'onuMgmtClientSearch',
+                        'hiddenId' => 'onuMgmtClientSearchId',
+                        'fieldName' => 'client_id',
+                        'label' => 'Assign to Client (Optional)',
+                        'required' => false,
+                    ])
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitProvision()" id="btnProvision">
+                    <i class="fas fa-check mr-1"></i>Provision
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-user-plus mr-2"></i>Assign ONU to Client</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="assignOnuId">
+                <div class="form-group">
+                    <label>Serial Number</label>
+                    <input type="text" class="form-control" id="assignSerialDisplay" readonly>
+                </div>
+                @include('admin.partials.client-search', [
+                    'inputId' => 'assignOnuClientSearch',
+                    'hiddenId' => 'assignOnuClientSearchId',
+                    'fieldName' => 'client_id',
+                    'label' => 'Client',
+                    'required' => true,
+                ])
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAssign()">
+                    <i class="fas fa-check mr-1"></i>Assign
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="decommissionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-trash mr-2"></i>Decommission ONU</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="decommOnuId">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>This will remove the ONU from the OLT and mark it as decommissioned.
+                </div>
+                <div class="form-group">
+                    <label>Serial Number</label>
+                    <input type="text" class="form-control" id="decommSerialDisplay" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Reason</label>
+                    <textarea class="form-control" id="decommReason" rows="3" placeholder="Reason for decommissioning"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitDecommission()">
+                    <i class="fas fa-trash mr-1"></i>Decommission
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{{-- ONU Live Info Popup Modal --}}
+<div class="modal fade" id="onuDetailModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#1a1a2e; color:#fff;">
+                <h5 class="modal-title" id="onuDetailModalTitle"><i class="fas fa-broadcast-tower mr-2"></i>ONU Details</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body p-2" id="onuDetailBody">
+                <div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i></div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+var oltId = {{ $olt->id }};
+var csrfToken = $('meta[name="csrf-token"]').attr('content');
+
+function switchOlt(id) {
+    window.location.href = '/admin/network/olt/' + id + '/onus';
+}
+
+function doSearch() {
+    var val = $('#searchInput').val();
+    var url = new URL(window.location.href);
+    if (val) { url.searchParams.set('search', val); } else { url.searchParams.delete('search'); }
+    window.location.href = url.toString();
+}
+
+function checkAllPower() {
+    var btn = $('#btnCheckAll');
+    var prog = $('#powerProgress');
+    var progText = $('#powerProgressText');
+    var progBar = $('#powerProgressBar');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Checking...');
+    prog.removeClass('d-none');
+    progBar.css('width', '0%');
+    progText.text('Connecting...');
+
+    fetch('/admin/network/olt/' + oltId + '/check-all-power', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'Content-Type': 'application/json'
+        }
+    }).then(function(response) {
+        if (!response.ok) throw new Error('Request failed');
+        var contentType = response.headers.get('Content-Type') || '';
+
+        if (contentType.indexOf('text/event-stream') !== -1) {
+            var reader = response.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+
+            function read() {
+                reader.read().then(function(result) {
+                    if (result.done) {
+                        btn.prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i>Check All ONU Power');
+                        return;
+                    }
+                    buffer += decoder.decode(result.value, {stream: true});
+                    var lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    lines.forEach(function(line) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                var data = JSON.parse(line.substring(6));
+                                if (data.type === 'start') {
+                                    progText.text('0/' + data.total);
+                                } else if (data.type === 'progress') {
+                                    var pct = Math.round((data.current / data.total) * 100);
+                                    progBar.css('width', pct + '%');
+                                    progText.text(data.current + '/' + data.total + ' (' + data.updated + ' updated)');
+                                } else if (data.type === 'complete') {
+                                    btn.prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i>Check All ONU Power');
+                                    progBar.css('width', '100%').removeClass('bg-warning').addClass('bg-success');
+                                    progText.text('Done! ' + data.updated + '/' + data.total);
+                                    Swal.fire('Complete!', data.message, 'success').then(function() { location.reload(); });
+                                } else if (data.type === 'error') {
+                                    btn.prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i>Check All ONU Power');
+                                    progBar.removeClass('bg-warning').addClass('bg-danger');
+                                    Swal.fire('Error', data.message, 'error');
+                                }
+                            } catch(e) {}
+                        }
+                    });
+                    read();
+                });
+            }
+            read();
+        } else {
+            response.json().then(function(res) {
+                btn.prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i>Check All ONU Power');
+                prog.addClass('d-none');
+                if (res.success) {
+                    Swal.fire('Complete!', res.message, 'success').then(function() { location.reload(); });
+                } else {
+                    Swal.fire('Failed', res.message, 'error');
+                }
+            });
+        }
+    }).catch(function(err) {
+        btn.prop('disabled', false).html('<i class="fas fa-bolt mr-1"></i>Check All ONU Power');
+        prog.addClass('d-none');
+        Swal.fire('Error', 'Error checking ONU power: ' + err.message, 'error');
+    });
+}
+
+function refreshOnuPower(onuId, serial) {
+    showOnuDetailModal(onuId, serial);
+}
+
+function doSyncRefresh() {
+    var btn = $('#btnSync');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Syncing...');
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/admin/network/olt/' + oltId + '/live-refresh', true);
+    xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 30000;
+
+    xhr.onload = function() {
+        btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i>Sync');
+        if (xhr.status === 200) {
+            try {
+                var res = JSON.parse(xhr.responseText);
+                if (res.success) {
+                    location.reload();
+                } else {
+                    Swal.fire('Sync Failed', res.message || 'Unknown error', 'error');
+                }
+            } catch(e) {
+                Swal.fire('Error', 'Invalid response', 'error');
+            }
+        } else {
+            Swal.fire('Error', 'Sync request failed (HTTP ' + xhr.status + ')', 'error');
+        }
+    };
+    xhr.onerror = function() {
+        btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i>Sync');
+        Swal.fire('Error', 'Network error during sync', 'error');
+    };
+    xhr.ontimeout = function() {
+        btn.prop('disabled', false).html('<i class="fas fa-sync-alt mr-1"></i>Sync');
+        Swal.fire('Timeout', 'Sync took too long. Try again.', 'warning');
+    };
+    xhr.send('{}');
+}
+
+function showOnuDetailModal(onuId, serial) {
+    $('#onuDetailModal').modal('show');
+    $('#onuDetailBody').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-info"></i><p class="mt-2 text-muted">Syncing from OLT...</p></div>');
+    $('#onuDetailModalTitle').text('ONU: ' + serial);
+    $.ajax({
+        url: '/admin/network/onu/' + onuId + '/live-info',
+        type: 'GET',
+        timeout: 40000,
+        success: function(res) {
+            if (res.success && res.data) {
+                renderOnuDetailModal(res.data);
+            } else {
+                $('#onuDetailBody').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle mr-2"></i>' + (res.message || 'Failed to fetch ONU info') + '</div>');
+            }
+        },
+        error: function() {
+            $('#onuDetailBody').html('<div class="alert alert-danger"><i class="fas fa-exclamation-triangle mr-2"></i>Connection error. Could not fetch ONU info.</div>');
+        }
+    });
+}
+
+function renderOnuDetailModal(d) {
+    var rxColor = '#6c757d';
+    var rxQuality = 'N/A';
+    if (d.rx_power !== null && d.rx_power !== undefined) {
+        rxColor = d.rx_power >= -15 ? '#28a745' : (d.rx_power >= -20 ? '#17a2b8' : (d.rx_power >= -25 ? '#ffc107' : '#dc3545'));
+        rxQuality = d.rx_power >= -15 ? 'Excellent' : (d.rx_power >= -20 ? 'Good' : (d.rx_power >= -25 ? 'Fair' : 'Poor'));
+    }
+    var statusBadge = d.status === 'online'
+        ? '<span class="badge badge-success px-3 py-1" style="font-size:14px;">ONLINE</span>'
+        : '<span class="badge badge-danger px-3 py-1" style="font-size:14px;">OFFLINE</span>';
+    var srcBadge = d.source === 'live'
+        ? '<span class="badge badge-success ml-2"><i class="fas fa-bolt mr-1"></i>Live from OLT</span>'
+        : '<span class="badge badge-secondary ml-2"><i class="fas fa-database mr-1"></i>Cached</span>';
+
+    var html = '<div style="font-size:13px;">';
+
+    // Header row
+    html += '<div class="d-flex justify-content-between align-items-center mb-3">';
+    html += '<div>' + statusBadge + srcBadge + '</div>';
+    html += '<small class="text-muted">OLT: ' + (d.olt_name || '—') + '</small>';
+    html += '</div>';
+
+    // Signal quality visual
+    if (d.rx_power !== null && d.rx_power !== undefined) {
+        var pct = Math.min(Math.max(((d.rx_power + 30) / 20) * 100, 0), 100);
+        html += '<div class="mb-3 p-2" style="background:#f8f9fa; border-radius:6px; border-left:4px solid ' + rxColor + ';">';
+        html += '<div class="d-flex justify-content-between mb-1"><strong style="color:' + rxColor + ';">RX Power: ' + d.rx_power + ' dBm</strong>';
+        html += '<span style="color:' + rxColor + '; font-weight:700;">' + rxQuality + '</span></div>';
+        html += '<div class="progress" style="height:8px;"><div class="progress-bar" style="width:' + pct + '%; background:' + rxColor + ';"></div></div>';
+        if (d.rx_power_mw) html += '<small class="text-muted">(' + d.rx_power_mw + ' mW)</small>';
+        html += '</div>';
+    }
+
+    html += '<table class="table table-sm table-bordered mb-2">';
+    html += '<tbody>';
+    html += '<tr><td style="width:40%;font-weight:600;background:#f8f9fa;">Serial Number</td><td><code>' + (d.serial || '—') + '</code></td></tr>';
+    html += '<tr><td style="font-weight:600;background:#f8f9fa;">MAC Address</td><td><code>' + (d.mac || '—') + '</code></td></tr>';
+    html += '<tr><td style="font-weight:600;background:#f8f9fa;">Port / ONU#</td><td>' + (d.port || '—') + ' / ' + (d.onu_number || '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:600;background:#f8f9fa;">Model</td><td>' + (d.model || '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:600;background:#f8f9fa;">TX Power</td><td>' + (d.tx_power !== null && d.tx_power !== undefined ? d.tx_power + ' dBm' + (d.tx_power_mw ? ' (' + d.tx_power_mw + ' mW)' : '') : '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:600;background:#f8f9fa;">Temperature</td><td>' + (d.temperature !== null && d.temperature !== undefined ? d.temperature + ' °C' : '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:600;background:#f8f9fa;">Voltage</td><td>' + (d.voltage !== null && d.voltage !== undefined ? d.voltage + ' V' : '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:600;background:#f8f9fa;">TX Bias</td><td>' + (d.tx_bias !== null && d.tx_bias !== undefined ? d.tx_bias + ' mA' : '—') + '</td></tr>';
+    html += '<tr><td style="font-weight:600;background:#f8f9fa;">Distance</td><td>' + (d.distance !== null && d.distance !== undefined ? '<strong>' + d.distance + '</strong> m' : '—') + '</td></tr>';
+    if (d.client_username || d.client_name) {
+        var displayName = d.client_username || d.client_code || d.client_name;
+        html += '<tr><td style="font-weight:600;background:#f8f9fa;">PPPoE ID</td><td><strong>' + displayName + '</strong>' + (d.client_name && d.client_username ? ' <small class="text-muted">(' + d.client_name + ')</small>' : '') + '</td></tr>';
+        html += '<tr><td style="font-weight:600;background:#f8f9fa;">Phone</td><td>' + (d.client_phone || '—') + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    html += '<small class="text-muted">Last synced: ' + (d.polled_at || '—') + '</small>';
+    html += '</div>';
+
+    $('#onuDetailModalTitle').text('ONU Details — ' + (d.mac || d.serial || ''));
+    $('#onuDetailBody').html(html);
+}
+
+function discoverOnus() {
+    var btn = $('#btnDiscover');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Discovering...');
+
+    $.ajax({
+        url: '{{ route("admin.olt.discover-onus", $olt) }}',
+        type: 'POST',
+        headers: {'X-CSRF-TOKEN': csrfToken},
+        success: function(res) {
+            btn.prop('disabled', false).html('<i class="fas fa-search mr-1"></i>Discover ONUs');
+            if (res.success && res.data.length > 0) {
+                var html = '';
+                res.data.forEach(function(onu) {
+                    html += '<tr>';
+                    html += '<td><code>' + onu.serial + '</code></td>';
+                    html += '<td>' + onu.port + '</td>';
+                    html += '<td><span class="badge badge-info">' + onu.vendor + '</span></td>';
+                    html += '<td><button class="btn btn-success btn-sm" onclick="showProvisionModal(\'' + onu.serial + '\', \'' + onu.port + '\')"><i class="fas fa-plus mr-1"></i>Provision</button></td>';
+                    html += '</tr>';
+                });
+                $('#discoveredOnusBody').html(html);
+                $('#discoveredOnusCard').removeClass('d-none');
+            } else {
+                $('#discoveredOnusBody').html('<tr><td colspan="4" class="text-center py-3 text-muted">No unregistered ONUs found</td></tr>');
+                $('#discoveredOnusCard').removeClass('d-none');
+            }
+        },
+        error: function() {
+            btn.prop('disabled', false).html('<i class="fas fa-search mr-1"></i>Discover ONUs');
+            Swal.fire('Error', 'Failed to discover ONUs', 'error');
+        }
+    });
+}
+
+function showProvisionModal(serial, port) {
+    $('#provSerial').val(serial);
+    $('#provPort').val(port);
+    $('#provSerialDisplay').val(serial);
+    $('#provPortDisplay').val(port);
+    $('#provisionModal').modal('show');
+}
+
+function submitProvision() {
+    var btn = $('#btnProvision');
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Provisioning...');
+
+    $.ajax({
+        url: '{{ route("admin.olt.provision-onu", $olt) }}',
+        type: 'POST',
+        data: $('#provisionForm').serialize(),
+        headers: {'X-CSRF-TOKEN': csrfToken},
+        success: function(res) {
+            btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i>Provision');
+            if (res.success) {
+                $('#provisionModal').modal('hide');
+                Swal.fire('Success', 'ONU provisioned successfully!', 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Failed', res.message || 'Provisioning failed', 'error');
+            }
+        },
+        error: function(xhr) {
+            btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i>Provision');
+            var msg = 'Error provisioning ONU';
+            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            Swal.fire('Error', msg, 'error');
+        }
+    });
+}
+
+function showAssignModal(onuId, serial) {
+    $('#assignOnuId').val(onuId);
+    $('#assignSerialDisplay').val(serial);
+    $('#assignModal').modal('show');
+}
+
+function submitAssign() {
+    var onuId = $('#assignOnuId').val();
+    var clientId = $('#assignOnuClientSearchId').val();
+    if (!clientId) { Swal.fire('Warning', 'Please select a client', 'warning'); return; }
+
+    $.ajax({
+        url: '/admin/network/onu/' + onuId + '/assign',
+        type: 'POST',
+        data: {client_id: clientId},
+        headers: {'X-CSRF-TOKEN': csrfToken},
+        success: function(res) {
+            if (res.success) {
+                $('#assignModal').modal('hide');
+                location.reload();
+            } else {
+                Swal.fire('Failed', res.message || 'Assignment failed', 'error');
+            }
+        },
+        error: function() { Swal.fire('Error', 'Error assigning ONU', 'error'); }
+    });
+}
+
+function showDecommissionModal(onuId, serial) {
+    $('#decommOnuId').val(onuId);
+    $('#decommSerialDisplay').val(serial);
+    $('#decommReason').val('');
+    $('#decommissionModal').modal('show');
+}
+
+function submitDecommission() {
+    var onuId = $('#decommOnuId').val();
+    var reason = $('#decommReason').val();
+
+    $.ajax({
+        url: '/admin/network/onu/' + onuId + '/decommission',
+        type: 'POST',
+        data: {reason: reason},
+        headers: {'X-CSRF-TOKEN': csrfToken},
+        success: function(res) {
+            if (res.success) {
+                $('#decommissionModal').modal('hide');
+                location.reload();
+            } else {
+                Swal.fire('Failed', res.message || 'Decommission failed', 'error');
+            }
+        },
+        error: function() { Swal.fire('Error', 'Error decommissioning ONU', 'error'); }
+    });
+}
+</script>
+@endpush

@@ -1,0 +1,602 @@
+@extends('layouts.admin')
+
+@section('title', 'Send Money Dashboard')
+
+@section('content')
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Send Money Dashboard</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+<div class="container-fluid">
+
+    {{-- API Setup Card --}}
+    <div class="card card-success card-outline collapsed-card">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-cog mr-1"></i>Send Money Forwarder Setup</h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-3">
+            {{-- Row 1: URL + Token --}}
+            <div class="row mb-2">
+                <div class="col-md-6">
+                    <label class="mb-1 small font-weight-bold"><i class="fas fa-link mr-1"></i>API Endpoint URL</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="apiUrl" value="{{ $apiUrl }}" readonly>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" onclick="copyText('apiUrl')"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="mb-1 small font-weight-bold"><i class="fas fa-key mr-1"></i>API Token</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="apiToken" value="{{ $apiToken ?? 'No token yet' }}" readonly>
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary" onclick="copyText('apiToken')"><i class="fas fa-copy"></i></button>
+                            <form action="{{ route('billing.android-sms.token') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button class="btn btn-warning btn-sm" onclick="return confirm('Generate a new API token?')">
+                                    <i class="fas fa-sync"></i> New Token
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <small class="text-muted">Header: <code>X-Api-Token: your_token</code></small>
+                </div>
+            </div>
+
+            {{-- Row 2: Setup steps + Manual Test side by side --}}
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="border rounded p-2 bg-light h-100">
+                        <p class="mb-1 small font-weight-bold text-info"><i class="fas fa-android mr-1"></i>Android App Setup (SMS Forwarder)</p>
+                        <ol class="mb-1 pl-3 small">
+                            <li>Install <strong>"SMS Forwarder"</strong> or <strong>"HTTP SMS"</strong> from Play Store</li>
+                            <li>Sender filter: <code>bKash, Nagad, Rocket</code></li>
+                            <li>Forward URL: <code class="text-break">{{ $apiUrl }}</code></li>
+                            <li>Header: <code>X-Api-Token: {{ $apiToken ?? 'your_token' }}</code></li>
+                            <li>Field name: <code>sms</code></li>
+                        </ol>
+                        <p class="mb-0 small text-muted"><i class="fas fa-info-circle mr-1"></i><strong>Reference:</strong> Use client username or ID &mdash; e.g. <code>Sajib_15</code>, <code>Sajib</code>, or <code>15</code></p>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="border rounded p-2 bg-light h-100">
+                        <p class="mb-1 small font-weight-bold text-warning"><i class="fas fa-terminal mr-1"></i>Manual Test (curl)</p>
+                        <code class="small" style="word-break:break-all;font-size:11px;">
+                            curl -X POST {{ $apiUrl }}<br>
+                            &nbsp;-H "X-Api-Token: {{ $apiToken ?? 'your_token' }}"<br>
+                            &nbsp;-d "sms=You have received Tk 500.00 from 01711000000. Ref: username123. Trx ID: TRX12345"
+                        </code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Stats --}}
+    <div class="row mb-3">
+        {{-- 1. Total SMS --}}
+        <div class="col-6 col-md-2">
+            <a href="{{ request()->url() }}" style="color:inherit;text-decoration:none">
+            <div class="small-box bg-info">
+                <div class="inner"><h4>{{ $stats->sum() }}</h4><p>Total SMS</p></div>
+                <div class="icon"><i class="fas fa-sms"></i></div>
+                
+            </div></a>
+        </div>
+        {{-- 2. Auto Applied --}}
+        <div class="col-6 col-md-2">
+            <a href="{{ request()->url() }}?status=applied" style="color:inherit;text-decoration:none">
+            <div class="small-box bg-success">
+                <div class="inner"><h4>{{ max(0, ($stats['applied'] ?? 0) - $manualCount) }}</h4><p>Total Auto Settled</p></div>
+                <div class="icon"><i class="fas fa-robot"></i></div>
+                
+            </div></a>
+        </div>
+        {{-- 3. Manual Applied --}}
+        <div class="col-6 col-md-2">
+            <a href="{{ request()->url() }}?manual=1" style="color:inherit;text-decoration:none">
+            <div class="small-box" style="background:#6f42c1;color:#fff">
+                <div class="inner"><h4 id="manualStatCount">{{ $manualCount }}</h4><p>Total Manual Settled</p></div>
+                <div class="icon"><i class="fas fa-money-bill-wave"></i></div>
+                
+            </div></a>
+        </div>
+        {{-- 4. Pending --}}
+        <div class="col-6 col-md-2">
+            <a href="{{ request()->url() }}?status=pending" style="color:inherit;text-decoration:none">
+            <div class="small-box bg-warning">
+                <div class="inner"><h4>{{ $stats['pending'] ?? 0 }}</h4><p>Total Pending</p></div>
+                <div class="icon"><i class="fas fa-clock"></i></div>
+                
+            </div></a>
+        </div>
+        {{-- 5. Duplicate --}}
+        <div class="col-6 col-md-2">
+            <a href="{{ request()->url() }}?status=duplicate" style="color:inherit;text-decoration:none">
+            <div class="small-box bg-secondary">
+                <div class="inner"><h4>{{ $stats['duplicate'] ?? 0 }}</h4><p>Duplicate</p></div>
+                <div class="icon"><i class="fas fa-copy"></i></div>
+                
+            </div></a>
+        </div>
+        {{-- 6. Unknown/Failed --}}
+        <div class="col-6 col-md-2">
+            <a href="{{ request()->url() }}?status=unknown" style="color:inherit;text-decoration:none">
+            <div class="small-box bg-danger">
+                <div class="inner"><h4>{{ ($stats['unknown'] ?? 0) + ($stats['failed'] ?? 0) }}</h4><p>Unknown/Failed</p></div>
+                <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                
+            </div></a>
+        </div>
+    </div>
+
+    {{-- Filter --}}
+    <div class="card">
+        <div class="card-header p-2">
+            <form method="GET">
+                <div class="row no-gutters align-items-center">
+                    <div class="col pr-1">
+                        <select name="status" class="form-control form-control-sm w-100">
+                            <option value="">All Status</option>
+                            <option value="applied" @selected(request('status')==='applied')>Settled</option>
+                            <option value="pending" @selected(request('status')==='pending')>Pending</option>
+                            <option value="unknown" @selected(request('status')==='unknown')>Unknown</option>
+                            <option value="failed" @selected(request('status')==='failed')>Failed</option>
+                            <option value="duplicate" @selected(request('status')==='duplicate')>Duplicate</option>
+                            <option value="matched" @selected(request('status')==='matched')>Matched</option>
+                        </select>
+                    </div>
+                    <div class="col pr-1">
+                        <select name="gateway" class="form-control form-control-sm w-100">
+                            <option value="">All Gateway</option>
+                            @foreach(['bkash','nagad','rocket','unknown'] as $g)
+                                <option value="{{ $g }}" @selected(request('gateway')===$g)>{{ ucfirst($g) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col pr-1">
+                        <input type="text" name="search" class="form-control form-control-sm w-100"
+                            placeholder="Reference / Phone / SMS..." value="{{ request('search') }}">
+                    </div>
+                    <div class="col pr-1">
+                        <button class="btn btn-sm btn-primary w-100"><i class="fas fa-search"></i> Filter</button>
+                    </div>
+                    <div class="col">
+                        <a href="{{ route('billing.android-sms.index') }}" class="btn btn-sm btn-secondary w-100"><i class="fas fa-times"></i> Clear</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Time</th>
+                            <th>Gateway</th>
+                            <th>Amount</th>
+                            <th>Sender</th>
+                            <th>Reference</th>
+                            <th>TrxID</th>
+                            <th>Client</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($logs as $log)
+                        <tr id="log-row-{{ $log->id }}">
+                            <td>{{ $log->id }}</td>
+                            <td class="text-nowrap">
+                                <small>{{ $log->created_at->format('d M y') }}<br>
+                                <span class="text-muted">{{ $log->created_at->format('h:i A') }}</span></small>
+                            </td>
+                            <td>{!! $log->gateway_badge !!}</td>
+                            <td class="font-weight-bold text-success">
+                                @if($log->amount) Tk {{ number_format($log->amount, 2) }} @else <span class="text-danger">-</span> @endif
+                            </td>
+                            <td><small>{{ $log->sender_number ?? '-' }}</small></td>
+                            <td>
+                                <code>{{ $log->reference ?? '-' }}</code>
+                            </td>
+                            <td>
+                                @if($log->trx_id)
+                                    <small class="text-monospace font-weight-bold">{{ $log->trx_id }}</small>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($log->client)
+                                    <a href="{{ route('admin.clients.show', $log->client) }}" class="text-nowrap">
+                                        {{ $log->client->name }}<br>
+                                        <small class="text-muted">{{ $log->client->client_id }}</small>
+                                    </a>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
+                            <td>{!! $log->status_badge !!}</td>
+                            <td>
+                                <button class="btn btn-xs btn-info" onclick="showSms({{ $log->id }})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                @if($log->status === 'pending')
+                                    @if($log->locked_by)
+                                        {{-- LOCKED — only show lock button, NO apply button --}}
+                                        @if($log->locked_by === auth()->id())
+                                            {{-- Locked by me — can unlock --}}
+                                            <button class="btn btn-xs btn-danger lock-btn"
+                                                title="Locked by you — click to unlock"
+                                                onclick="toggleLock({{ $log->id }}, this)">
+                                                <i class="fas fa-lock"></i>
+                                            </button>
+                                        @else
+                                            {{-- Locked by another admin --}}
+                                            <button class="btn btn-xs btn-secondary" disabled
+                                                title="Locked by {{ optional($log->locker)->name ?? 'Admin' }} at {{ $log->locked_at ? $log->locked_at->format('d M H:i') : '' }}">
+                                                <i class="fas fa-lock"></i>
+                                            </button>
+                                        @endif
+                                    @else
+                                        {{-- NOT LOCKED — show lock button + apply button --}}
+                                        <button class="btn btn-xs btn-secondary lock-btn"
+                                            title="Lock to reserve (hides Apply button)"
+                                            onclick="toggleLock({{ $log->id }}, this)">
+                                            <i class="fas fa-unlock"></i>
+                                        </button>
+                                        <button class="btn btn-xs btn-success apply-btn" title="Cash — Manual Payment Apply"
+                                            onclick="openReprocess(
+                                                {{ $log->id }},
+                                                '{{ addslashes($log->reference ?? '') }}',
+                                                '{{ $log->amount ?? '' }}',
+                                                '{{ addslashes($log->gateway ?? '') }}',
+                                                '{{ addslashes($log->sender_number ?? '') }}',
+                                                '{{ addslashes($log->trx_id ?? '') }}',
+                                                '{{ addslashes(str_replace([chr(10), chr(13)], [' ', ' '], $log->raw_sms ?? '')) }}'
+                                            )">
+                                            <i class="fas fa-money-bill-wave"></i>
+                                        </button>
+                                    @endif
+                                @elseif($log->status === 'failed')
+                                    <button class="btn btn-xs btn-success" title="Cash — Manual Payment Apply"
+                                        onclick="openReprocess(
+                                            {{ $log->id }},
+                                            '{{ addslashes($log->reference ?? '') }}',
+                                            '{{ $log->amount ?? '' }}',
+                                            '{{ addslashes($log->gateway ?? '') }}',
+                                            '{{ addslashes($log->sender_number ?? '') }}',
+                                            '{{ addslashes($log->trx_id ?? '') }}',
+                                            '{{ addslashes(str_replace([chr(10), chr(13)], [' ', ' '], $log->raw_sms ?? '')) }}'
+                                        )">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </button>
+                                @endif
+                            </td>
+                        </tr>
+                        {{-- Hidden raw SMS row --}}
+                        <tr id="sms-row-{{ $log->id }}" style="display:none">
+                            <td colspan="10" class="bg-light">
+                                <strong>Raw SMS:</strong><br>
+                                <pre class="mb-0 text-sm">{{ $log->raw_sms }}</pre>
+                                @if($log->failure_reason)
+                                    <span class="text-danger"><i class="fas fa-info-circle"></i> {{ $log->failure_reason }}</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                No SMS received yet. Please set up the Android SMS Forwarder.
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @if($logs->hasPages())
+        <div class="card-footer">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-1">
+    <div class="d-flex align-items-center">
+        <label class="small text-muted mb-0 mr-2" style="white-space:nowrap;">SHOW</label>
+        <select class="form-control form-control-sm bulk-show-entries" style="width:80px;">
+            <option value="20" {{ request('per_page',20)==20?'selected':'' }}>20</option>
+            <option value="50" {{ request('per_page',20)==50?'selected':'' }}>50</option>
+            <option value="100" {{ request('per_page',20)==100?'selected':'' }}>100</option>
+            <option value="200" {{ request('per_page',20)==200?'selected':'' }}>200</option>
+        </select>
+        <label class="small text-muted mb-0 ml-2" style="white-space:nowrap;">ENTRIES</label>
+    </div>
+    <div>
+        {{ $logs->appends(request()->query())->links() }}
+    </div>
+</div>
+<script>
+(function(){
+    var sel = document.querySelector('.bulk-show-entries');
+    if(sel){ sel.addEventListener('change',function(){
+        var p=new URLSearchParams(window.location.search);
+        p.set('per_page',this.value); p.delete('page');
+        window.location=window.location.pathname+'?'+p.toString();
+    }); }
+})();
+</script>
+        </div>
+        @endif
+    </div>
+
+</div>
+</section>
+
+{{-- Reprocess Modal --}}
+<div class="modal fade" id="reprocessModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form id="reprocessForm" method="POST">
+            @csrf
+            <input type="hidden" name="client_id" id="reprocessClientId">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="fas fa-money-bill-wave mr-1"></i>Cash — Manual Payment Apply</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    {{-- SMS Info Summary --}}
+                    <div class="card card-outline card-info mb-3">
+                        <div class="card-body p-2">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><td class="text-muted" style="width:80px">Amount</td><td><strong class="text-success" id="modal-amount"></strong></td></tr>
+                                <tr><td class="text-muted">Gateway</td><td id="modal-gateway"></td></tr>
+                                <tr><td class="text-muted">Sender</td><td id="modal-sender"></td></tr>
+                                <tr><td class="text-muted">TrxID</td><td id="modal-trxid"></td></tr>
+                                <tr id="modal-ref-row"><td class="text-muted">Reference</td><td id="modal-ref"></td></tr>
+                            </table>
+                            <div class="mt-2">
+                                <small class="text-muted">Raw SMS:</small>
+                                <pre id="modal-raw-sms" style="font-size:11px;background:#f8f9fa;padding:6px;border-radius:4px;max-height:80px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;" class="mb-0"></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Client Search --}}
+                    <div class="form-group">
+                        <label><i class="fas fa-search mr-1"></i>Search Client <span class="text-danger">*</span></label>
+                        <select id="clientSearchSelect" class="form-control select2-client" style="width:100%">
+                            <option value="">-- Search by name / ID / phone --</option>
+                        </select>
+                        <small class="text-muted">No need to fill reference if a client is selected</small>
+                    </div>
+
+                    {{-- Reference override (optional) --}}
+                    <div class="form-group">
+                        <label>Reference Override <small class="text-muted">(optional)</small></label>
+                        <input type="text" name="reference" id="reprocessRef" class="form-control" placeholder="username or client ID">
+                        <small class="text-muted">Enter reference here if no client is selected</small>
+                    </div>
+
+                    {{-- Manual amount override (shown when parsed amount is missing) --}}
+                    <div class="form-group" id="manual-amount-row" style="display:none">
+                        <label>Payment Amount <span class="text-danger">*</span> <small class="text-muted">(not found in SMS — enter manually)</small></label>
+                        <input type="number" name="amount" id="reprocessAmount" class="form-control border-danger" placeholder="Enter amount (e.g. 500)" min="1" step="0.01">
+                    </div>
+                    <input type="hidden" name="amount" id="reprocessAmountHidden">
+
+                    {{-- Send SMS option --}}
+                    <div class="form-group mb-2">
+                        <div class="custom-control custom-checkbox">
+                            <input type="hidden" name="send_sms" value="0">
+                            <input type="checkbox" class="custom-control-input" id="reprocessSendSms" name="send_sms" value="1" checked>
+                            <label class="custom-control-label" for="reprocessSendSms">
+                                <i class="fas fa-sms text-success mr-1"></i>Send payment confirmation SMS to client
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        This SMS amount will be applied as a payment. Please verify before submitting.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning"><i class="fas fa-check mr-1"></i>Apply Payment</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap4-theme@1.0.0/dist/select2-bootstrap4.min.css" rel="stylesheet">
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+function showSms(id) {
+    var row = document.getElementById('sms-row-' + id);
+    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+function openReprocess(id, ref, amount, gateway, sender, trxid, rawSms) {
+    // Reset
+    document.getElementById('reprocessRef').value = ref || '';
+    document.getElementById('reprocessClientId').value = '';
+    document.getElementById('reprocessForm').action = '/admin/billing/android-sendmoney/reprocess/' + id;
+    document.getElementById('reprocessForm').dataset.logId = id;
+
+    // Populate SMS info
+    document.getElementById('modal-amount').textContent = amount ? 'Tk ' + parseFloat(amount).toLocaleString() : '-';
+    // Show manual amount input if amount is missing
+    var manualRow = document.getElementById('manual-amount-row');
+    var amountHidden = document.getElementById('reprocessAmountHidden');
+    if (!amount) {
+        manualRow.style.display = 'block';
+        document.getElementById('reprocessAmount').value = '';
+        amountHidden.value = '';
+        document.getElementById('reprocessAmount').setAttribute('required', 'required');
+    } else {
+        manualRow.style.display = 'none';
+        document.getElementById('reprocessAmount').removeAttribute('required');
+        amountHidden.value = amount;
+    }
+    document.getElementById('modal-gateway').textContent = gateway || '-';
+    document.getElementById('modal-sender').textContent = sender || '-';
+    document.getElementById('modal-trxid').textContent = trxid || '-';
+    document.getElementById('modal-ref').textContent = ref || '(none)';
+    document.getElementById('modal-raw-sms').textContent = rawSms || '-';
+
+    // Reset Select2
+    if ($('#clientSearchSelect').data('select2')) {
+        $('#clientSearchSelect').val(null).trigger('change');
+    }
+
+    $('#reprocessModal').modal('show');
+}
+
+function copyText(id) {
+    var el = document.getElementById(id);
+    el.select();
+    document.execCommand('copy');
+    toastr.success('Copied!');
+}
+
+$(document).ready(function() {
+    // Initialize Select2 for client search
+    $('#clientSearchSelect').select2({
+        dropdownParent: $('#reprocessModal'),
+        placeholder: 'Search by name / Client ID / phone...',
+        minimumInputLength: 2,
+        allowClear: true,
+        ajax: {
+            url: '/admin/api/search-clients',
+            dataType: 'json',
+            delay: 300,
+            data: function(params) {
+                return { q: params.term };
+            },
+            processResults: function(data) {
+                return {
+                    results: data.map(function(c) {
+                        return {
+                            id: c.id,
+                            text: c.name + ' (' + (c.client_id || c.username) + ')' + (c.phone ? ' - ' + c.phone : '')
+                        };
+                    })
+                };
+            }
+        }
+    });
+
+    // When client is selected, set hidden input
+    $('#clientSearchSelect').on('select2:select', function(e) {
+        document.getElementById('reprocessClientId').value = e.params.data.id;
+    });
+    $('#clientSearchSelect').on('select2:unselect', function() {
+        document.getElementById('reprocessClientId').value = '';
+    });
+
+    // AJAX form submit — remove row immediately on success
+    $('#reprocessForm').on('submit', function(e) {
+        e.preventDefault();
+        var form = this;
+        var logId = form.dataset.logId;
+        var $btn = $(form).find('button[type=submit]');
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Processing...');
+
+        $.ajax({
+            url: form.action,
+            method: 'POST',
+            data: $(form).serialize(),
+            dataType: 'json',
+            success: function(res) {
+                if (res.success) {
+                    $('#reprocessModal').modal('hide');
+                    // Remove row from pending list
+                    var $row = $('#log-row-' + logId);
+                    var $rawRow = $('#sms-row-' + logId);
+                    $row.fadeOut(300, function() { $(this).remove(); });
+                    $rawRow.remove();
+                    // Update manual applied stat count
+                    var $statCount = $('#manualStatCount');
+                    $statCount.text(parseInt($statCount.text() || 0) + 1);
+                    toastr.success('Payment of Tk ' + (res.amount ? parseFloat(res.amount).toLocaleString() : '?') + ' applied to ' + (res.client_name || 'client') + ' successfully!');
+                } else {
+                    toastr.error(res.message || 'Failed to apply payment.');
+                    $btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i>Apply Payment');
+                }
+            },
+            error: function(xhr) {
+                var msg = 'Server error. Please try again.';
+                try { msg = xhr.responseJSON.message || msg; } catch(ex) {}
+                toastr.error(msg);
+                $btn.prop('disabled', false).html('<i class="fas fa-check mr-1"></i>Apply Payment');
+            }
+        });
+    });
+});
+
+function toggleLock(id, btn) {
+    fetch('/admin/billing/android-sendmoney/' + id + '/lock', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const icon = btn.querySelector('i');
+            // Find the apply button in the same cell
+            const applyBtn = btn.parentElement.querySelector('.apply-btn');
+
+            if (data.locked) {
+                // Locked — style button red, hide apply button
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-danger', 'lock-btn');
+                btn.title = 'Locked by you — click to unlock';
+                icon.classList.remove('fa-unlock');
+                icon.classList.add('fa-lock');
+                if (applyBtn) applyBtn.style.display = 'none';
+            } else {
+                // Unlocked — style button grey, show apply button
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-secondary');
+                btn.title = 'Lock to reserve (hides Apply button)';
+                icon.classList.remove('fa-lock');
+                icon.classList.add('fa-unlock');
+                if (applyBtn) applyBtn.style.display = '';
+            }
+        } else {
+            alert(data.message || 'Could not toggle lock');
+        }
+    })
+    .catch(() => alert('Network error'));
+}
+
+</script>
+@endpush
+@endsection

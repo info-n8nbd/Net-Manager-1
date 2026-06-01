@@ -1,0 +1,834 @@
+@extends('layouts.reseller')
+@section('title', 'Add New Client')
+@section('breadcrumb')
+<li class="breadcrumb-item"><a href="{{ route('reseller.clients') }}">Clients</a></li>
+<li class="breadcrumb-item active">Add New</li>
+@endsection
+
+@push('styles')
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .section-title { font-size: 14px; font-weight: 700; color: #495057; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #e9ecef; }
+    .section-title i { color: #007bff; margin-right: 6px; }
+    .compact-form .form-group { margin-bottom: 10px; }
+    .compact-form label { font-size: 12px; font-weight: 600; color: #6c757d; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .compact-form .form-control { font-size: 13px; padding: 4px 8px; height: calc(1.8rem + 2px); }
+    .compact-form textarea.form-control { height: auto; }
+    .compact-form select.form-control { padding: 4px 8px; }
+    .compact-form .input-group .btn { padding: 4px 10px; font-size: 13px; }
+    .compact-form .form-text, .compact-form small { font-size: 11px; }
+    .section-card { border: 1px solid #dee2e6; border-radius: 6px; padding: 14px; margin-bottom: 14px; background: #fff; }
+    .section-card.highlight { border-left: 3px solid #007bff; }
+    .profile-preview { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #dee2e6; }
+</style>
+@endpush
+
+@section('content')
+<form action="{{ route('reseller.clients.store') }}" method="POST" enctype="multipart/form-data" class="compact-form">
+    @csrf
+
+    @if($errors->any())
+    <div class="alert alert-danger py-2 mb-3">
+        <ul class="mb-0 small">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+    </div>
+    @endif
+
+    <div class="row">
+        {{-- Personal Info --}}
+        <div class="col-lg-4 col-md-6">
+            <div class="section-card highlight">
+                <div class="section-title"><i class="fas fa-user"></i>Personal Info</div>
+
+                <div class="form-group text-center mb-2">
+                    <img id="profilePreview" src="{{ asset('images/default-avatar.png') }}" class="profile-preview mb-1" alt="Photo">
+                    <div>
+                        <label class="btn btn-outline-secondary btn-sm mb-0" style="cursor:pointer;font-size:11px;">
+                            <i class="fas fa-camera mr-1"></i>Upload Photo
+                            <input type="file" name="profile_picture" id="profile_picture" accept="image/*" class="d-none" onchange="previewImage(this,'profilePreview')">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Full Name <span class="text-danger">*</span></label>
+                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name') }}" required placeholder="Client full name">
+                    @error('name')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Father's Name</label>
+                            <input type="text" name="father_husband_name" class="form-control" value="{{ old('father_husband_name') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Mother's Name</label>
+                            <input type="text" name="mother_name" class="form-control" value="{{ old('mother_name') }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" name="date_of_birth" class="form-control" value="{{ old('date_of_birth') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Gender</label>
+                            <select name="gender" class="form-control">
+                                <option value="">Select</option>
+                                <option value="male" {{ old('gender')=='male'?'selected':'' }}>Male</option>
+                                <option value="female" {{ old('gender')=='female'?'selected':'' }}>Female</option>
+                                <option value="other" {{ old('gender')=='other'?'selected':'' }}>Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Phone <span class="text-danger">*</span></label>
+                            <input type="text" name="phone" class="form-control @error('phone') is-invalid @enderror" value="{{ old('phone') }}" required>
+                            @error('phone')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Alt Phone</label>
+                            <input type="text" name="alt_phone" class="form-control" value="{{ old('alt_phone') }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" placeholder="Optional - creates login account">
+                    @error('email')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                </div>
+                <div class="form-group">
+                    <label>Occupation</label>
+                    <input type="text" name="occupation" class="form-control" value="{{ old('occupation') }}" placeholder="e.g. Service, Business">
+                </div>
+                <div class="form-group">
+                    <label>Address <span class="text-danger">*</span></label>
+                    <textarea name="address" id="address" class="form-control @error('address') is-invalid @enderror" rows="2" required>{{ old('address') }}</textarea>
+                    @error('address')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>NID Number</label>
+                            <input type="text" name="nid" class="form-control" value="{{ old('nid') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>District</label>
+                            <select name="district_id" class="form-control">
+                                <option value="">Select District</option>
+                                @foreach($districts as $district)
+                                <option value="{{ $district->id }}" {{ old('district_id')==$district->id?'selected':'' }}>{{ $district->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Upazila/Thana</label>
+                            <select name="upazila_id" class="form-control">
+                                <option value="">Select Upazila</option>
+                                @foreach($upazilas as $upazila)
+                                <option value="{{ $upazila->id }}" {{ old('upazila_id')==$upazila->id?'selected':'' }}>{{ $upazila->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>NID Front Image</label>
+                            <input type="file" name="nid_front_image" class="form-control-file" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>NID Back Image</label>
+                    <input type="file" name="nid_back_image" class="form-control-file" accept="image/*">
+                </div>
+            </div>
+        </div>
+
+        {{-- Connection & Billing --}}
+        <div class="col-lg-4 col-md-6">
+            <div class="section-card highlight">
+                <div class="section-title"><i class="fas fa-network-wired"></i>Connection Details</div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Zone <span class="text-danger">*</span></label>
+                            <select name="zone_id" id="zone_id" class="form-control @error('zone_id') is-invalid @enderror" required>
+                                <option value="">Select Zone</option>
+                                @foreach($zones as $zone)
+                                <option value="{{ $zone->id }}" {{ old('zone_id')==$zone->id?'selected':'' }}>{{ $zone->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('zone_id')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Subzone</label>
+                            <select name="area_id" id="area_id" class="form-control">
+                                <option value="">Select Subzone</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>TJ/Box</label>
+                    <select name="box_id" class="form-control">
+                        <option value="">Select TJ</option>
+                        @foreach($boxes as $box)
+                        <option value="{{ $box->id }}" {{ old('box_id')==$box->id?'selected':'' }}>{{ $box->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Package <span class="text-danger">*</span></label>
+                    <select name="package_id" id="package_id" class="form-control @error('package_id') is-invalid @enderror" required>
+                        <option value="">Select Package</option>
+                        @foreach($packages as $package)
+                        <option value="{{ $package->id }}" data-price="{{ $package->display_price ?? $package->price }}" {{ old('package_id')==$package->id?'selected':'' }}>
+                            {{ $package->name }} — ৳{{ number_format($package->display_price ?? $package->price, 0) }}/mo
+                        </option>
+                        @endforeach
+                    </select>
+                    @error('package_id')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Username (PPPoE) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                @if($reseller->ppp_short_code)
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text font-weight-bold text-primary px-2" style="font-size:12px;">{{ $reseller->ppp_short_code }}</span>
+                                </div>
+                                @endif
+                                <input type="text" name="username" id="pppUsername" class="form-control @error('username') is-invalid @enderror @error('full_username') is-invalid @enderror" value="{{ old('username') }}" required>
+                                @error('username')<span class="invalid-feedback">{{ $message }}</span>@enderror
+                                @error('full_username')<span class="invalid-feedback d-block">{{ $message }}</span>@enderror
+                            </div>
+                            @if($reseller->ppp_short_code)
+                            <small class="text-muted">Full: <strong>{{ $reseller->ppp_short_code }}<span id="preview_username">{{ old('username','...') }}</span></strong></small>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>PPPoE Password</label>
+                            <div class="input-group">
+                                <input type="text" name="pppoe_password" id="pppoe_password" class="form-control" value="{{ old('pppoe_password') }}" placeholder="Leave blank = auto">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="generatePassword()" title="Generate"><i class="fas fa-random"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Connection Type</label>
+                            <select name="connection_type" class="form-control">
+                                <option value="pppoe" {{ old('connection_type','pppoe')=='pppoe'?'selected':'' }}>PPPoE</option>
+                                <option value="static" {{ old('connection_type')=='static'?'selected':'' }}>Static IP</option>
+                                <option value="dhcp" {{ old('connection_type')=='dhcp'?'selected':'' }}>DHCP</option>
+                                <option value="hotspot" {{ old('connection_type')=='hotspot'?'selected':'' }}>Hotspot</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Connection Medium</label>
+                            <select name="connection_medium" class="form-control">
+                                <option value="fiber" {{ old('connection_medium','fiber')=='fiber'?'selected':'' }}>Fiber</option>
+                                <option value="utp" {{ old('connection_medium')=='utp'?'selected':'' }}>UTP Cable</option>
+                                <option value="wireless" {{ old('connection_medium')=='wireless'?'selected':'' }}>Wireless</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>MAC Address</label>
+                            <input type="text" name="mac_address" class="form-control" value="{{ old('mac_address') }}" placeholder="AA:BB:CC:DD:EE:FF">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>IP Address</label>
+                            <input type="text" name="ip_address" class="form-control" value="{{ old('ip_address') }}" placeholder="192.168.x.x">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Joining Date</label>
+                            <input type="date" name="connection_date" class="form-control" value="{{ old('connection_date', date('Y-m-d')) }}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <div class="custom-control custom-switch mt-4">
+                                <input type="checkbox" class="custom-control-input" id="mac_binding_enabled" name="mac_binding_enabled" value="1" {{ old('mac_binding_enabled') ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="mac_binding_enabled" style="font-size:12px;">MAC Binding</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Google Map --}}
+                <div class="section-title mt-2"><i class="fas fa-map-marker-alt"></i>Location (Optional)</div>
+                <div id="locationStatus" class="alert py-1 mb-2 small" style="display:none;"></div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Latitude</label>
+                            <input type="text" name="google_map_lat" id="lat" class="form-control" value="{{ old('google_map_lat') }}" placeholder="23.8103">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Longitude</label>
+                            <input type="text" name="google_map_lng" id="lng" class="form-control" value="{{ old('google_map_lng') }}" placeholder="90.4125">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="hidden" name="google_map_location" id="google_map_location" value="{{ old('google_map_location') }}">
+                    <button type="button" class="btn btn-outline-info btn-sm mr-1" onclick="getLocationFromAddress()"><i class="fas fa-map-marked-alt mr-1"></i>Find Location</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm mr-1" onclick="openMapPicker()" title="Pick exact location on map"><i class="fas fa-map-pin mr-1"></i>Pick on Map</button>
+                    <a href="#" id="viewMapBtn" target="_blank" class="btn btn-outline-success btn-sm" style="display:none;"><i class="fas fa-external-link-alt mr-1"></i>View Map</a>
+                </div>
+
+                <!-- Map Picker Modal -->
+                <div class="modal fade" id="mapPickerModal" tabindex="-1" role="dialog" aria-hidden="true">
+                    <div class="modal-dialog modal-xl" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header py-2">
+                                <h5 class="modal-title"><i class="fas fa-map-marked-alt mr-2 text-primary"></i>Pick Exact Location</h5>
+                                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                            </div>
+                            <div class="modal-body p-0">
+                                <div style="padding:8px 12px;background:#f8f9fa;border-bottom:1px solid #dee2e6;display:flex;gap:8px;align-items:center;">
+                                    <input type="text" id="mapSearchInput" class="form-control form-control-sm" placeholder="Search address... e.g. Dhakeshwari Rd, Dhaka" style="flex:1;">
+                                    <button class="btn btn-sm btn-primary" onclick="searchOnMap()"><i class="fas fa-search"></i> Search</button>
+                                    <span style="font-size:12px;color:#6c757d;white-space:nowrap;"><i class="fas fa-info-circle"></i> Click map for exact pin</span>
+                                </div>
+                                <div id="leafletMap" style="height:460px;width:100%;"></div>
+                            </div>
+                            <div class="modal-footer py-2">
+                                <div style="flex:1;font-size:13px;" id="mapPickedCoords">No location selected yet. Click on the map to pick.</div>
+                                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-success btn-sm" id="confirmMapPick" onclick="confirmMapLocation()" disabled><i class="fas fa-check mr-1"></i>Use This Location</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Billing & Fiber --}}
+        <div class="col-lg-4 col-md-12">
+            <div class="section-card highlight">
+                <div class="section-title"><i class="fas fa-money-bill-wave"></i>Billing Settings</div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Monthly Bill (৳)</label>
+                            <input type="number" name="monthly_fee" id="monthly_fee" class="form-control" value="{{ old('monthly_fee') }}" step="0.01" min="0" placeholder="Auto from package">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Discount (৳)</label>
+                            <input type="number" name="permanent_discount" class="form-control" value="{{ old('permanent_discount', 0) }}" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Installation Fee (৳)</label>
+                            <input type="number" name="installation_charge" class="form-control" value="{{ old('installation_charge', 0) }}" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Recharge Days <span class="text-danger">*</span></label>
+                            <input type="number" name="recharge_days" id="recharge_days" class="form-control" value="{{ old('recharge_days', $reseller->minimum_recharge_days ?? 30) }}" min="1" max="365" required>
+                            <small class="text-muted">Days to recharge on creation</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Bill Generate Date</label>
+                            <select name="billing_date" class="form-control">
+                                @for($i = 1; $i <= 28; $i++)
+                                <option value="{{ $i }}" {{ old('billing_date', 1)==$i?'selected':'' }}>{{ $i }}</option>
+                                @endfor
+                            </select>
+                            <small class="text-muted">Day of month when bill is auto-generated</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Auto-Inactive Date</label>
+                            <input type="number" name="payment_deadline" class="form-control" value="{{ old('payment_deadline', 15) }}" min="1" max="31">
+                            <small class="text-muted">Day of month — auto-inactivated if bill unpaid</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Auto Disconnect (days)</label>
+                            <input type="number" name="auto_disconnect_days" class="form-control" value="{{ old('auto_disconnect_days', 15) }}" min="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="custom-control custom-switch">
+                        <input type="hidden" name="auto_renewal" value="0">
+                        <input type="checkbox" class="custom-control-input" id="auto_renewal" name="auto_renewal" value="1" {{ old('auto_renewal') ? 'checked' : '' }}>
+                        <label class="custom-control-label" for="auto_renewal">Enable Auto Renewal</label>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Fiber / ONU Info --}}
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-project-diagram"></i>Fiber / ONU Info</div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Fiber Code</label>
+                            <input type="text" name="fiber_code" class="form-control" value="{{ old('fiber_code') }}" placeholder="e.g. FC-001">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Fiber Color</label>
+                            <div class="input-group">
+    <input type="text" name="fiber_color" id="fiber_color_input" class="form-control" value="{{ old('fiber_color') }}" placeholder="e.g. Blue" autocomplete="off" readonly>
+    <div class="input-group-append">
+        <button class="btn btn-outline-secondary fiber-color-btn" type="button" data-target="fiber_color_input" style="padding:0 8px;">
+            <span class="fiber-dot" id="dot_fiber_color_input" style="display:inline-block;width:18px;height:18px;border-radius:3px;background:#ccc;border:1px solid #aaa;vertical-align:middle;"></span>
+        </button>
+    </div>
+    <div class="fiber-color-palette" id="palette_fiber_color_input" style="display:none;position:absolute;top:100%;left:0;z-index:9999;background:#fff;border:1px solid #ddd;border-radius:6px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:170px;">
+        <div style="display:flex;flex-wrap:wrap;"><span class="fiber-color-swatch" data-color="Blue" data-hex="#0057B8" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#0057B8;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Blue"></span><span class="fiber-color-swatch" data-color="Orange" data-hex="#FF8C00" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#FF8C00;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Orange"></span><span class="fiber-color-swatch" data-color="Green" data-hex="#28a745" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#28a745;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Green"></span><span class="fiber-color-swatch" data-color="Brown" data-hex="#8B4513" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#8B4513;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Brown"></span><span class="fiber-color-swatch" data-color="Slate" data-hex="#708090" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#708090;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Slate"></span><span class="fiber-color-swatch" data-color="White" data-hex="#e9ecef" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#e9ecef;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="White"></span><span class="fiber-color-swatch" data-color="Red" data-hex="#dc3545" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#dc3545;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Red"></span><span class="fiber-color-swatch" data-color="Black" data-hex="#222222" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#222222;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Black"></span><span class="fiber-color-swatch" data-color="Yellow" data-hex="#ffc107" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#ffc107;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Yellow"></span><span class="fiber-color-swatch" data-color="Violet" data-hex="#6f42c1" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#6f42c1;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Violet"></span><span class="fiber-color-swatch" data-color="Rose" data-hex="#e83e8c" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#e83e8c;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Rose"></span><span class="fiber-color-swatch" data-color="Aqua" data-hex="#20c997" data-target="fiber_color_input" style="display:inline-block;width:28px;height:28px;background:#20c997;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Aqua"></span></div>
+        <div style="margin-top:4px;font-size:10px;color:#999;">Click a color to select</div>
+    </div>
+</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Fiber Core Type</label>
+                            <input type="text" name="fiber_core_type" class="form-control" value="{{ old('fiber_core_type') }}" placeholder="e.g. 2 Core">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Fiber Vendor</label>
+                            <input type="text" name="fiber_vendor" class="form-control" value="{{ old('fiber_vendor') }}" placeholder="e.g. Corning">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Splitter Number</label>
+                            <input type="text" name="splitter_number" class="form-control" value="{{ old('splitter_number') }}" placeholder="e.g. SP-01">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Splitter Color</label>
+                            <div class="input-group">
+    <input type="text" name="splitter_color" id="splitter_color_input" class="form-control" value="{{ old('splitter_color') }}" placeholder="e.g. Green" autocomplete="off" readonly>
+    <div class="input-group-append">
+        <button class="btn btn-outline-secondary fiber-color-btn" type="button" data-target="splitter_color_input" style="padding:0 8px;">
+            <span class="fiber-dot" id="dot_splitter_color_input" style="display:inline-block;width:18px;height:18px;border-radius:3px;background:#ccc;border:1px solid #aaa;vertical-align:middle;"></span>
+        </button>
+    </div>
+    <div class="fiber-color-palette" id="palette_splitter_color_input" style="display:none;position:absolute;top:100%;left:0;z-index:9999;background:#fff;border:1px solid #ddd;border-radius:6px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);width:170px;">
+        <div style="display:flex;flex-wrap:wrap;"><span class="fiber-color-swatch" data-color="Blue" data-hex="#0057B8" data-target="splitter_color_input" style="display:inline-block;width:28px;height:28px;background:#0057B8;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Blue"></span><span class="fiber-color-swatch" data-color="Orange" data-hex="#FF8C00" data-target="splitter_color_input" style="display:inline-block;width:28px;height:28px;background:#FF8C00;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Orange"></span><span class="fiber-color-swatch" data-color="Green" data-hex="#28a745" data-target="splitter_color_input" style="display:inline-block;width:28px;height:28px;background:#28a745;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Green"></span><span class="fiber-color-swatch" data-color="Brown" data-hex="#8B4513" data-target="splitter_color_input" style="display:inline-block;width:28px;height:28px;background:#8B4513;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Brown"></span><span class="fiber-color-swatch" data-color="Gray" data-hex="#808080" data-target="splitter_color_input" style="display:inline-block;width:28px;height:28px;background:#808080;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Gray"></span><span class="fiber-color-swatch" data-color="White" data-hex="#e9ecef" data-target="splitter_color_input" style="display:inline-block;width:28px;height:28px;background:#e9ecef;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="White"></span><span class="fiber-color-swatch" data-color="Red" data-hex="#dc3545" data-target="splitter_color_input" style="display:inline-block;width:28px;height:28px;background:#dc3545;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Red"></span><span class="fiber-color-swatch" data-color="Black" data-hex="#222222" data-target="splitter_color_input" style="display:inline-block;width:28px;height:28px;background:#222222;border-radius:4px;cursor:pointer;margin:2px;border:1px solid rgba(0,0,0,0.15);" title="Black"></span></div>
+        <div style="margin-top:4px;font-size:10px;color:#999;">Click a color to select</div>
+    </div>
+</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>OLT Device</label>
+                            <select name="olt_device_id" class="form-control select2">
+                                <option value="">-- No OLT --</option>
+                                @foreach($availableOlts ?? [] as $oltDev)
+                                <option value="{{ $oltDev->id }}" {{ old('olt_device_id') == $oltDev->id ? 'selected' : '' }}>
+                                    {{ $oltDev->name }} ({{ $oltDev->ip_address }})@if($oltDev->vendor) — {{ ucfirst($oltDev->vendor) }}@endif
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>OLT Port</label>
+                            <input type="text" name="olt_port" class="form-control" value="{{ old('olt_port') }}" placeholder="e.g. 0/1/1">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>ONU Serial</label>
+                            <input type="text" name="onu_serial" class="form-control" value="{{ old('onu_serial') }}" placeholder="e.g. HWTC1A2B3C4D">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>ONU Model</label>
+                            <input type="text" name="onu_model" class="form-control" value="{{ old('onu_model') }}" placeholder="e.g. EG8145V5">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>ONU Brand</label>
+                            <input type="text" name="onu_brand" class="form-control" value="{{ old('onu_brand') }}" placeholder="e.g. Huawei">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>ONU MAC</label>
+                            <input type="text" name="onu_mac" class="form-control" value="{{ old('onu_mac') }}" placeholder="AA:BB:CC:DD:EE:FF">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Remarks --}}
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-comment-alt"></i>Notes / Remarks</div>
+                <div class="form-group mb-1">
+                    <label>Notes</label>
+                    <textarea name="notes" class="form-control" rows="2" placeholder="Internal notes...">{{ old('notes') }}</textarea>
+                </div>
+                <div class="form-group mb-0">
+                    <label>Remarks</label>
+                    <textarea name="remarks" class="form-control" rows="2" placeholder="Any additional remarks...">{{ old('remarks') }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white border-top p-3" style="position:sticky; bottom:0; z-index:10; box-shadow:0 -2px 8px rgba(0,0,0,0.08);">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save Client</button>
+        <a href="{{ route('reseller.clients') }}" class="btn btn-secondary ml-1">Cancel</a>
+    </div>
+</form>
+@endsection
+
+@push('scripts')
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+$(document).ready(function() {
+    var zones = @json($zones);
+
+    $('#zone_id').change(function() {
+        var zoneId = $(this).val();
+        var areaSelect = $('#area_id');
+        areaSelect.html('<option value="">Select Subzone</option>');
+        if (zoneId) {
+            var zone = zones.find(z => z.id == zoneId);
+            if (zone && zone.areas) {
+                zone.areas.forEach(function(area) {
+                    areaSelect.append('<option value="' + area.id + '">' + area.name + '</option>');
+                });
+            }
+        }
+    });
+
+    $('#pppUsername').on('input', function() {
+        $('#preview_username').text($(this).val() || '...');
+    });
+
+    $('#package_id').on('change', function() {
+        var price = $(this).find('option:selected').data('price');
+        if (price) $('#monthly_fee').val(price);
+    });
+});
+
+function previewImage(input, previewId) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById(previewId).src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function generatePassword() {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    var p = '';
+    for (var i = 0; i < 8; i++) p += chars.charAt(Math.floor(Math.random() * chars.length));
+    document.getElementById('pppoe_password').value = p;
+}
+
+function updateMapButton() {
+    var lat = document.getElementById('lat').value, lng = document.getElementById('lng').value;
+    var btn = document.getElementById('viewMapBtn');
+    if (lat && lng) {
+        btn.href = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+        btn.style.display = 'inline-block';
+        document.getElementById('google_map_location').value = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function showLocationStatus(msg, type) {
+    var s = document.getElementById('locationStatus');
+    s.className = 'alert py-1 mb-2 small alert-' + type;
+    s.innerHTML = msg;
+    s.style.display = 'block';
+}
+
+function getLocationFromAddress() {
+    var address = document.getElementById('address').value.trim();
+    if (!address) { showLocationStatus('<i class="fas fa-exclamation-triangle mr-1"></i>Enter address first.', 'warning'); return; }
+    showLocationStatus('<i class="fas fa-spinner fa-spin mr-1"></i>Searching...', 'info');
+    var key = '37e22662c7614c5996dacf00d6279b95';
+    var q = address + ', Dhaka, Bangladesh';
+    fetch('https://api.opencagedata.com/geocode/v1/json?q=' + encodeURIComponent(q) + '&key=' + key + '&countrycode=bd&limit=5&language=en&no_annotations=1')
+    .then(r=>r.json()).then(function(d){
+        if (d.results && d.results.length > 0) {
+            var r = d.results[0];
+            document.getElementById('lat').value = r.geometry.lat.toFixed(6);
+            document.getElementById('lng').value = r.geometry.lng.toFixed(6);
+            document.getElementById('google_map_location').value = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.formatted);
+            updateMapButton();
+            showLocationStatus('<i class="fas fa-check-circle mr-1"></i>Found: ' + r.formatted, 'success');
+        } else {
+            showLocationStatus('<i class="fas fa-times-circle mr-1"></i>Not found. Try with area name.', 'danger');
+        }
+    }).catch(function(){ showLocationStatus('<i class="fas fa-times-circle mr-1"></i>Error. Check internet.', 'danger'); });
+}
+
+document.getElementById('lat').addEventListener('input', updateMapButton);
+document.getElementById('lng').addEventListener('input', updateMapButton);
+updateMapButton();
+</script>
+
+<script>
+// ── Map Picker (Leaflet + OSM) ──
+var _mapInst = null, _mapMarker = null, _pickedLat = null, _pickedLng = null;
+function openMapPicker() {
+    var existLat = parseFloat(document.getElementById('lat').value) || 23.8103;
+    var existLng = parseFloat(document.getElementById('lng').value) || 90.4125;
+    var addrVal  = document.getElementById('address') ? document.getElementById('address').value.trim() : '';
+    document.getElementById('mapSearchInput').value = addrVal || '';
+    $('#mapPickerModal').modal('show');
+    setTimeout(function() {
+        if (!_mapInst) {
+            _mapInst = L.map('leafletMap').setView([existLat, existLng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+            }).addTo(_mapInst);
+            _mapInst.on('click', function(e) { placeMapPin(e.latlng.lat, e.latlng.lng); });
+        } else {
+            _mapInst.invalidateSize();
+            _mapInst.setView([existLat, existLng], 15);
+        }
+        if (document.getElementById('lat').value) {
+            placeMapPin(existLat, existLng);
+        } else if (addrVal) {
+            searchOnMap();
+        }
+    }, 320);
+}
+function placeMapPin(lat, lng) {
+    _pickedLat = lat; _pickedLng = lng;
+    if (_mapMarker) { _mapMarker.setLatLng([lat, lng]); }
+    else {
+        _mapMarker = L.marker([lat, lng], {draggable: true}).addTo(_mapInst);
+        _mapMarker.on('dragend', function(e) {
+            var pos = e.target.getLatLng();
+            placeMapPin(pos.lat, pos.lng);
+        });
+    }
+    _mapInst.panTo([lat, lng]);
+    document.getElementById('mapPickedCoords').innerHTML = '<i class="fas fa-map-pin text-danger mr-1"></i><b>Lat:</b> ' + lat.toFixed(6) + '  <b>Lng:</b> ' + lng.toFixed(6) + ' &nbsp;<small class="text-muted">(drag pin to adjust)</small>';
+    document.getElementById('confirmMapPick').disabled = false;
+}
+function searchOnMap() {
+    var q = document.getElementById('mapSearchInput').value.trim();
+    if (!q) return;
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q + ', Bangladesh') + '&limit=1&countrycodes=bd', {headers:{'User-Agent':'SmartOnlineISP/1.0'}})
+    .then(r=>r.json()).then(function(d){
+        if (d && d.length > 0) {
+            placeMapPin(parseFloat(d[0].lat), parseFloat(d[0].lon));
+        } else {
+            fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q + ' Bangladesh') + '&limit=1&bbox=88.0,20.6,92.7,26.6')
+            .then(r=>r.json()).then(function(p){
+                if (p && p.features && p.features.length > 0) {
+                    var c = p.features[0].geometry.coordinates;
+                    placeMapPin(c[1], c[0]);
+                } else { alert('Address not found on map. Click manually on map.'); }
+            }).catch(function(){ alert('Search failed. Click manually on map.'); });
+        }
+    }).catch(function(){ alert('Search failed. Click manually on map.'); });
+}
+function confirmMapLocation() {
+    if (_pickedLat === null) return;
+    document.getElementById('lat').value = _pickedLat.toFixed(6);
+    document.getElementById('lng').value = _pickedLng.toFixed(6);
+    document.getElementById('google_map_location').value = 'https://www.google.com/maps?q=' + _pickedLat + ',' + _pickedLng;
+    updateMapButton();
+    showLocationStatus('<i class="fas fa-check-circle mr-1"></i>Location set from map pin!', 'success');
+    $('#mapPickerModal').modal('hide');
+}
+document.getElementById('mapSearchInput') && document.getElementById('mapSearchInput').addEventListener('keydown', function(e){ if(e.key==='Enter'){e.preventDefault();searchOnMap();} });
+
+// ── OpenCage Address Autocomplete ──
+(function(){
+    var _oc_timer = null, _oc_key = '37e22662c7614c5996dacf00d6279b95';
+    var addrEl = document.getElementById('address');
+    if (!addrEl) return;
+
+    // Create suggestions dropdown
+    var sug = document.createElement('div');
+    sug.id = 'ocSuggestions';
+    sug.style.cssText = 'position:absolute;z-index:9999;background:#fff;border:1px solid #ced4da;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.12);max-height:220px;overflow-y:auto;display:none;width:100%;left:0;top:100%;margin-top:2px;';
+    var wrapper = addrEl.parentNode;
+    if (wrapper.style.position !== 'relative') wrapper.style.position = 'relative';
+    wrapper.appendChild(sug);
+
+    addrEl.addEventListener('input', function(){
+        clearTimeout(_oc_timer);
+        var q = addrEl.value.trim();
+        if (q.length < 4) { sug.style.display='none'; return; }
+        _oc_timer = setTimeout(function(){
+            fetch('https://api.opencagedata.com/geocode/v1/json?q=' + encodeURIComponent(q + ' Bangladesh') +
+                  '&key=' + _oc_key + '&countrycode=bd&limit=6&language=en&no_annotations=1&abbrv=1')
+            .then(r=>r.json()).then(function(d){
+                sug.innerHTML = '';
+                if (!d.results || !d.results.length) { sug.style.display='none'; return; }
+                d.results.forEach(function(r){
+                    var item = document.createElement('div');
+                    item.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f1f5f9;color:#1e293b;';
+                    item.innerHTML = '<i class="fas fa-map-marker-alt text-danger mr-2" style="font-size:11px;"></i>' + r.formatted;
+                    item.addEventListener('mouseenter', function(){ item.style.background='#f0f9ff'; });
+                    item.addEventListener('mouseleave', function(){ item.style.background='#fff'; });
+                    item.addEventListener('mousedown', function(e){
+                        e.preventDefault();
+                        addrEl.value = r.formatted;
+                        document.getElementById('lat').value = r.geometry.lat.toFixed(6);
+                        document.getElementById('lng').value = r.geometry.lng.toFixed(6);
+                        document.getElementById('google_map_location').value = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(r.formatted);
+                        updateMapButton();
+                        showLocationStatus('<i class="fas fa-check-circle mr-1"></i>' + r.formatted, 'success');
+                        sug.style.display = 'none';
+                    });
+                    sug.appendChild(item);
+                });
+                sug.style.display = 'block';
+            }).catch(function(){});
+        }, 550);
+    });
+
+    addrEl.addEventListener('blur', function(){ setTimeout(function(){ sug.style.display='none'; }, 200); });
+    addrEl.addEventListener('focus', function(){ if(sug.children.length) sug.style.display='block'; });
+})();
+</script>
+
+<script>
+(function() {
+    var fiberColors = {
+        'blue':'#0057B8','orange':'#FF8C00','green':'#28a745','brown':'#8B4513',
+        'slate':'#708090','white':'#e9ecef','red':'#dc3545','black':'#222222',
+        'yellow':'#ffc107','violet':'#6f42c1','rose':'#e83e8c','aqua':'#20c997'
+    };
+    function updateDot(inputId) {
+        var inp = document.getElementById(inputId);
+        var dot = document.getElementById('dot_' + inputId);
+        if (!inp || !dot) return;
+        var hex = fiberColors[(inp.value||'').toLowerCase().trim()];
+        dot.style.background = hex || '#ccc';
+        dot.style.border = (inp.value||'').toLowerCase().trim()==='white' ? '1px solid #aaa' : '1px solid rgba(0,0,0,0.15)';
+    }
+    function closeAllPalettes() {
+        document.querySelectorAll('.fiber-color-palette').forEach(function(p){ p.style.display='none'; });
+    }
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.input-group')) closeAllPalettes();
+        var btn = e.target.classList.contains('fiber-color-btn') ? e.target : e.target.closest('.fiber-color-btn');
+        if (btn) {
+            e.stopPropagation();
+            var palette = document.getElementById('palette_' + btn.dataset.target);
+            var open = palette && palette.style.display !== 'none';
+            closeAllPalettes();
+            if (palette && !open) palette.style.display = 'block';
+        }
+        if (e.target.classList.contains('fiber-color-swatch')) {
+            var sw = e.target;
+            var inp = document.getElementById(sw.dataset.target);
+            if (inp) { inp.value = sw.dataset.color; updateDot(sw.dataset.target); }
+            closeAllPalettes();
+        }
+    });
+    document.addEventListener('input', function(e) {
+        if (e.target.id === 'fiber_color_input' || e.target.id === 'splitter_color_input') {
+            updateDot(e.target.id);
+        }
+    });
+    setTimeout(function(){
+        ['fiber_color_input','splitter_color_input'].forEach(updateDot);
+        // Click on readonly input also opens palette
+        ['fiber_color_input','splitter_color_input'].forEach(function(id){
+            var inp = document.getElementById(id);
+            if(inp) inp.addEventListener('click', function(e){
+                e.stopPropagation();
+                var btn = this.closest('.input-group').querySelector('.fiber-color-btn');
+                if(btn) btn.click();
+            });
+        });
+    }, 150);
+})();
+</script>
+
+@endpush

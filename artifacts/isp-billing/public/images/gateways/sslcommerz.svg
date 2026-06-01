@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 44">
+  <rect width="220" height="44" rx="8" fill="white"/>
+  <!-- lock icon -->
+  <g transform="translate(10,6)">
+    <rect x="3" y="14" width="22" height="17" rx="4" fill="#e8312a"/>
+    <path d="M6,14 L6,9 A8,8 0 0,1 22,9 L22,14" fill="none" stroke="#003087" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="12" y="20" width="4" height="6" rx="2" fill="white" opacity="0.9"/>
+  </g>
+  <!-- SSLCommerz wordmark -->
+  <text x="44" y="20" font-family="Arial,sans-serif" font-size="14" font-weight="900" fill="#003087">SSL</text><text x="44" y="20" font-family="Arial,sans-serif" font-size="14" font-weight="900" fill="#e8312a">Commerz</text>
+  <text x="44" y="36" font-family="Arial,sans-serif" font-size="9" fill="#666" letter-spacing="0.5">Payment Gateway</text>
+</svg>

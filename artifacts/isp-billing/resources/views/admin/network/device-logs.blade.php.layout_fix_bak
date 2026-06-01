@@ -1,0 +1,169 @@
+@extends('layouts.admin')
+
+@section('title', 'Device Operation Logs')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3>{{ number_format($stats['total']) }}</h3>
+                        <p>Total Operations</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-cogs"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3>{{ number_format($stats['success']) }}</h3>
+                        <p>Successful</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-check-circle"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3>{{ number_format($stats['failed']) }}</h3>
+                        <p>Failed</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-times-circle"></i></div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3>{{ number_format($stats['today']) }}</h3>
+                        <p>Today</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-calendar-day"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter mr-1"></i>Filters</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row align-items-end">
+                    <div class="col-md-2">
+                        <label>Device Type</label>
+                        <select name="device_type" class="form-control form-control-sm">
+                            <option value="">All</option>
+                            <option value="mikrotik" {{ request('device_type') == 'mikrotik' ? 'selected' : '' }}>MikroTik</option>
+                            <option value="olt" {{ request('device_type') == 'olt' ? 'selected' : '' }}>OLT</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>Operation</label>
+                        <input type="text" name="operation" class="form-control form-control-sm" value="{{ request('operation') }}" placeholder="e.g. enable, disable">
+                    </div>
+                    <div class="col-md-2">
+                        <label>Result</label>
+                        <select name="result" class="form-control form-control-sm">
+                            <option value="">All</option>
+                            <option value="success" {{ request('result') == 'success' ? 'selected' : '' }}>Success</option>
+                            <option value="failed" {{ request('result') == 'failed' ? 'selected' : '' }}>Failed</option>
+                            <option value="pending" {{ request('result') == 'pending' ? 'selected' : '' }}>Pending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label>Date From</label>
+                        <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label>Date To</label>
+                        <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label>Search</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="search" class="form-control" value="{{ request('search') }}" placeholder="Client/Message...">
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list mr-1"></i>Operation Logs</h3>
+                <div class="card-tools">
+                    <span class="badge badge-primary">{{ $logs->total() }} records</span>
+                </div>
+            </div>
+            <div class="card-body table-responsive p-0">
+                <table class="table table-hover table-striped table-sm">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Time</th>
+                            <th>Device</th>
+                            <th>Client</th>
+                            <th>Operation</th>
+                            <th>Conn. Type</th>
+                            <th>Result</th>
+                            <th>Message</th>
+                            <th>User</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($logs as $log)
+                        <tr class="log-row" style="cursor: pointer;" data-toggle="collapse" data-target="#params-{{ $log->id }}">
+                            <td><small>{{ \Carbon\Carbon::parse($log->created_at)->format('Y-m-d H:i:s') }}</small></td>
+                            <td>
+                                <span class="badge badge-{{ $log->device_type == 'mikrotik' ? 'info' : 'purple' }}">
+                                    {{ strtoupper($log->device_type ?? 'N/A') }}
+                                </span>
+                            </td>
+                            <td>
+                                @if($log->client_name)
+                                    <small class="text-muted">{{ $log->client_code }}</small><br>
+                                    {{ $log->client_name }}
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
+                            <td><code>{{ $log->operation ?? 'N/A' }}</code></td>
+                            <td>{{ $log->connection_type ?? '-' }}</td>
+                            <td>
+                                @if($log->result == 'success')
+                                    <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Success</span>
+                                @elseif($log->result == 'failed')
+                                    <span class="badge badge-danger"><i class="fas fa-times mr-1"></i>Failed</span>
+                                @else
+                                    <span class="badge badge-warning"><i class="fas fa-clock mr-1"></i>{{ ucfirst($log->result ?? 'pending') }}</span>
+                                @endif
+                            </td>
+                            <td><small>{{ \Illuminate\Support\Str::limit($log->result_message ?? '-', 60) }}</small></td>
+                            <td>{{ $log->user_name ?? '-' }}</td>
+                        </tr>
+                        <tr id="params-{{ $log->id }}" class="collapse">
+                            <td colspan="8" class="bg-light">
+                                <strong>Parameters:</strong>
+                                <pre class="mb-0 p-2 bg-white border rounded" style="font-size: 12px; max-height: 200px; overflow-y: auto;">{{ json_encode(json_decode($log->parameters ?? '{}'), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                                @if($log->result_message)
+                                    <strong class="mt-2 d-block">Full Message:</strong>
+                                    <pre class="mb-0 p-2 bg-white border rounded" style="font-size: 12px;">{{ $log->result_message }}</pre>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="8" class="text-center text-muted py-4">No operation logs found</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer clearfix">
+                {{ $logs->appends(request()->query())->links() }}
+            </div>
+        </div>
+    </div>
+</section>
+@endsection

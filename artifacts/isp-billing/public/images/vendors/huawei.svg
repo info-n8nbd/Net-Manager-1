@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" width="160" height="110">
+  <rect width="160" height="110" fill="white"/>
+  <!-- Huawei flower - 8 petals in pairs at 0,45,90,135,180,225,270,315 degrees -->
+  <g transform="translate(80,42)">
+    <!-- Petal shapes: elongated diamond radiating outward -->
+    <ellipse cx="0" cy="-16" rx="4.5" ry="13" fill="#CF0A2C"/>
+    <ellipse cx="11.3" cy="-11.3" rx="4.5" ry="13" fill="#CF0A2C" transform="rotate(45,11.3,-11.3)"/>
+    <ellipse cx="16" cy="0" rx="4.5" ry="13" fill="#CF0A2C" transform="rotate(90,16,0)"/>
+    <ellipse cx="11.3" cy="11.3" rx="4.5" ry="13" fill="#CF0A2C" transform="rotate(135,11.3,11.3)"/>
+    <ellipse cx="0" cy="16" rx="4.5" ry="13" fill="#CF0A2C" transform="rotate(180,0,16)"/>
+    <ellipse cx="-11.3" cy="11.3" rx="4.5" ry="13" fill="#CF0A2C" transform="rotate(225,-11.3,11.3)"/>
+    <ellipse cx="-16" cy="0" rx="4.5" ry="13" fill="#CF0A2C" transform="rotate(270,-16,0)"/>
+    <ellipse cx="-11.3" cy="-11.3" rx="4.5" ry="13" fill="#CF0A2C" transform="rotate(315,-11.3,-11.3)"/>
+  </g>
+  <text x="80" y="83" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="bold" letter-spacing="2" fill="#CF0A2C">HUAWEI</text>
+</svg>

@@ -1,0 +1,222 @@
+@extends('layouts.admin')
+
+@section('title', 'Connectivity Test')
+
+@section('content')
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-search mr-1"></i>Select Client</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Search Client</label>
+                            <input type="text" id="clientSearch" class="form-control" placeholder="Type client name or ID...">
+                            <div id="searchResults" class="list-group mt-2" style="max-height: 300px; overflow-y: auto; display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="clientInfoCard" class="card card-success card-outline" style="display: none;">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-user mr-1"></i>Client Info</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr><td><strong>Name</strong></td><td id="infoName">-</td></tr>
+                            <tr><td><strong>Client ID</strong></td><td id="infoClientId">-</td></tr>
+                            <tr><td><strong>IP Address</strong></td><td id="infoIp">-</td></tr>
+                            <tr><td><strong>MAC Address</strong></td><td id="infoMac">-</td></tr>
+                            <tr><td><strong>Status</strong></td><td id="infoStatus">-</td></tr>
+                            <tr><td><strong>Connection</strong></td><td id="infoConnection">-</td></tr>
+                            <tr><td><strong>Package</strong></td><td id="infoPackage">-</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card card-warning card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-globe mr-1"></i>DNS Lookup</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="input-group">
+                            <input type="text" id="dnsInput" class="form-control" placeholder="e.g. google.com">
+                            <div class="input-group-append">
+                                <button class="btn btn-warning" onclick="runDnsLookup()"><i class="fas fa-search"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-tools mr-1"></i>Test Tools</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="btn-group mb-3">
+                            <button class="btn btn-info" onclick="runPing()" id="btnPing" disabled>
+                                <i class="fas fa-satellite-dish mr-1"></i>Ping from Router
+                            </button>
+                            <button class="btn btn-primary" onclick="runTraceroute()" id="btnTraceroute" disabled>
+                                <i class="fas fa-route mr-1"></i>Traceroute
+                            </button>
+                            <button class="btn btn-success" onclick="checkSession()" id="btnSession" disabled>
+                                <i class="fas fa-plug mr-1"></i>Check Session
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-dark card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-terminal mr-1"></i>Results</h3>
+                        <div class="card-tools">
+                            <button class="btn btn-tool" onclick="clearResults()"><i class="fas fa-eraser"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="resultsArea" style="min-height: 400px; max-height: 600px; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 15px; font-family: 'Courier New', monospace; font-size: 13px;">
+                            <div class="text-muted">Select a client and run a test to see results...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@endsection
+
+@push('scripts')
+<script>
+let selectedClientId = null;
+let searchTimeout = null;
+
+document.getElementById('clientSearch').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+    if (query.length < 2) {
+        document.getElementById('searchResults').style.display = 'none';
+        return;
+    }
+    searchTimeout = setTimeout(() => searchClients(query), 300);
+});
+
+function searchClients(query) {
+    fetch('{{ route("admin.api.quick-search") }}?q=' + encodeURIComponent(query))
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('searchResults');
+            container.innerHTML = '';
+            const clients = data.clients || data.results || data;
+            if (Array.isArray(clients) && clients.length > 0) {
+                clients.forEach(c => {
+                    const item = document.createElement('a');
+                    item.href = '#';
+                    item.className = 'list-group-item list-group-item-action py-2';
+                    item.innerHTML = `<strong>${c.client_id || c.code || ''}</strong> - ${c.name || ''}<br><small class="text-muted">IP: ${c.ip_address || 'N/A'} | ${c.connection_type || 'pppoe'}</small>`;
+                    item.onclick = function(e) {
+                        e.preventDefault();
+                        selectClient(c);
+                        container.style.display = 'none';
+                    };
+                    container.appendChild(item);
+                });
+                container.style.display = 'block';
+            } else {
+                container.innerHTML = '<div class="list-group-item text-muted">No clients found</div>';
+                container.style.display = 'block';
+            }
+        })
+        .catch(() => {});
+}
+
+function selectClient(client) {
+    selectedClientId = client.id;
+    document.getElementById('infoName').textContent = client.name || '-';
+    document.getElementById('infoClientId').innerHTML = '<span class="badge badge-primary">' + (client.client_id || client.code || '-') + '</span>';
+    document.getElementById('infoIp').textContent = client.ip_address || 'N/A';
+    document.getElementById('infoMac').textContent = client.mac_address || 'N/A';
+    document.getElementById('infoStatus').innerHTML = '<span class="badge badge-' + (client.status == 'active' ? 'success' : 'danger') + '">' + (client.status || 'unknown') + '</span>';
+    document.getElementById('infoConnection').textContent = client.connection_type || 'pppoe';
+    document.getElementById('infoPackage').textContent = client.package_name || client.package || 'N/A';
+    document.getElementById('clientInfoCard').style.display = 'block';
+    document.getElementById('btnPing').disabled = false;
+    document.getElementById('btnTraceroute').disabled = false;
+    document.getElementById('btnSession').disabled = false;
+    appendResult('--- Client Selected: ' + client.name + ' (IP: ' + (client.ip_address || 'N/A') + ') ---', 'info');
+}
+
+function appendResult(text, type = 'default') {
+    const area = document.getElementById('resultsArea');
+    if (area.querySelector('.text-muted:only-child')) area.innerHTML = '';
+    const line = document.createElement('div');
+    line.style.marginBottom = '2px';
+    const timestamp = new Date().toLocaleTimeString();
+    const colors = { info: '#569cd6', success: '#4ec9b0', error: '#f44747', warning: '#dcdcaa', default: '#d4d4d4' };
+    line.style.color = colors[type] || colors.default;
+    line.textContent = '[' + timestamp + '] ' + text;
+    area.appendChild(line);
+    area.scrollTop = area.scrollHeight;
+}
+
+function clearResults() {
+    document.getElementById('resultsArea').innerHTML = '<div class="text-muted">Results cleared.</div>';
+}
+
+function runTest(url, data, testName) {
+    appendResult('Running ' + testName + '...', 'warning');
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (result.success) {
+            appendResult(testName + ' completed successfully', 'success');
+            if (result.data) {
+                if (Array.isArray(result.data)) {
+                    result.data.forEach(item => {
+                        appendResult(JSON.stringify(item), 'default');
+                    });
+                } else if (typeof result.data === 'object') {
+                    Object.entries(result.data).forEach(([key, val]) => {
+                        appendResult('  ' + key + ': ' + (typeof val === 'object' ? JSON.stringify(val) : val), 'default');
+                    });
+                }
+            }
+            if (result.message) appendResult(result.message, 'info');
+        } else {
+            appendResult(testName + ' failed: ' + (result.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(err => {
+        appendResult(testName + ' error: ' + err.message, 'error');
+    });
+}
+
+function runPing() {
+    if (!selectedClientId) return;
+    runTest('{{ route("admin.network.connectivity-ping") }}', { client_id: selectedClientId }, 'Ping');
+}
+
+function runTraceroute() {
+    if (!selectedClientId) return;
+    runTest('{{ route("admin.network.connectivity-traceroute") }}', { client_id: selectedClientId }, 'Traceroute');
+}
+
+function checkSession() {
+    if (!selectedClientId) return;
+    runTest('{{ route("admin.network.connectivity-session") }}', { client_id: selectedClientId }, 'Session Check');
+}
+
+function runDnsLookup() {
+    const domain = document.getElementById('dnsInput').value.trim();
+    if (!domain) return;
+    runTest('{{ route("admin.network.connectivity-dns") }}', { domain: domain }, 'DNS Lookup (' + domain + ')');
+}
+</script>
+@endpush

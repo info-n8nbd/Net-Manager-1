@@ -1,0 +1,147 @@
+@extends('layouts.admin')
+
+@section('title', 'Bill & Payment Corrections')
+
+@section('content')
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-file-invoice mr-2"></i>Recent Bill Corrections</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Correction #</th>
+                                        <th>Bill</th>
+                                        <th>Client</th>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($billCorrections as $correction)
+                                    <tr>
+                                        <td><span class="badge badge-info">{{ $correction->correction_no }}</span></td>
+                                        <td>
+                                            <a href="{{ route('admin.corrections.bill', $correction->bill_id) }}">
+                                                {{ $correction->bill->bill_no ?? 'N/A' }}
+                                            </a>
+                                        </td>
+                                        <td>{{ $correction->client->name ?? 'N/A' }}</td>
+                                        <td>
+                                            @if($correction->correction_type == 'amount_correction')
+                                            <span class="badge badge-warning">Amount</span>
+                                            @elseif($correction->correction_type == 'cancellation')
+                                            <span class="badge badge-danger">Cancel</span>
+                                            @else
+                                            <span class="badge badge-secondary">{{ ucfirst($correction->correction_type) }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="{{ $correction->adjustment_amount >= 0 ? 'text-danger' : 'text-success' }}">
+                                            {{ $correction->adjustment_amount >= 0 ? '+' : '' }}{{ number_format($correction->adjustment_amount, 2) }}
+                                        </td>
+                                        <td>{{ $correction->created_at->format('d-m-y H:i') }}</td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-3">No bill corrections yet</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card card-danger card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-money-bill-wave mr-2"></i>Recent Payment Corrections</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Correction #</th>
+                                        <th>Payment</th>
+                                        <th>Client</th>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($paymentCorrections as $correction)
+                                    <tr>
+                                        <td><span class="badge badge-info">{{ $correction->correction_no }}</span></td>
+                                        <td>
+                                            <a href="{{ route('admin.corrections.payment', $correction->payment_id) }}">
+                                                {{ $correction->payment->payment_no ?? 'N/A' }}
+                                            </a>
+                                        </td>
+                                        <td>{{ $correction->client->name ?? 'N/A' }}</td>
+                                        <td>
+                                            @if($correction->correction_type == 'reversal')
+                                            <span class="badge badge-danger">Reversed</span>
+                                            @elseif($correction->correction_type == 'duplicate')
+                                            <span class="badge badge-warning">Duplicate</span>
+                                            @else
+                                            <span class="badge badge-secondary">{{ ucfirst($correction->correction_type) }}</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-danger">-{{ number_format($correction->original_amount, 2) }}</td>
+                                        <td>{{ $correction->created_at->format('d-m-y H:i') }}</td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-3">No payment corrections yet</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-dark">
+                <h3 class="card-title"><i class="fas fa-info-circle mr-2"></i>Correction System Rules</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-shield-alt text-success mr-2"></i>Data Protection</h6>
+                        <ul class="small text-muted">
+                            <li>No hard deletions - all data preserved</li>
+                            <li>Ledger-based reversals only</li>
+                            <li>Full audit trail maintained</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-file-invoice text-primary mr-2"></i>Bill Corrections</h6>
+                        <ul class="small text-muted">
+                            <li>Correct amounts after submission</li>
+                            <li>Cancel bills (no payments only)</li>
+                            <li>Replace with new bills</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="fas fa-money-bill text-danger mr-2"></i>Payment Corrections</h6>
+                        <ul class="small text-muted">
+                            <li>Reverse wrong payments</li>
+                            <li>Mark duplicate payments</li>
+                            <li>Detect same TrxID/amount</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+@endsection

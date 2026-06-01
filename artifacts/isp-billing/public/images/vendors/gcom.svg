@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" width="160" height="110">
+  <rect width="160" height="110" fill="white"/>
+  <!-- G arc with horizontal bar -->
+  <path d="M44,22 A24,24 0 1,0 44,78" fill="none" stroke="#6A1B9A" stroke-width="6" stroke-linecap="round"/>
+  <line x1="56" y1="50" x2="68" y2="50" stroke="#6A1B9A" stroke-width="6" stroke-linecap="round"/>
+  <text x="105" y="48" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="22" font-weight="900" fill="#6A1B9A">GCOM</text>
+  <text x="105" y="63" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" letter-spacing="0.5" fill="#555">Technologies</text>
+</svg>

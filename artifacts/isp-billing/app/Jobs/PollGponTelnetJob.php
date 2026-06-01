@@ -1,0 +1,293 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Models\OltDevice;
+use App\Services\OLT\GponTelnetCollector;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * PollGponTelnetJob
+ *
+ * Collects real per-ONU data (serial number, RX/TX power, distance,
+ * temperature) from BDCOM GPON OLTs via Telnet CLI.
+ *
+ * SNMP firmware 10.3.0D Build 147850 does NOT expose per-ONU optical
+ * data via SNMP — this job fills that gap using CLI commands:
+ *   show gpon onu state gpon-onu_X/Y
+ *   show gpon onu optical-info gpon-onu_X/Y
+ *
+ * Runs every 10 minutes (see routes/console.php).
+ *
+ * Prerequisites:
+ *   1. VPS IP (139.59.107.78) whitelisted on OLT Telnet/SSH ACL
+ *   2. olt_devices.ssh_port set (e.g. 3000) OR telnet_port set (default 23)
+ *   3. olt_devices.username / password set for CLI login
+ */
+class PollGponTelnetJob implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $tries   = 1;
+    public int $timeout = 600;
+
+    public function handle(): void
+    {
+        $startTime    = microtime(true);
+        $totalUpdated = 0;
+        $errors       = [];
+
+        // Find BDCOM GPON OLTs with Telnet access configured:
+        // telnet_port > 0  OR  connection_type = 'telnet' (uses port 23 default)
+        $olts = OltDevice::where('is_active', true)
+            ->where(DB::raw('LOWER(vendor)'), 'bdcom')
+            ->where(DB::raw('LOWER(pon_type)'), 'gpon')
+            ->where(function ($q) {
+                $q->where('telnet_port', '>', 0)
+                  ->orWhere('ssh_port', '>', 0)
+                  ->orWhere('connection_type', 'telnet')
+                  ->orWhere('connection_type', 'ssh');
+            })
+            ->get();
+
+        if ($olts->isEmpty()) {
+            Log::info('PollGponTelnetJob: no BDCOM GPON OLTs with Telnet configured — skipping');
+            return;
+        }
+
+        foreach ($olts as $olt) {
+            try {
+                $updated = $this->pollOlt($olt);
+                $totalUpdated += $updated;
+                Log::info("PollGponTelnetJob [{$olt->name}]: {$updated} ONUs updated");
+            } catch (\Exception $e) {
+                $msg = "PollGponTelnetJob [{$olt->name}] FAILED: " . $e->getMessage();
+                Log::error($msg);
+                $errors[] = $msg;
+            }
+        }
+
+        $elapsed = round(microtime(true) - $startTime, 1);
+        Log::info("PollGponTelnetJob done: {$totalUpdated} ONUs, {$elapsed}s");
+
+        try {
+            DB::table('cron_job_logs')->insert([
+                'job_name'          => 'poll_gpon_telnet',
+                'job_class'         => self::class,
+                'status' => empty($errors) ? 'completed' : 'failed',
+                'records_processed' => $totalUpdated,
+                'execution_time_ms' => (int)($elapsed * 1000),
+                'message' => empty($errors) ? null : implode('; ', array_slice($errors, 0, 3)),
+                'started_at'        => now(),
+                'completed_at'      => now(),
+                'created_at'        => now(),
+                'updated_at'        => now(),
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('PollGponTelnetJob: could not write cron_job_log: ' . $e->getMessage());
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Per-OLT polling
+    // ─────────────────────────────────────────────────────────
+
+    protected function pollOlt(OltDevice $olt): int
+    {
+        $collector = new GponTelnetCollector($olt);
+        $onuList   = $collector->collectAll();
+
+        if (empty($onuList)) {
+            Log::warning("PollGponTelnetJob [{$olt->name}]: collectAll returned empty — check Telnet access");
+            return 0;
+        }
+
+        $updated = 0;
+
+        foreach ($onuList as $raw) {
+            try {
+                $updated += $this->syncOnu($olt, $raw);
+            } catch (\Exception $e) {
+                Log::warning("PollGponTelnetJob [{$olt->name}] ONU sync error: " . $e->getMessage());
+            }
+        }
+
+        // Update client onu_status / rx_power from real data
+        $this->syncClientOptical($olt->id);
+
+        return $updated;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Sync one ONU record
+    // ─────────────────────────────────────────────────────────
+
+    protected function syncOnu(OltDevice $olt, array $data): int
+    {
+        if (empty($data['onu_number'])) {
+            return 0;
+        }
+
+        // Normalize pon_port: CLI gives "GPON0/slot/port", DB has "GPON0/port"
+        $ponPort = $this->normalizePonPort($data['pon_port'] ?? '');
+
+        // ── Find existing ONU by olt + port + onu_number ─────
+        $existing = DB::table('onus')
+            ->where('olt_device_id', $olt->id)
+            ->where('pon_port',      $ponPort)
+            ->where('onu_number',    $data['onu_number'])
+            ->first();
+
+        $now = now();
+
+        // ── Build update payload ──────────────────────────────
+        $payload = [
+            'status'     => $data['status'] ?? 'offline',
+            'down_reason' => $data['down_reason'] ?? null,
+            'updated_at' => $now,
+        ];
+
+        if (!empty($data['serial_number'])) {
+            $serial = strtoupper(trim($data['serial_number']));
+            // Only write real serial (skip SYN-* placeholders)
+            if (!str_starts_with($serial, 'SYN-')) {
+                // Check for UNIQUE conflict with a *different* ONU
+                $conflict = DB::table('onus')
+                    ->where('serial_number', $serial)
+                    ->when($existing, fn($q) => $q->where('id', '!=', $existing->id))
+                    ->exists();
+
+                if (!$conflict) {
+                    $payload['serial_number'] = $serial;
+                }
+            }
+        }
+
+        // Optical values (only overwrite with real data, not null)
+        foreach (['rx_power', 'tx_power', 'temperature', 'voltage', 'distance', 'tx_bias'] as $col) {
+            if (isset($data[$col]) && $data[$col] !== null) {
+                $payload[$col] = $data[$col];
+            }
+        }
+
+        if (!empty($data['mac_address'])) $payload['mac_address']    = $data['mac_address'];
+        if (!empty($data['model']))       $payload['model']           = $data['model'];
+        if (!empty($data['description'])) $payload['description']     = $data['description'];
+        if (isset($data['uptime_seconds']) && $data['uptime_seconds'] !== null) {
+            $payload['uptime_seconds'] = $data['uptime_seconds'];
+        }
+
+        // Online / offline timestamps
+        if (($payload['status'] ?? '') === 'online') {
+            $payload['last_online'] = $now;
+        } else {
+            $payload['last_offline']    = $now;
+            $payload['last_offline_at'] = $now;
+            if (!empty($payload['down_reason'])) {
+                $payload['last_down_reason'] = $payload['down_reason'];
+            }
+            // Store specific GPON offline reason (LOS, LOFI, etc.) from OLT CLI
+            if (!empty($data['olt_offline_reason'])) {
+                $payload['olt_offline_reason'] = strtoupper(trim($data['olt_offline_reason']));
+            }
+        }
+
+        // ── Update or insert ──────────────────────────────────
+        if ($existing) {
+            DB::table('onus')->where('id', $existing->id)->update($payload);
+            return 1;
+        }
+
+        // Insert new ONU (discovered via Telnet but not in DB yet)
+        $serial = $payload['serial_number']
+            ?? ('SYN-OLT' . $olt->id . '-P' . preg_replace('/\D/', '', $ponPort) . 'O' . $data['onu_number']);
+
+        try {
+            DB::table('onus')->insert(array_merge($payload, [
+                'olt_device_id'  => $olt->id,
+                'company_id'     => $olt->company_id ?? null,
+                'pon_port'       => $ponPort,
+                'onu_number'     => $data['onu_number'],
+                'serial_number'  => $serial,
+                'is_provisioned' => false,
+                'created_at'     => $now,
+            ]));
+            return 1;
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // DB-level UNIQUE (olt_device_id, pon_port, onu_number) prevented a duplicate.
+            // Fall back to update — another process already inserted this ONU.
+            $updatePayload = $payload;
+            unset($updatePayload['serial_number']); // avoid serial UNIQUE conflict on update
+            DB::table('onus')
+                ->where('olt_device_id', $olt->id)
+                ->where('pon_port',      $ponPort)
+                ->where('onu_number',    $data['onu_number'])
+                ->update($updatePayload);
+            Log::info("PollGponTelnetJob: Duplicate blocked by DB constraint, updated instead: {$ponPort}:{$data['onu_number']}");
+            return 1;
+        } catch (\Exception $e) {
+            Log::warning("PollGponTelnetJob: INSERT failed for {$ponPort}:{$data['onu_number']}: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Push optical data back to clients table
+    // ─────────────────────────────────────────────────────────
+
+    protected function syncClientOptical(int $oltId): void
+    {
+        try {
+            // Primary: normalize serial colon variants + set onu_id FK
+            DB::statement("
+                UPDATE clients
+                SET onu_status   = o.status,
+                    onu_rx_power = o.rx_power,
+                    onu_id       = o.id
+                FROM onus o
+                WHERE o.olt_device_id = ?
+                  AND o.serial_number NOT LIKE 'SYN-%'
+                  AND (
+                    REPLACE(clients.onu_serial, ':', '') = REPLACE(o.serial_number, ':', '')
+                    OR clients.onu_mac = o.mac_address
+                  )
+            ", [$oltId]);
+
+            // Fallback: clients already linked by onu_id FK
+            DB::statement("
+                UPDATE clients
+                SET onu_status   = o.status,
+                    onu_rx_power = o.rx_power
+                FROM onus o
+                WHERE clients.onu_id = o.id
+                  AND o.olt_device_id = ?
+            ", [$oltId]);
+        } catch (\Exception $e) {
+            Log::warning('PollGponTelnetJob: syncClientOptical error: ' . $e->getMessage());
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────
+
+    /**
+     * CLI format → DB format:
+     *   "GPON0/1/1" (slot=1, port=1) → "GPON0/1"
+     *   "GPON0/1"   (already correct) → "GPON0/1"
+     */
+    protected function normalizePonPort(string $ponPort): string
+    {
+        // "GPON0/slot/port" — drop the slot component
+        if (preg_match('/^GPON0\/\d+\/(\d+)$/i', $ponPort, $m)) {
+            return 'GPON0/' . $m[1];
+        }
+        return $ponPort ?: 'GPON0/1';
+    }
+}

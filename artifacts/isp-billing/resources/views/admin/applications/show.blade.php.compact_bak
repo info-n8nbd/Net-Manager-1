@@ -1,0 +1,611 @@
+@extends('layouts.admin')
+
+@section('title', 'Application Details')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        @if(session('mikrotik_error'))
+        <div class="alert alert-warning alert-dismissible">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            <i class="fas fa-exclamation-triangle mr-1"></i> <strong>MikroTik Warning:</strong> {{ session('mikrotik_error') }}
+            <br><small>Client has been created successfully but MikroTik user needs to be created manually or by setting the correct MikroTik Profile in Package settings.</small>
+        </div>
+        @endif
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Application Status</h3>
+                        <span class="badge {{ $application->status_badge_class }} float-right" style="font-size: 1em;">{{ $application->status_label }}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Personal Information</h5>
+                                <table class="table table-sm table-bordered">
+                                    @php
+                                        $nameParts = explode(' ', $application->full_name_english, 2);
+                                        $firstName = $nameParts[0] ?? '';
+                                        $lastName = $nameParts[1] ?? '';
+                                    @endphp
+                                    <tr><th>First Name</th><td>{{ $firstName }}</td></tr>
+                                    <tr><th>Last Name</th><td>{{ $lastName ?: '—' }}</td></tr>
+                                    <tr><th>Father/Husband</th><td>{{ $application->father_husband_name ?? '-' }}</td></tr>
+                                    <tr><th>Mother</th><td>{{ $application->mother_name ?? '-' }}</td></tr>
+                                    <tr><th>Date of Birth</th><td>{{ $application->date_of_birth?->format('d-m-Y') ?? '-' }}</td></tr>
+                                    <tr><th>Gender</th><td>{{ ucfirst($application->gender) }}</td></tr>
+                                    <tr><th>Occupation</th><td>{{ $application->occupation ?? '—' }}</td></tr>
+                                    <tr><th>Mobile</th><td>{{ $application->mobile_number }}</td></tr>
+                                    <tr><th>Alt Mobile</th><td>{{ $application->alternative_mobile ?? '-' }}</td></tr>
+                                    <tr><th>Email</th><td>{{ $application->email ?? '-' }}</td></tr>
+                                </table>
+
+                                <h5 class="mt-3">Address</h5>
+                                <table class="table table-sm table-bordered">
+                                    <tr><th width="35%">Division</th><td>{{ $application->division ?? '-' }}</td></tr>
+                                    <tr><th>District</th><td>{{ ($application->district_id ? \App\Models\District::find($application->district_id)?->name : null) ?? $application->district ?? '-' }}</td></tr>
+                                    <tr><th>Thana/Upazila</th><td>{{ ($application->upazila_id ? \App\Models\Upazila::find($application->upazila_id)?->name : null) ?? $application->thana_upazila ?? '-' }}</td></tr>
+                                    <tr><th>Zone</th><td>{{ $application->zone?->name ?? '-' }}</td></tr>
+                                    <tr><th>Sub Zone</th><td>{{ $application->subZone?->name ?? '-' }}</td></tr>
+                                    <tr><th>TJ Box</th><td>{{ $application->box?->name ?? '-' }}</td></tr>
+                                    <tr><th>Address</th><td>{{ $application->house_road_floor ?? '-' }}</td></tr>
+                                    <tr><th>Landmark</th><td>{{ $application->nearby_landmark ?? '-' }}</td></tr>
+                                    <tr>
+                                        <th>Location</th>
+                                        <td>
+                                            @if($application->latitude && $application->longitude)
+                                                <a href="https://www.google.com/maps?q={{ $application->latitude }},{{ $application->longitude }}" target="_blank" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-map-marker-alt mr-1"></i>View Map
+                                                </a>
+                                            @else
+                                                <span class="text-muted">No location</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Connection Details</h5>
+                                <table class="table table-sm table-bordered">
+                                    <tr><th width="40%">Type</th><td>{{ ucfirst($application->connection_type) }}</td></tr>
+                                    <tr><th>Package</th><td>{{ $application->package?->name ?? '-' }} @if($application->package?->price) <small class="text-muted">— ৳{{ number_format($application->package->price, 2) }}</small> @endif</td></tr>
+                                    <tr><th>MikroTik Profile</th><td>{{ $application->mikrotik_profile_name ?: '-' }}</td></tr>
+                                    <tr><th>Connection Type</th><td>{{ ucfirst($application->ip_type) }}</td></tr>
+                                    <tr><th>Billing Cycle</th><td>{{ ucfirst(str_replace('_', ' ', $application->billing_cycle)) }}</td></tr>
+                                    <tr><th>Installation Charge</th><td>৳{{ number_format($application->installation_charge) }}</td></tr>
+                                    <tr><th>Free Client</th><td>{!! $application->is_free ? '<span class="badge badge-info"><i class="fas fa-gift mr-1"></i>FREE — ' . e($application->free_reason ?: 'No reason') . '</span>' : '<span class="text-muted">No</span>' !!}</td></tr>
+                                    <tr><th>ISP ONU</th><td>{!! $application->onu_required ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-secondary">No</span>' !!}</td></tr>
+                                    <tr><th>ISP Router</th><td>{!! $application->router_required ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-secondary">No</span>' !!}</td></tr>
+                                    <tr><th>ISP Fiber/UTP Cable</th><td>{!! ($application->fiber_required ?? true) ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-secondary">No</span>' !!}</td></tr>
+                                    <tr><th>Cable Type</th><td>{{ $application->connection_medium == 'fiber' ? 'Optical Fiber' : 'UTP Cable' }}</td></tr>
+                                    <tr><th>Cable Length</th><td>{{ $application->cable_length_meters ?? '-' }} meters</td></tr>
+                                    <tr><th>Fiber Brand</th><td>{{ $application->fiber_vendor ?: '—' }}</td></tr>
+                                    <tr><th>Fiber Code</th><td>{{ $application->fiber_code ?: '—' }}</td></tr>
+                                    <tr><th>Fiber Core Type</th><td>{{ $application->fiber_core_type ?: '—' }}</td></tr>
+                                    <tr><th>Fiber Color</th><td>{{ $application->fiber_color ?: '—' }}</td></tr>
+                                    <tr><th>Splitter Number</th><td>{{ $application->splitter_number ?: '—' }}</td></tr>
+                                    <tr><th>Splitter Color</th><td>{{ $application->splitter_color ?: '—' }}</td></tr>
+                                    <tr><th>ONU Brand</th><td>{{ $application->onu_brand ?: '—' }}</td></tr>
+                                    <tr><th>ONU MAC/Serial</th><td>{{ $application->onu_mac ?: '—' }}</td></tr>
+                                    @php $appAgent = $application->agent_id ? \App\Models\Agent::find($application->agent_id) : null; @endphp
+                                    <tr><th>Referral Partner</th><td>{{ $appAgent ? $appAgent->name . ($appAgent->personal_contact ? ' (' . $appAgent->personal_contact . ')' : '') : '—' }}</td></tr>
+                                    <tr><th>Commission (%)</th><td>{{ $application->commission_percent !== null ? number_format($application->commission_percent, 2) . '%' : '—' }}</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-danger">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-id-card"></i> NID Verification</h3>
+                        <span class="badge badge-{{ $application->nid_verification_status == 'verified' ? 'success' : ($application->nid_verification_status == 'rejected' ? 'danger' : 'warning') }} float-right">
+                            {{ ucfirst($application->nid_verification_status) }}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <strong>NID Number:</strong> {{ $application->nid_number }}
+                            </div>
+                            <div class="col-md-4">
+                                <h6>NID Front</h6>
+                                @if($application->nid_front_image)
+                                <a href="{{ asset('storage/' . $application->nid_front_image) }}">
+                                    <img src="{{ asset('storage/' . $application->nid_front_image) }}" class="img-fluid img-thumbnail" style="max-height: 150px;">
+                                </a>
+                                @else
+                                <p class="text-muted">Not uploaded</p>
+                                @endif
+                            </div>
+                            <div class="col-md-4">
+                                <h6>NID Back</h6>
+                                @if($application->nid_back_image)
+                                <a href="{{ asset('storage/' . $application->nid_back_image) }}">
+                                    <img src="{{ asset('storage/' . $application->nid_back_image) }}" class="img-fluid img-thumbnail" style="max-height: 150px;">
+                                </a>
+                                @else
+                                <p class="text-muted">Not uploaded</p>
+                                @endif
+                            </div>
+                        </div>
+                        @if($application->nid_verification_status == 'pending' && $application->canBeApproved())
+                        <hr>
+                        <form action="{{ route('admin.applications.verify-nid', $application) }}" method="POST" class="form-inline">
+                            @csrf
+                            <select name="verification_status" class="form-control mr-2" required>
+                                <option value="verified">Verify NID</option>
+                                <option value="rejected">Reject NID</option>
+                            </select>
+                            <input type="text" name="verification_note" class="form-control mr-2" placeholder="Note (optional)">
+                            <button type="submit" class="btn btn-primary">Update NID Status</button>
+                        </form>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-history"></i> Status History</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Action</th>
+                                    <th>By</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($application->statusLogs as $log)
+                                <tr>
+                                    <td>{{ $log->created_at->format('d-m-y H:i') }}</td>
+                                    <td>{{ $log->action_label }}</td>
+                                    <td>{{ $log->changedByUser?->name ?? 'System' }}</td>
+                                    <td>{{ Str::limit($log->note, 80) }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                @if($application->canBeApproved())
+                <div class="card card-success">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-check-circle"></i> Admin Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        @if($application->status == 'submitted')
+                        <form action="{{ route('admin.applications.under-review', $application) }}" method="POST" class="mb-3">
+                            @csrf
+                            <button type="submit" class="btn btn-info btn-block">
+                                <i class="fas fa-search"></i> Take Under Review
+                            </button>
+                        </form>
+                        @endif
+
+                        <form action="{{ route('admin.applications.approve', $application) }}" method="POST" class="mb-3">
+                            @csrf
+                            <div class="form-group">
+                                <label><i class="fas fa-server mr-1"></i> MikroTik Router <span class="text-danger">*</span></label>
+                                <select name="mikrotik_device_id" class="form-control" required>
+                                    <option value="">-- Select Router --</option>
+                                    @foreach($mikrotikDevices as $device)
+                                    <option value="{{ $device->id }}">
+                                        {{ $device->name }} ({{ $device->ip_address ?? $device->host }})
+                                    </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Select which router this client will be connected to</small>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fas fa-tachometer-alt mr-1"></i> MikroTik Profile <span class="text-danger">*</span></label>
+                                <select name="mikrotik_profile_name" class="form-control" id="approve_profile" required>
+                                    <option value="">-- Select Profile --</option>
+                                    @foreach($availableProfiles ?? [] as $profile)
+                                    <option value="{{ $profile }}" {{ $application->mikrotik_profile_name == $profile ? 'selected' : '' }}>{{ $profile }}</option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">Select speed profile for this client on MikroTik router.</small>
+                            </div>
+                            @php $nextClientCode = \App\Models\Client::generateClientId(); @endphp
+                            <div class="form-group">
+                                <label>Client Code / ComID <span class="text-danger">*</span></label>
+                                <input type="text" name="client_code" id="client_code_field" class="form-control" value="{{ $nextClientCode }}" required>
+                                <small class="text-muted">Leave as-is for auto-generated, or customize as needed.</small>
+                            </div>
+                            <div class="form-group">
+                                <label>PPPoE Username <span class="text-danger">*</span></label>
+                                <input type="text" name="username" class="form-control" value="{{ strtolower(preg_replace('/[^a-zA-Z]/', '', $application->full_name_english)) }}" required>
+                                <small class="text-muted">e.g. masud42</small>
+                            </div>
+                            <div class="form-group">
+                                <label>PPPoE Password <span class="text-danger">*</span></label>
+                                <input type="text" name="password" id="pppoe_password_field" class="form-control" value="{{ $nextClientCode }}" required>
+                                <small class="text-muted">Matches Client Code by default.</small>
+                            </div>
+                            <div class="card card-body mb-3" style="background:#f8f9ff; border:1px solid #dee2f7; border-radius:8px;">
+                                <h6 class="mb-2" style="color:#1a2e5a;"><i class="fas fa-satellite-dish mr-1"></i>ONU/OLT Device</h6>
+                                <div class="alert alert-info py-2 mb-2" style="font-size:12px; border-radius:6px;">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Type ONU details manually, or click <strong>"Pick ONU"</strong> to select from OLT-detected ONU list.
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label style="font-size:12px;" class="mb-1">OLT DEVICE</label>
+                                    <select name="olt_device_id" id="app_olt_device_id" class="form-control form-control-sm">
+                                        <option value="">-- Select OLT --</option>
+                                        @foreach($oltDevices ?? [] as $olt)
+                                        <option value="{{ $olt->id }}" {{ $application->olt_device_id == $olt->id ? 'selected' : '' }}>
+                                            {{ $olt->name }} ({{ $olt->ip_address }})
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="d-flex mb-2" style="gap:8px;">
+                                    <button type="button" class="btn btn-primary btn-sm flex-grow-1" id="btnAppPickOnu" style="font-weight:600;">
+                                        <i class="fas fa-search mr-1"></i>Pick ONU
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" id="btnAppUnselectOnu" style="display:none;" onclick="appUnselectOnu()">
+                                        <i class="fas fa-times mr-1"></i>Unselect
+                                    </button>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6 pr-1">
+                                        <div class="form-group mb-2">
+                                            <label style="font-size:12px;" class="mb-1">ONU SERIAL <small class="text-muted">(AUTO-FILLED ON PICK)</small></label>
+                                            <input type="text" name="onu_serial" id="app_onu_serial" class="form-control form-control-sm"
+                                                value="{{ $application->onu_serial }}" placeholder="e.g. BDCOM2057AF139BC">
+                                        </div>
+                                    </div>
+                                    <div class="col-6 pl-1">
+                                        <div class="form-group mb-2">
+                                            <label style="font-size:12px;" class="mb-1">ONU MAC <small class="text-muted">(AUTO-FILLED)</small></label>
+                                            <input type="text" name="onu_mac" id="app_onu_mac" class="form-control form-control-sm"
+                                                value="{{ $application->onu_mac }}" placeholder="e.g. 20:57:AF:13:9B:C4">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6 pr-1">
+                                        <div class="form-group mb-0">
+                                            <label style="font-size:12px;" class="mb-1">ONU MODEL</label>
+                                            <input type="text" name="onu_model" id="app_onu_model" class="form-control form-control-sm"
+                                                value="{{ $application->onu_model }}" placeholder="e.g. FHR1">
+                                        </div>
+                                    </div>
+                                    <div class="col-6 pl-1">
+                                        <div class="form-group mb-0">
+                                            <label style="font-size:12px;" class="mb-1">OLT PORT <small class="text-muted">(AUTO-FILLED)</small></label>
+                                            <input type="text" name="olt_port" id="app_olt_port" class="form-control form-control-sm"
+                                                value="{{ $application->olt_port }}" placeholder="e.g. EPON0/2">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Admin Note (Optional)</label>
+                                <textarea name="admin_note" class="form-control" rows="2"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-block" onclick="return confirm('Approve this application? This will create a new client and MikroTik user.')">
+                                <i class="fas fa-check"></i> Approve Application
+                            </button>
+                        </form>
+
+                        <a href="{{ route('admin.applications.edit', $application) }}" class="btn btn-warning btn-block mb-3">
+                            <i class="fas fa-edit"></i> Edit Application
+                        </a>
+
+                        <hr>
+
+                        <form action="{{ route('admin.applications.request-correction', $application) }}" method="POST" class="mb-3">
+                            @csrf
+                            <div class="form-group">
+                                <label>Correction Required</label>
+                                <textarea name="correction_note" class="form-control" rows="2" placeholder="Correction details..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-warning btn-block">
+                                <i class="fas fa-edit"></i> Request Correction
+                            </button>
+                        </form>
+
+                        <hr>
+
+                        <form action="{{ route('admin.applications.reject', $application) }}" method="POST">
+                            @csrf
+                            <div class="form-group">
+                                <label>Rejection Reason</label>
+                                <textarea name="rejection_reason" class="form-control" rows="2" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-danger btn-block" onclick="return confirm('Reject this application?')">
+                                <i class="fas fa-times"></i> Reject Application
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                @endif
+
+                @if($application->status == 'approved')
+                <div class="card card-success">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-check-circle"></i> Approval Details</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Approved By:</strong> {{ $application->approver?->name }}</p>
+                        <p><strong>Approved At:</strong> {{ $application->approved_at?->format('d-m-y H:i') }}</p>
+                        @if($application->admin_note)
+                        <p><strong>Admin Note:</strong> {{ $application->admin_note }}</p>
+                        @endif
+                        <hr>
+                        @if($application->createdClient)
+                        <p><strong>Client ID:</strong> 
+                            <a href="{{ route('admin.clients.show', $application->createdClient) }}">{{ $application->createdClient->client_id }}</a>
+                        </p>
+                        @endif
+                        @if($application->mikrotik_created)
+                        <p><strong>MikroTik User:</strong> {{ $application->mikrotik_username }}</p>
+                        <p><strong>Device:</strong> {{ $application->mikrotikDevice?->name }}</p>
+                        @else
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> MikroTik user not created
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
+                @if($application->status == 'rejected')
+                <div class="card card-danger">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-times-circle"></i> Rejection Details</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Rejected By:</strong> {{ $application->reviewer?->name }}</p>
+                        <p><strong>Rejected At:</strong> {{ $application->reviewed_at?->format('d-m-y H:i') }}</p>
+                        <p><strong>Reason:</strong> {{ $application->rejection_reason }}</p>
+                    </div>
+                </div>
+                @endif
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-user-cog"></i> Technician Info</h3>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Technician:</strong> {{ $application->technician?->name }}</p>
+                        <p><strong>Submitted:</strong> {{ $application->created_at->format('d-m-y H:i') }}</p>
+                        <p><strong>Feasibility:</strong> 
+                            @if($application->installation_feasibility)
+                            <span class="badge badge-success">Feasible</span>
+                            @else
+                            <span class="badge badge-danger">Not Feasible</span>
+                            @endif
+                        </p>
+                        @if($application->technician_note)
+                        <p><strong>Note:</strong> {{ $application->technician_note }}</p>
+                        @endif
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var codeField = document.getElementById('client_code_field');
+    var passField = document.getElementById('pppoe_password_field');
+    if (codeField && passField) {
+        codeField.addEventListener('input', function() {
+            passField.value = this.value;
+        });
+    }
+});
+</script>
+
+{{-- ONU Picker Modal for Application Review --}}
+<div class="modal fade" id="appOnuPickerModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1a1a2e,#16213e); color:#fff; padding:12px 20px;">
+                <h5 class="modal-title"><i class="fas fa-broadcast-tower mr-2"></i>Pick ONU from OLT Scan</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="input-group mb-3">
+                    <input type="text" id="appOnuPickerSearch" class="form-control" placeholder="Search by Serial / MAC / Port...">
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <div class="custom-control custom-checkbox mb-0">
+                                <input type="checkbox" class="custom-control-input" id="appOnuPickerUnassignedOnly">
+                                <label class="custom-control-label" for="appOnuPickerUnassignedOnly" style="font-size:12px;">Only Unassigned</label>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="appOnuPickerSearchBtn"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+                <div id="appOnuPickerLoading" class="text-center py-4" style="display:none;">
+                    <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                    <p class="mt-2 text-muted">Loading ONU list...</p>
+                </div>
+                <div style="max-height:400px; overflow-y:auto;">
+                    <table class="table table-sm table-hover table-bordered mb-0">
+                        <thead style="background:#f0f0f0; position:sticky; top:0;">
+                            <tr>
+                                <th>Serial</th><th>MAC</th><th>Port</th><th>Model</th>
+                                <th>RX Power</th><th>Status</th><th>Client</th><th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="appOnuPickerBody">
+                            <tr><td colspan="8" class="text-center text-muted py-3">Click search to load ONUs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer py-2 d-flex justify-content-between align-items-center flex-wrap">
+                <small class="text-muted"><i class="fas fa-info-circle mr-1"></i>Selecting an ONU will auto-fill the form</small>
+                <div>
+                    <button type="button" class="btn btn-warning btn-sm mr-2" onclick="appScanOltAndRefresh()">
+                        <i class="fas fa-sync-alt mr-1"></i>OLT Scan
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// ─── ONU Picker for Application Review ────────────────────────────────────────
+(function() {
+    var _appCachedOnus = null;
+
+    document.getElementById('btnAppPickOnu') && document.getElementById('btnAppPickOnu').addEventListener('click', function() {
+        _appCachedOnus = null;
+        $('#appOnuPickerModal').modal('show');
+        appLoadOnuPickerList();
+    });
+
+    document.getElementById('appOnuPickerSearchBtn') && document.getElementById('appOnuPickerSearchBtn').addEventListener('click', function() {
+        appLoadOnuPickerList();
+    });
+
+    document.getElementById('appOnuPickerSearch') && document.getElementById('appOnuPickerSearch').addEventListener('keypress', function(e) {
+        if (e.which === 13) { e.preventDefault(); appLoadOnuPickerList(); }
+    });
+
+    document.getElementById('app_onu_serial') && (function() {
+        var s = document.getElementById('app_onu_serial').value;
+        if (s) document.getElementById('btnAppUnselectOnu') && (document.getElementById('btnAppUnselectOnu').style.display = '');
+    })();
+
+    window.appLoadOnuPickerList = function() {
+        if (_appCachedOnus && _appCachedOnus.length > 0) {
+            appRenderOnuTable(_appCachedOnus);
+            return;
+        }
+        $('#appOnuPickerLoading').show();
+        $('#appOnuPickerBody').html('');
+        var search = encodeURIComponent(document.getElementById('appOnuPickerSearch').value || '');
+        var unassigned = document.getElementById('appOnuPickerUnassignedOnly').checked ? '1' : '0';
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/admin/network/onus/picker-list?search=' + search + '&unassigned_only=' + unassigned, true);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.timeout = 15000;
+        xhr.onload = function() {
+            $('#appOnuPickerLoading').hide();
+            try {
+                var res = JSON.parse(xhr.responseText);
+                if (res.success && res.data && res.data.length > 0) {
+                    _appCachedOnus = res.data;
+                    appRenderOnuTable(res.data);
+                } else if (res.success) {
+                    $('#appOnuPickerBody').html('<tr><td colspan="8" class="text-center text-muted py-3"><i class="fas fa-info-circle mr-2"></i>No ONUs found. Run OLT Scan first.</td></tr>');
+                } else {
+                    $('#appOnuPickerBody').html('<tr><td colspan="8" class="text-center text-danger py-3">' + (res.message || 'Error') + '</td></tr>');
+                }
+            } catch(e) {
+                $('#appOnuPickerBody').html('<tr><td colspan="8" class="text-center text-danger py-3">Failed to load ONU list.</td></tr>');
+            }
+        };
+        xhr.onerror = function() { $('#appOnuPickerLoading').hide(); $('#appOnuPickerBody').html('<tr><td colspan="8" class="text-center text-danger py-3">Network error.</td></tr>'); };
+        xhr.ontimeout = function() { $('#appOnuPickerLoading').hide(); $('#appOnuPickerBody').html('<tr><td colspan="8" class="text-center text-danger py-3">Timeout.</td></tr>'); };
+        xhr.send();
+    };
+
+    window.appRenderOnuTable = function(onus) {
+        var search = (document.getElementById('appOnuPickerSearch').value || '').toLowerCase();
+        var unassignedOnly = document.getElementById('appOnuPickerUnassignedOnly').checked;
+        var html = '';
+        var count = 0;
+        onus.forEach(function(o) {
+            if (unassignedOnly && o.client_id) return;
+            if (search && !(
+                (o.serial_number||'').toLowerCase().indexOf(search) >= 0 ||
+                (o.mac_address||'').toLowerCase().indexOf(search) >= 0 ||
+                (o.pon_port||'').toLowerCase().indexOf(search) >= 0 ||
+                (o.model||'').toLowerCase().indexOf(search) >= 0
+            )) return;
+            var statusBadge = o.status === 'online'
+                ? '<span class="badge badge-success" style="font-size:11px;">Online</span>'
+                : '<span class="badge badge-secondary" style="font-size:11px;">Offline</span>';
+            var clientInfo = o.client_username
+                ? '<span class="badge badge-warning" style="font-size:11px;"><i class="fas fa-user mr-1"></i>' + o.client_username + '</span>'
+                : '<span class="text-muted" style="font-size:11px;">—</span>';
+            var rxStr = o.rx_power !== null ? o.rx_power + ' dBm' : '—';
+            var rxColor = o.rx_power !== null ? (o.rx_power >= -15 ? 'color:#28a745' : (o.rx_power >= -20 ? 'color:#17a2b8' : 'color:#ffc107')) : '';
+            html += '<tr style="cursor:pointer;" onclick=\'appPickOnu(' + JSON.stringify(o).replace(/'/g, "\\'") + ')\'>';
+            html += '<td><code style="font-size:12px;">' + (o.serial_number || '—') + '</code></td>';
+            html += '<td><code style="font-size:11px;">' + (o.mac_address || '—') + '</code></td>';
+            html += '<td><strong class="text-success">' + (o.pon_port || '—') + '</strong></td>';
+            html += '<td>' + (o.model || '—') + '</td>';
+            html += '<td style="' + rxColor + '; font-weight:600;">' + rxStr + '</td>';
+            html += '<td>' + statusBadge + '</td>';
+            html += '<td>' + clientInfo + '</td>';
+            html += '<td><button type="button" class="btn btn-xs btn-success" style="white-space:nowrap;padding:2px 8px;font-size:12px;"><i class="fas fa-check mr-1"></i>Select</button></td>';
+            html += '</tr>';
+            count++;
+        });
+        if (!count) html = '<tr><td colspan="8" class="text-center text-muted py-3">No matching ONUs found.</td></tr>';
+        document.getElementById('appOnuPickerBody').innerHTML = html;
+    };
+
+    window.appPickOnu = function(o) {
+        if (o.serial_number) document.getElementById('app_onu_serial').value = o.serial_number;
+        if (o.mac_address)   document.getElementById('app_onu_mac').value   = o.mac_address;
+        if (o.pon_port)      document.getElementById('app_olt_port').value   = o.pon_port;
+        if (o.model)         document.getElementById('app_onu_model').value  = o.model;
+        if (o.olt_device_id) document.getElementById('app_olt_device_id').value = o.olt_device_id;
+        $('#appOnuPickerModal').modal('hide');
+        document.getElementById('btnAppUnselectOnu').style.display = '';
+        var serial = document.getElementById('app_onu_serial');
+        serial.style.borderColor = '#28a745';
+        serial.style.boxShadow = '0 0 0 0.2rem rgba(40,167,69,0.25)';
+        setTimeout(function() { serial.style.borderColor = ''; serial.style.boxShadow = ''; }, 3000);
+        if (typeof toastr !== 'undefined') toastr.success('ONU "' + (o.serial_number || o.mac_address) + '" selected!', 'ONU Selected');
+    };
+
+    window.appUnselectOnu = function() {
+        if (!window.Swal) {
+            if (!confirm('Clear ONU selection?')) return;
+            document.getElementById('app_onu_serial').value = '';
+            document.getElementById('app_onu_mac').value = '';
+            document.getElementById('app_olt_port').value = '';
+            document.getElementById('app_onu_model').value = '';
+            document.getElementById('app_olt_device_id').value = '';
+            document.getElementById('btnAppUnselectOnu').style.display = 'none';
+            return;
+        }
+        Swal.fire({
+            title: 'Unselect ONU?',
+            text: 'ONU Serial, MAC, Port and Model will be cleared.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Yes, Clear',
+        }).then(function(r) {
+            if (r.isConfirmed) {
+                document.getElementById('app_onu_serial').value = '';
+                document.getElementById('app_onu_mac').value = '';
+                document.getElementById('app_olt_port').value = '';
+                document.getElementById('app_onu_model').value = '';
+                document.getElementById('app_olt_device_id').value = '';
+                document.getElementById('btnAppUnselectOnu').style.display = 'none';
+                if (typeof toastr !== 'undefined') toastr.info('ONU cleared.', 'ONU Unselected');
+            }
+        });
+    };
+
+    window.appScanOltAndRefresh = function() {
+        if (typeof toastr !== 'undefined') toastr.info('OLT Scan triggered. Reload list in a moment.', 'OLT Scan');
+        _appCachedOnus = null;
+        setTimeout(appLoadOnuPickerList, 2000);
+    };
+})();
+</script>
+@endsection

@@ -1,0 +1,228 @@
+@extends('layouts.admin')
+
+@section('title', 'MAC Address Bindings')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter mr-1"></i>Filters</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row align-items-end">
+                    <div class="col-md-3">
+                        <label>Zone</label>
+                        <select name="zone_id" class="form-control form-control-sm">
+                            <option value="">All Zones</option>
+                            @foreach($zones as $zone)
+                                <option value="{{ $zone->id }}" {{ request('zone_id') == $zone->id ? 'selected' : '' }}>{{ $zone->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Binding Status</label>
+                        <select name="binding_status" class="form-control form-control-sm">
+                            <option value="">All</option>
+                            <option value="bound" {{ request('binding_status') == 'bound' ? 'selected' : '' }}>Bound</option>
+                            <option value="unbound" {{ request('binding_status') == 'unbound' ? 'selected' : '' }}>Unbound</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>Search</label>
+                        <input type="text" name="search" class="form-control form-control-sm" value="{{ request('search') }}" placeholder="Name, ID, MAC, IP...">
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary btn-sm btn-block"><i class="fas fa-search mr-1"></i>Filter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-table mr-1"></i>Clients with MAC Addresses</h3>
+                <div class="card-tools">
+                    <button class="btn btn-sm btn-success" onclick="bulkBind()" id="bulkBindBtn" disabled>
+                        <i class="fas fa-link mr-1"></i>Bulk Bind Selected
+                    </button>
+                    <span class="badge badge-primary ml-2">{{ $clients->total() }} clients</span>
+                </div>
+            </div>
+            <div class="card-body table-responsive p-0">
+                <table class="table table-hover table-striped table-sm">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
+                            <th>Client ID</th>
+                            <th>Name</th>
+                            <th>MAC Address</th>
+                            <th>IP Address</th>
+                            <th>Zone</th>
+                            <th>Connection</th>
+                            <th>Binding</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($clients as $client)
+                        <tr id="row-{{ $client->id }}">
+                            <td><input type="checkbox" class="client-check" value="{{ $client->id }}" onchange="updateBulkBtn()"></td>
+                            <td><span class="badge badge-primary">{{ $client->client_id }}</span></td>
+                            <td>{{ $client->name }}</td>
+                            <td>
+                                <span id="mac-display-{{ $client->id }}">
+                                    <code>{{ $client->mac_address }}</code>
+                                    <button class="btn btn-xs btn-outline-secondary ml-1" onclick="editMac({{ $client->id }}, '{{ $client->mac_address }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </span>
+                                <span id="mac-edit-{{ $client->id }}" style="display: none;">
+                                    <div class="input-group input-group-sm" style="width: 220px;">
+                                        <input type="text" class="form-control" id="mac-input-{{ $client->id }}" value="{{ $client->mac_address }}" placeholder="AA:BB:CC:DD:EE:FF" pattern="^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-success" onclick="saveMac({{ $client->id }})"><i class="fas fa-check"></i></button>
+                                            <button class="btn btn-secondary" onclick="cancelEditMac({{ $client->id }})"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </div>
+                                </span>
+                            </td>
+                            <td>{{ $client->ip_address ?? 'N/A' }}</td>
+                            <td>{{ $client->zone->name ?? '-' }}</td>
+                            <td><span class="badge badge-secondary">{{ ucfirst($client->connection_type ?? 'pppoe') }}</span></td>
+                            <td>
+                                <span id="binding-status-{{ $client->id }}">
+                                    @if($client->mac_binding_enabled)
+                                        <span class="badge badge-success"><i class="fas fa-lock mr-1"></i>Bound</span>
+                                    @else
+                                        <span class="badge badge-secondary"><i class="fas fa-lock-open mr-1"></i>Unbound</span>
+                                    @endif
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-xs btn-{{ $client->mac_binding_enabled ? 'danger' : 'success' }}" onclick="toggleBinding({{ $client->id }})" id="toggle-btn-{{ $client->id }}">
+                                    <i class="fas fa-{{ $client->mac_binding_enabled ? 'unlock' : 'lock' }} mr-1"></i>
+                                    {{ $client->mac_binding_enabled ? 'Unbind' : 'Bind' }}
+                                </button>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="9" class="text-center text-muted py-4">No clients with MAC addresses found</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer clearfix">
+                {{ $clients->appends(request()->query())->links() }}
+            </div>
+        </div>
+    </div>
+</section>
+@endsection
+
+@push('scripts')
+<script>
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+function toggleSelectAll(el) {
+    document.querySelectorAll('.client-check').forEach(cb => cb.checked = el.checked);
+    updateBulkBtn();
+}
+
+function updateBulkBtn() {
+    const checked = document.querySelectorAll('.client-check:checked').length;
+    document.getElementById('bulkBindBtn').disabled = checked === 0;
+}
+
+function toggleBinding(clientId) {
+    const btn = document.getElementById('toggle-btn-' + clientId);
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    fetch('{{ url("admin/network/mac-bindings") }}/' + clientId + '/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const bound = data.bound;
+            document.getElementById('binding-status-' + clientId).innerHTML = bound
+                ? '<span class="badge badge-success"><i class="fas fa-lock mr-1"></i>Bound</span>'
+                : '<span class="badge badge-secondary"><i class="fas fa-lock-open mr-1"></i>Unbound</span>';
+            btn.className = 'btn btn-xs btn-' + (bound ? 'danger' : 'success');
+            btn.innerHTML = '<i class="fas fa-' + (bound ? 'unlock' : 'lock') + ' mr-1"></i>' + (bound ? 'Unbind' : 'Bind');
+        }
+        btn.disabled = false;
+    })
+    .catch(() => { btn.disabled = false; btn.innerHTML = 'Error'; });
+}
+
+function editMac(clientId, currentMac) {
+    document.getElementById('mac-display-' + clientId).style.display = 'none';
+    document.getElementById('mac-edit-' + clientId).style.display = 'inline-block';
+    document.getElementById('mac-input-' + clientId).value = currentMac;
+    document.getElementById('mac-input-' + clientId).focus();
+}
+
+function cancelEditMac(clientId) {
+    document.getElementById('mac-display-' + clientId).style.display = 'inline';
+    document.getElementById('mac-edit-' + clientId).style.display = 'none';
+}
+
+function saveMac(clientId) {
+    const mac = document.getElementById('mac-input-' + clientId).value.trim();
+    const macRegex = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
+    if (!macRegex.test(mac)) {
+        alert('Invalid MAC address format. Use format: AA:BB:CC:DD:EE:FF');
+        return;
+    }
+
+    fetch('{{ url("admin/network/mac-bindings") }}/' + clientId + '/update-mac', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+        body: JSON.stringify({ mac_address: mac })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const display = document.getElementById('mac-display-' + clientId);
+            display.querySelector('code').textContent = mac.toUpperCase();
+            display.querySelector('button').setAttribute('onclick', "editMac(" + clientId + ", '" + mac.toUpperCase() + "')");
+            cancelEditMac(clientId);
+        } else {
+            alert(data.message || 'Failed to update MAC address');
+        }
+    })
+    .catch(() => alert('Error updating MAC address'));
+}
+
+function bulkBind() {
+    const ids = Array.from(document.querySelectorAll('.client-check:checked')).map(cb => cb.value);
+    if (ids.length === 0) return;
+    smartConfirm({message:'Bind MAC addresses for '+ids.length+' selected clients?',confirmText:'Bind'}, function() {
+    const btn = document.getElementById('bulkBindBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Processing...';
+
+    fetch('{{ route("admin.network.mac-bulk-bind") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+        body: JSON.stringify({ client_ids: ids })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message || 'Bulk bind failed');
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-link mr-1"></i>Bulk Bind Selected';
+    })
+    .catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-link mr-1"></i>Bulk Bind Selected'; });
+    }); // end smartConfirm
+}
+</script>
+@endpush

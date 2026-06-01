@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110" width="160" height="110">
+  <rect width="160" height="110" fill="white"/>
+  <!-- Fiber arc mark -->
+  <g transform="translate(20,30)">
+    <path d="M0,30 Q15,-5 30,30" fill="none" stroke="#006DB7" stroke-width="5" stroke-linecap="round"/>
+    <path d="M8,30 Q20,0 32,30" fill="none" stroke="#00A651" stroke-width="4" stroke-linecap="round"/>
+    <path d="M16,30 Q25,5 34,30" fill="none" stroke="#006DB7" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  </g>
+  <text x="95" y="48" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" font-weight="bold" fill="#006DB7">FiberHome</text>
+  <text x="95" y="62" text-anchor="middle" font-family="Arial,sans-serif" font-size="8.5" letter-spacing="0.5" fill="#555">Technologies</text>
+</svg>

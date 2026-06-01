@@ -1,0 +1,156 @@
+@extends('layouts.admin')
+
+@section('title', 'Data Transfer - Import & Export')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-upload mr-2"></i>Import Data</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>Import clients, bills, payments, and other data from external sources.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success mr-2"></i>Excel (.xlsx, .xls)</li>
+                            <li><i class="fas fa-check text-success mr-2"></i>CSV files</li>
+                            <li><i class="fas fa-check text-success mr-2"></i>JSON data</li>
+                            <li><i class="fas fa-check text-success mr-2"></i>ZIP archives</li>
+                        </ul>
+                        <a href="{{ route('admin.data-transfer.import.index') }}" class="btn btn-primary">
+                            <i class="fas fa-upload mr-1"></i> Start Import
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card card-success card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-download mr-2"></i>Export Data</h3>
+                    </div>
+                    <div class="card-body">
+                        <p>Export your complete data for backup or migration purposes.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check text-success mr-2"></i>Excel (multi-sheet)</li>
+                            <li><i class="fas fa-check text-success mr-2"></i>CSV format</li>
+                            <li><i class="fas fa-check text-success mr-2"></i>JSON (migration ready)</li>
+                            <li><i class="fas fa-check text-success mr-2"></i>ZIP (complete package)</li>
+                        </ul>
+                        <a href="{{ route('admin.data-transfer.export.index') }}" class="btn btn-success">
+                            <i class="fas fa-download mr-1"></i> Start Export
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Imports</h3>
+                    </div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($recentImports as $import)
+                                <tr>
+                                    <td>{{ $import->name }}</td>
+                                    <td>{{ ucfirst($import->data_type) }}</td>
+                                    <td><span class="badge {{ $import->getStatusBadgeClass() }}">{{ ucfirst($import->status) }}</span></td>
+                                    <td>{{ $import->created_at->format('d-m-Y') }}</td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No recent imports</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Exports</h3>
+                    </div>
+                    <div class="card-body table-responsive p-0">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Format</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($recentExports as $export)
+                                <tr>
+                                    <td>{{ $export->name }}</td>
+                                    <td>{{ strtoupper($export->file_format) }}</td>
+                                    <td><span class="badge {{ $export->getStatusBadgeClass() }}">{{ ucfirst($export->status) }}</span></td>
+                                    <td>{{ $export->created_at->format('d-m-Y') }}</td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No recent exports</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-layer-group mr-2"></i>Saved Mapping Templates</h3>
+                        <div class="card-tools">
+                            <a href="{{ route('admin.data-transfer.templates.index') }}" class="btn btn-sm btn-outline-secondary">
+                                View All Templates
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        @if($templates->count() > 0)
+                        <div class="row">
+                            @foreach($templates as $template)
+                            <div class="col-md-4 col-lg-3">
+                                <div class="info-box bg-light">
+                                    <span class="info-box-icon bg-info"><i class="fas fa-exchange-alt"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">{{ $template->name }}</span>
+                                        <span class="info-box-number">{{ ucfirst($template->data_type) }}</span>
+                                        <small class="text-muted">Used {{ $template->usage_count }} times</small>
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                        @else
+                        <p class="text-muted text-center mb-0">No saved templates yet. Templates will appear here when you save field mappings during import.</p>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@endsection

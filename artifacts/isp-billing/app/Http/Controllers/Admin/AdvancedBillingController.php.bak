@@ -1,0 +1,441 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\AdvancePayment;
+use App\Models\Bill;
+use App\Models\Client;
+use App\Models\Payment;
+use App\Models\PaymentMethod;
+use App\Models\PaymentGatewayTransaction;
+use App\Models\PaymentLink;
+use App\Models\CollectionTransfer;
+use App\Models\Account;
+use App\Services\BillingService;
+use App\Services\SmsService;
+use Illuminate\Http\Request;
+
+class AdvancedBillingController extends Controller
+{
+    protected BillingService $billingService;
+    protected SmsService $smsService;
+
+    public function __construct(BillingService $billingService, SmsService $smsService)
+    {
+        $this->billingService = $billingService;
+        $this->smsService = $smsService;
+    }
+
+    public function processPartialPayment(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'payment_method_id' => 'required|exists:payment_methods,id'
+        ]);
+
+        $payments = $this->billingService->processPartialPayment(
+            $client,
+            $validated['amount'],
+            $validated['payment_method_id']
+        );
+
+        if (!empty($payments)) {
+            $this->smsService->sendPaymentConfirmation($client, $validated['amount'], $payments[0]->payment_no);
+        }
+
+        return redirect()->back()->with('success', 'Payment of ৳' . number_format($validated['amount'], 2) . ' processed successfully.');
+    }
+
+    public function collectionTransfers(Request $request)
+    {
+        $query = CollectionTransfer::with(['fromUser', 'toUser', 'toAccount', 'verifier'])->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('date_from')) {
+            $query->whereDate('transfer_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('transfer_date', '<=', $request->date_to);
+        }
+
+        $transfers = $query->paginate(in_array((int)request()->per_page,[20,50,100,200])?(int)request()->per_page:20)->withQueryString();
+        $authUser = auth()->user();
+        $isAdmin = in_array($authUser->user_type, ['admin', 'super_admin']);
+        if ($isAdmin) {
+            $accounts = Account::where('is_active', true)->get();
+        } else {
+            // Non-admin: only show accounts belonging to their portal/company
+            $accounts = Account::where('is_active', true)
+                ->where(function($q) use ($authUser) {
+                    $q->where('company_id', $authUser->company_id)
+                      ->orWhereNull('company_id');
+                })->get();
+        }
+        $staffUsers = \App\Models\User::whereIn('user_type', ['admin', 'employee', 'super_admin', 'technician', 'billman', 'manager'])
+            ->where('is_active', true)
+            ->where('id', '!=', auth()->id())
+            ->orderBy('name')
+            ->get();
+
+        $allStaffUsers = \App\Models\User::whereIn('user_type', ['admin', 'employee', 'super_admin', 'technician', 'billman', 'manager'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $pendingCount = CollectionTransfer::where('status', 'pending')->count();
+        $totalTransferred = CollectionTransfer::where('status', 'completed')->sum('amount');
+
+        return view('admin.billing.collection-transfers', compact('transfers', 'accounts', 'staffUsers', 'allStaffUsers', 'pendingCount', 'totalTransferred'));
+    }
+
+    public function storeCollectionTransfer(Request $request)
+    {
+        $rules = [
+            'from_user_id' => 'required|exists:users,id',
+            'amount' => 'required|numeric|min:1',
+            'transfer_date' => 'required|date',
+            'remarks' => 'nullable|string',
+            'transfer_type' => 'required|in:to_account,to_user',
+        ];
+
+        if ($request->transfer_type === 'to_account') {
+            $rules['to_account_id'] = 'required|exists:accounts,id';
+        } else {
+            $rules['to_user_id'] = 'required|exists:users,id';
+        }
+
+        $validated = $request->validate($rules);
+
+        $data = [
+            'transfer_no' => CollectionTransfer::generateTransferNo(),
+            'from_user_id' => $validated['from_user_id'],
+            'amount' => $validated['amount'],
+            'transfer_date' => $validated['transfer_date'],
+            'remarks' => $validated['remarks'] ?? null,
+            'status' => 'pending',
+        ];
+
+        if ($request->transfer_type === 'to_account') {
+            $data['to_account_id'] = $validated['to_account_id'];
+        } else {
+            $data['to_user_id'] = $validated['to_user_id'];
+        }
+
+        $transfer = CollectionTransfer::create($data);
+
+        try {
+            $fromUser = \App\Models\User::find($validated['from_user_id'])->name ?? 'Unknown';
+            $toTarget = $request->transfer_type === 'to_account'
+                ? (Account::find($validated['to_account_id'])->name ?? 'Account')
+                : (\App\Models\User::find($validated['to_user_id'])->name ?? 'User');
+            (new \App\Services\TelegramService())->sendCollectionTransferNotification(
+                $transfer->transfer_no,
+                $fromUser,
+                $toTarget,
+                (float) $validated['amount'],
+                'pending',
+                $validated['transfer_date'] ?? '',
+                $validated['remarks'] ?? ''
+            );
+        } catch (\Throwable $e) {
+        }
+
+        return redirect()->back()->with('success', 'Collection transfer submitted for verification.');
+    }
+
+    public function verifyTransfer(Request $request, CollectionTransfer $transfer)
+    {
+        if ($request->action === 'verify') {
+            $transfer->status = 'completed';
+            $transfer->verified_by = auth()->id();
+            $transfer->save();
+
+            try {
+                $fromUser = $transfer->fromUser->name ?? 'Unknown';
+                $toTarget = $transfer->to_account_id
+                    ? ($transfer->toAccount->name ?? 'Account')
+                    : ($transfer->toUser->name ?? 'User');
+                (new \App\Services\TelegramService())->sendCollectionTransferNotification(
+                    $transfer->transfer_no,
+                    $fromUser,
+                    $toTarget,
+                    (float) $transfer->amount,
+                    'completed',
+                    $transfer->transfer_date ? (is_string($transfer->transfer_date) ? $transfer->transfer_date : $transfer->transfer_date->format('d-m-Y')) : '',
+                    $transfer->remarks ?? '',
+                    auth()->user()->name ?? ''
+                );
+            } catch (\Throwable $e) {
+            }
+
+            if ($transfer->to_account_id) {
+                $account = $transfer->toAccount;
+                if ($account) {
+                    $account->current_balance += $transfer->amount;
+                    $account->save();
+                }
+            }
+
+            // Sync staff_dues: mark payments as submitted and reduce current_due
+            try {
+                $submissionAmount = (float) $transfer->amount;
+                $fromUserId = $transfer->from_user_id;
+
+                $staffDue = \App\Models\StaffDue::firstOrCreate(
+                    ['user_id' => $fromUserId],
+                    ['total_collected' => 0, 'total_submitted' => 0, 'current_due' => 0]
+                );
+
+                // Create a StaffSubmission record for audit trail
+                $submission = \App\Models\StaffSubmission::create([
+                    'staff_user_id'  => $fromUserId,
+                    'amount'         => $submissionAmount,
+                    'submission_date'=> now()->toDateString(),
+                    'payment_method' => 'collection_transfer',
+                    'remarks'        => 'Via Collection Transfer: ' . $transfer->transfer_no,
+                    'status'         => 'received',
+                    'received_by'    => auth()->id(),
+                    'received_at'    => now(),
+                ]);
+
+                // Mark unsubmitted payments as submitted (oldest first, up to amount)
+                $markedAmount = 0;
+                $unsubmitted = \App\Models\Payment::where('collected_by', $fromUserId)
+                    ->where(function($q) { $q->whereNull('submitted_to_admin')->orWhere('submitted_to_admin', false); })
+                    ->where('status', 'approved')
+                    ->orderBy('created_at')
+                    ->get();
+
+                foreach ($unsubmitted as $payment) {
+                    if ($markedAmount >= $submissionAmount) break;
+                    if ($markedAmount + $payment->amount <= $submissionAmount) {
+                        $payment->submitted_to_admin = true;
+                        $payment->submitted_at = now();
+                        $payment->submission_id = $submission->id;
+                        $payment->save();
+                        $markedAmount += (float) $payment->amount;
+                    }
+                }
+
+                // Update staff_dues record
+                $staffDue->current_due     = max(0, (float)$staffDue->current_due - $submissionAmount);
+                $staffDue->total_submitted = (float)$staffDue->total_submitted + $submissionAmount;
+                $staffDue->last_submission_date = now();
+                $staffDue->save();
+
+            } catch (\Throwable $e) {
+                // Non-critical: log but don't block the transfer
+                \Illuminate\Support\Facades\Log::warning('StaffDue sync failed after transfer verify: ' . $e->getMessage());
+            }
+
+            return redirect()->back()->with('success', 'Transfer verified, completed and staff dues updated.');
+        }
+
+        $transfer->delete();
+        return redirect()->back()->with('success', 'Transfer rejected and deleted.');
+    }
+
+    public function getStaffBalance(\App\Models\User $user)
+    {
+        // Total collected by this staff but not yet submitted to admin
+        $pending = \App\Models\Payment::where('collected_by', $user->id)
+            ->where(function($q) { $q->whereNull('submitted_to_admin')->orWhere('submitted_to_admin', false); })
+            ->where('status', 'approved')
+            ->where(function($q) { $q->where('is_reversed', 0)->orWhereNull('is_reversed'); })
+            ->sum('amount');
+
+        // Total pending outgoing collection transfers (already sent but not verified)
+        $inTransit = \App\Models\CollectionTransfer::where('from_user_id', $user->id)
+            ->where('status', 'pending')
+            ->sum('amount');
+
+        return response()->json([
+            'user_id'    => $user->id,
+            'name'       => $user->name,
+            'pending'    => (float) $pending,
+            'in_transit' => (float) $inTransit,
+            'available'  => (float) max(0, $pending - $inTransit),
+        ]);
+    }
+
+    public function dueReminderPreview(Bill $bill)
+    {
+        $preview = $this->smsService->getDueReminderPreview($bill);
+        return response()->json(['preview' => $preview]);
+    }
+
+    public function sendDueReminder(Bill $bill)
+    {
+        $this->smsService->sendDueReminder($bill);
+        return redirect()->back()->with('success', 'Due reminder SMS sent to ' . $bill->client->name);
+    }
+
+    public function printPocketInvoice(Bill $bill)
+    {
+        return view('admin.billing.pocket-invoice', compact('bill'));
+    }
+
+    public function advanceCollection(Request $request)
+    {
+        $query = AdvancePayment::with(['client', 'paymentMethod', 'collectedBy']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('client', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('client_id', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('payment_method_id')) {
+            $query->where('payment_method_id', $request->payment_method_id);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('payment_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('payment_date', '<=', $request->date_to);
+        }
+
+        $statsQuery = clone $query;
+        $totalCollected = (clone $statsQuery)->sum('amount');
+        $totalUsed = (clone $statsQuery)->sum('used_amount');
+        $totalRemaining = (clone $statsQuery)->sum('remaining_amount');
+
+        $advances = $query->latest('payment_date')->paginate(in_array((int)request()->per_page,[20,50,100,200])?(int)request()->per_page:20)->withQueryString();
+        $paymentMethods = auth()->user()->allowedPaymentMethods();
+        $clients = Client::select('id', 'name', 'client_id', 'phone')->where('status', 'active')->orderBy('name')->get();
+
+        return view('admin.billing.advance-collection', compact(
+            'advances', 'paymentMethods', 'clients',
+            'totalCollected', 'totalUsed', 'totalRemaining'
+        ));
+    }
+
+    public function storeAdvanceCollection(Request $request)
+    {
+        $validated = $request->validate([
+            'client_id' => 'required|exists:clients,id',
+            'amount' => 'required|numeric|min:1',
+            'payment_method_id' => 'required|exists:payment_methods,id',
+            'payment_date' => 'required|date',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $client = \App\Models\Client::findOrFail($validated['client_id']);
+
+            $validated['used_amount'] = 0;
+            $validated['remaining_amount'] = $validated['amount'];
+            $validated['collected_by'] = auth()->id();
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $client) {
+                AdvancePayment::create($validated);
+                $client->increment('balance', $validated['amount']);
+            });
+
+            return redirect()->back()->with('success', 'Advance payment of ৳' . number_format($validated['amount'], 2) . ' collected from ' . $client->name . '.');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Failed to collect advance: ' . $e->getMessage())->withInput();
+        }
+    }
+
+    public function onlinePayments(Request $request)
+    {
+        $activeTab = $request->input('tab', 'online');
+
+        $query = PaymentGatewayTransaction::with(['client', 'bill']);
+
+        if ($request->filled('gateway')) {
+            $query->where('gateway', $request->gateway);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('transaction_id', 'like', "%{$search}%")
+                  ->orWhereHas('client', function ($cq) use ($search) {
+                      $cq->where('name', 'like', "%{$search}%")
+                         ->orWhere('client_id', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $totalOnlineCollected = (clone $query)->where('status', 'completed')->sum('amount');
+        $pendingCount = (clone $query)->where('status', 'pending')->count();
+        $completedCount = (clone $query)->where('status', 'completed')->count();
+        $failedCount = (clone $query)->where('status', 'failed')->count();
+
+        $transactions = $query->latest()->paginate(20, ['*'], 'online_page')->withQueryString();
+
+        $gateways = PaymentGatewayTransaction::select('gateway')->distinct()->pluck('gateway');
+
+        $paymentLinksActive = PaymentLink::where('status', 'active')->where(function ($q) {
+            $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+        })->count();
+        $paymentLinksPaid = PaymentLink::where('status', 'paid')->count();
+        $paymentLinksExpired = PaymentLink::where(function ($q) {
+            $q->where('status', 'expired')
+              ->orWhere(function ($sq) {
+                  $sq->where('status', 'active')->whereNotNull('expires_at')->where('expires_at', '<=', now());
+              });
+        })->count();
+
+        $webhookQuery = \App\Models\WebhookPaymentLog::with('client');
+
+        if ($request->filled('wh_gateway')) {
+            $webhookQuery->where('gateway', $request->wh_gateway);
+        }
+        if ($request->filled('wh_status')) {
+            $webhookQuery->where('status', $request->wh_status);
+        } else {
+            $webhookQuery->where('status', 'applied');
+        }
+        if ($request->filled('wh_search')) {
+            $whSearch = $request->wh_search;
+            $webhookQuery->where(function ($q) use ($whSearch) {
+                $q->where('trx_id', 'like', "%{$whSearch}%")
+                  ->orWhere('reference', 'like', "%{$whSearch}%")
+                  ->orWhere('sender_number', 'like', "%{$whSearch}%")
+                  ->orWhereHas('client', function ($cq) use ($whSearch) {
+                      $cq->where('name', 'like', "%{$whSearch}%")
+                         ->orWhere('username', 'like', "%{$whSearch}%");
+                  });
+            });
+        }
+        if ($request->filled('wh_date_from')) {
+            $webhookQuery->whereDate('created_at', '>=', $request->wh_date_from);
+        }
+        if ($request->filled('wh_date_to')) {
+            $webhookQuery->whereDate('created_at', '<=', $request->wh_date_to);
+        }
+
+        $webhookAppliedCount = \App\Models\WebhookPaymentLog::where('status', 'applied')->count();
+        $webhookTotalAmount = \App\Models\WebhookPaymentLog::where('status', 'applied')->sum('amount');
+
+        $webhookLogs = $webhookQuery->latest()->paginate(20, ['*'], 'webhook_page')->withQueryString();
+
+        return view('admin.billing.online-payments', compact(
+            'transactions', 'gateways', 'totalOnlineCollected',
+            'pendingCount', 'completedCount', 'failedCount',
+            'paymentLinksActive', 'paymentLinksPaid', 'paymentLinksExpired',
+            'webhookLogs', 'webhookAppliedCount',
+            'webhookTotalAmount', 'activeTab'
+        ));
+    }
+}

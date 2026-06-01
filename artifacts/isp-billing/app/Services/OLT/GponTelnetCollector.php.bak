@@ -1,0 +1,292 @@
+<?php
+
+namespace App\Services\OLT;
+
+use App\Models\OltDevice;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * GponTelnetCollector — Connects to a GPON OLT via Telnet or SSH (via socket)
+ * and collects full ONU data using CLI commands.
+ *
+ * Supports BDCOM GP3600 / compatible GPON OLT platforms.
+ *
+ * Commands executed per PON port:
+ *   show gpon onu state gpon-onu_<slot>/<port>
+ *   show gpon onu optical-info gpon-onu_<slot>/<port>
+ *   show mac-address gpon-onu <slot> <port>
+ *
+ * Per ONU (optional deep scan):
+ *   show gpon onu detail-info gpon-onu_<slot>/<port>/<onu>
+ *   show gpon onu uptime gpon-onu_<slot>/<port>/<onu>
+ */
+class GponTelnetCollector
+{
+    private OltDevice $olt;
+    /** @var resource|null */
+    private $socket = null;
+
+    private int $slotCount  = 1;   // GP3600-08D has 1 slot
+    private int $portCount  = 8;   // 8 GPON ports
+
+    private string $prompt = '#';
+
+    public function __construct(OltDevice $olt)
+    {
+        $this->olt = $olt;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Public API
+    // ─────────────────────────────────────────────────────────
+
+    /**
+     * Collect complete ONU data for all GPON ports.
+     * Returns normalised array ready for DB sync.
+     */
+    public function collectAll(): array
+    {
+        try {
+            $this->connect();
+            $this->login();
+            $this->enterEnable();
+            $this->disablePaging();
+            $this->detectPlatform();
+
+            $allOnus = [];
+
+            for ($slot = 1; $slot <= $this->slotCount; $slot++) {
+                for ($port = 1; $port <= $this->portCount; $port++) {
+                    $portOnus = $this->collectPort($slot, $port);
+                    if (!empty($portOnus)) {
+                        $allOnus = array_merge($allOnus, $portOnus);
+                    }
+                }
+            }
+
+            $this->disconnect();
+
+            Log::info("GponTelnetCollector [{$this->olt->name}]: collected " . count($allOnus) . " ONUs");
+            return $allOnus;
+
+        } catch (\Exception $e) {
+            Log::error("GponTelnetCollector [{$this->olt->name}]: " . $e->getMessage());
+            $this->disconnect();
+            throw $e;
+        }
+    }
+
+    /**
+     * Collect data for a single GPON port (slot/port).
+     */
+    public function collectPort(int $slot, int $port): array
+    {
+        $portStr = "gpon-onu_{$slot}/{$port}";
+
+        // ── Step 1: ONU state (serial + status) ──────────────
+        $this->send("show gpon onu state {$portStr}\n");
+        $stateOutput = $this->readUntil($this->prompt, 15);
+        $onus = GponCliParser::parseOnuState($stateOutput, $slot, $port);
+
+        if (empty($onus)) {
+            return [];
+        }
+
+        // ── Step 2: Optical info (RX/TX power, distance) ──────
+        $this->send("show gpon onu optical-info {$portStr}\n");
+        $opticalOutput = $this->readUntil($this->prompt, 15);
+        $opticalMap = GponCliParser::parseOpticalInfo($opticalOutput);
+
+        // ── Step 3: MAC addresses ─────────────────────────────
+        $this->send("show mac-address gpon-onu {$slot} {$port}\n");
+        $macOutput = $this->readUntil($this->prompt, 10);
+        $macMap = GponCliParser::parseMacTable($macOutput);
+
+        // ── Step 4: Traffic stats ─────────────────────────────
+        $this->send("show gpon onu traffic {$portStr}\n");
+        $trafficOutput = $this->readUntil($this->prompt, 10);
+        $trafficMap = GponCliParser::parseTraffic($trafficOutput);
+
+        // ── Merge data ────────────────────────────────────────
+        foreach ($onus as &$onu) {
+            $id = $onu['onu_number'];
+            if (isset($opticalMap[$id])) {
+                $onu = array_merge($onu, array_filter($opticalMap[$id], fn($v) => $v !== null));
+            }
+            if (isset($macMap[$id]) && !$onu['mac_address']) {
+                $onu['mac_address'] = $macMap[$id];
+            }
+            if (isset($trafficMap[$id])) {
+                $onu['traffic_in']  = $trafficMap[$id]['traffic_in'];
+                $onu['traffic_out'] = $trafficMap[$id]['traffic_out'];
+            }
+        }
+
+        return $onus;
+    }
+
+    /**
+     * Get deep detail for a single ONU (slower but complete).
+     */
+    public function collectOnuDetail(int $slot, int $port, int $onuId): array
+    {
+        try {
+            $this->connect();
+            $this->login();
+            $this->enterEnable();
+            $this->disablePaging();
+
+            $intf = "gpon-onu_{$slot}/{$port}/{$onuId}";
+
+            $this->send("show gpon onu detail-info {$intf}\n");
+            $detail = GponCliParser::parseOnuDetailInfo($this->readUntil($this->prompt, 10));
+
+            $this->send("show gpon onu uptime {$intf}\n");
+            $upOutput = $this->readUntil($this->prompt, 8);
+            if (preg_match('/Uptime\s*:\s*(.+)/i', $upOutput, $m)) {
+                $detail['uptime_seconds'] = GponCliParser::parseUptime($m[1]);
+            }
+
+            $this->disconnect();
+            return $detail;
+
+        } catch (\Exception $e) {
+            $this->disconnect();
+            throw $e;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Connection management
+    // ─────────────────────────────────────────────────────────
+
+    private function connect(): void
+    {
+        $host = $this->olt->ip_address;
+        $port = $this->olt->telnet_port ?: ($this->olt->port ?: 23);
+
+        $this->socket = @fsockopen($host, $port, $errno, $errstr, 10);
+        if (!$this->socket) {
+            throw new \Exception("Cannot connect to {$host}:{$port} — {$errstr} ({$errno})");
+        }
+        stream_set_timeout($this->socket, 10);
+        usleep(400000);
+
+        // Handle Telnet IAC negotiation
+        $iacBuf = @fread($this->socket, 512);
+        if ($iacBuf !== false && $iacBuf !== '') {
+            $reply = '';
+            $len   = strlen($iacBuf);
+            for ($i = 0; $i < $len - 2; $i++) {
+                if (ord($iacBuf[$i]) === 0xFF) {
+                    $cmd = ord($iacBuf[$i + 1]);
+                    $opt = ord($iacBuf[$i + 2]);
+                    $reply .= chr(0xFF) . ($cmd === 0xFB ? chr(0xFE) : chr(0xFC)) . chr($opt);
+                    $i += 2;
+                }
+            }
+            if ($reply !== '') { fwrite($this->socket, $reply); usleep(200000); }
+        }
+
+        $banner = $this->readUntil(':', 12);
+        if (!str_contains($banner, 'Username') && !str_contains($banner, 'login') && !str_contains($banner, 'user')) {
+            throw new \Exception("Unexpected banner (no login prompt): " . substr($banner, 0, 100));
+        }
+    }
+
+    private function login(): void
+    {
+        $this->send($this->olt->username . "\n");
+        $this->readUntil(':', 6);
+        $this->send($this->olt->password . "\n");
+
+        // May land at > or # depending on privilege level
+        $buf = $this->readUntil(['#', '>'], 8);
+        $this->prompt = str_contains($buf, '#') ? '#' : '>';
+    }
+
+    private function enterEnable(): void
+    {
+        if ($this->prompt === '>') {
+            $this->send("enable\n");
+            $buf = $this->readUntil(['#', 'Password:'], 6);
+            if (str_contains($buf, 'Password:')) {
+                $this->send($this->olt->password . "\n");
+                $this->readUntil('#', 5);
+            }
+            $this->prompt = '#';
+        }
+    }
+
+    private function disablePaging(): void
+    {
+        $this->send("terminal length 0\n");
+        $this->readUntil($this->prompt, 5);
+    }
+
+    /**
+     * Detect GPON platform specifics (slot/port count, prompt variant).
+     */
+    private function detectPlatform(): void
+    {
+        $this->send("show version\n");
+        $output = $this->readUntil($this->prompt, 8);
+
+        // GP3600-08D has 1 slot, 8 GPON ports
+        if (preg_match('/GP3600-(\d+)/i', $output, $m)) {
+            $this->portCount = (int)$m[1];
+        }
+        // GP3600-08B2/16D etc.
+        if (preg_match('/GP3600-\d+[A-Z](\d+)/i', $output, $m)) {
+            $this->portCount = (int)$m[1];
+        }
+
+        Log::debug("GponTelnetCollector [{$this->olt->name}]: platform detected, ports={$this->portCount}");
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Low-level I/O
+    // ─────────────────────────────────────────────────────────
+
+    private function send(string $data): void
+    {
+        fwrite($this->socket, $data);
+    }
+
+    /**
+     * @param string|array $needles
+     */
+    private function readUntil($needles, int $timeout = 8): string
+    {
+        if (is_string($needles)) $needles = [$needles];
+        $buf      = '';
+        $deadline = time() + $timeout;
+
+        while (time() < $deadline) {
+            $chunk = @fread($this->socket, 8192);
+            if ($chunk !== false && $chunk !== '') {
+                $buf .= $this->stripIac($chunk);
+                foreach ($needles as $needle) {
+                    if (str_contains($buf, $needle)) return $buf;
+                }
+            }
+            usleep(80000);
+        }
+        return $buf;
+    }
+
+    private function stripIac(string $data): string
+    {
+        return preg_replace('/\xff[\xfb-\xfe]./s', '', $data) ?? $data;
+    }
+
+    private function disconnect(): void
+    {
+        if ($this->socket) {
+            @fwrite($this->socket, "quit\n");
+            usleep(100000);
+            @fclose($this->socket);
+            $this->socket = null;
+        }
+    }
+}

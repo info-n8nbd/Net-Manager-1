@@ -1,0 +1,13 @@
+{
+    "tests_run": 13,
+    "passed": 12,
+    "failed": 1,
+    "critical": 0,
+    "issues": [
+        {
+            "test": "Create-Delete-Recover cycle (10 iterations)",
+            "detail": "10 cycles failed",
+            "severity": "WARNING"
+        }
+    ]
+}

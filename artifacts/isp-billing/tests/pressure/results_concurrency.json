@@ -1,0 +1,14 @@
+{
+    "tests_run": 13,
+    "passed": 12,
+    "failed": 1,
+    "critical": 0,
+    "issues": [
+        {
+            "test": "Balance reconciliation (50 client sample)",
+            "detail": "1\/50 clients have inconsistent balances",
+            "severity": "WARNING"
+        }
+    ],
+    "timings": []
+}

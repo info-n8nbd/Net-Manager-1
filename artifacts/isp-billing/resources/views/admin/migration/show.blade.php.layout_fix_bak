@@ -1,0 +1,122 @@
+@extends('layouts.admin')
+
+@section('title', 'Migration: ' . $run->name)
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        @include('partials.alerts')
+
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Migration Progress</h3>
+                        <div class="card-tools">
+                            @if($run->status === 'completed')
+                            <span class="badge badge-success badge-lg p-2">COMPLETED</span>
+                            @else
+                            <span class="badge badge-warning badge-lg p-2">IN PROGRESS - Phase {{ $run->current_phase }}/5</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @php
+                            $phases = [
+                                1 => ['icon' => 'fa-file-import', 'title' => 'Data Ingestion', 'desc' => 'Import client data from spreadsheet'],
+                                2 => ['icon' => 'fa-search', 'title' => 'MikroTik Discovery', 'desc' => 'Scan routers for existing users'],
+                                3 => ['icon' => 'fa-balance-scale', 'title' => 'Reconciliation', 'desc' => 'Compare billing vs router data'],
+                                4 => ['icon' => 'fa-sync', 'title' => 'Safe Sync', 'desc' => 'Apply corrections safely'],
+                                5 => ['icon' => 'fa-rocket', 'title' => 'Go Live', 'desc' => 'Verify and activate'],
+                            ];
+                            @endphp
+
+                            @foreach($phases as $num => $phase)
+                            <div class="col text-center">
+                                @php
+                                $status = $run->getPhaseStatus($num);
+                                $bgClass = match($status) {
+                                    'completed' => 'bg-success',
+                                    'in_progress', 'running' => 'bg-warning',
+                                    'failed' => 'bg-danger',
+                                    default => 'bg-secondary',
+                                };
+                                $canAccess = $run->canAccessPhase($num);
+                                @endphp
+
+                                <div class="info-box {{ $bgClass }} mb-3">
+                                    <span class="info-box-icon"><i class="fas {{ $phase['icon'] }}"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Phase {{ $num }}</span>
+                                        <span class="info-box-number">{{ $phase['title'] }}</span>
+                                        <small>{{ ucfirst($status) }}</small>
+                                    </div>
+                                </div>
+
+                                @if($canAccess && $status !== 'completed' && $run->status !== 'completed')
+                                <a href="{{ route("admin.migration.phase{$num}", $run) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-arrow-right"></i> Go to Phase {{ $num }}
+                                </a>
+                                @elseif($status === 'completed')
+                                <a href="{{ route("admin.migration.phase{$num}", $run) }}" class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-eye"></i> Review
+                                </a>
+                                @endif
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3>{{ $run->total_clients_imported }}</h3>
+                        <p>Clients Imported</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-users"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3>{{ $run->total_routers_scanned }}</h3>
+                        <p>Routers Scanned</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-server"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3>{{ $run->total_router_users_found }}</h3>
+                        <p>Router Users Found</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-network-wired"></i></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-primary">
+                    <div class="inner">
+                        <h3>{{ $run->total_synced }}</h3>
+                        <p>Users Synced</p>
+                    </div>
+                    <div class="icon"><i class="fas fa-check-double"></i></div>
+                </div>
+            </div>
+        </div>
+
+        @if($run->status !== 'completed' && $run->current_phase <= 5)
+        <div class="text-center mt-3">
+            <a href="{{ route("admin.migration.phase{$run->current_phase}", $run) }}" class="btn btn-lg btn-primary">
+                <i class="fas fa-arrow-right"></i> Continue to Phase {{ $run->current_phase }}
+            </a>
+        </div>
+        @endif
+    </div>
+</section>
+@endsection

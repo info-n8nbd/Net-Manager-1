@@ -1,0 +1,510 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Models\OltDevice;
+use App\Services\OLT\MonitoringService;
+use App\Services\OLT\BdcomTelnetPoller;
+use App\Services\TelegramService;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\DeviceCircuitBreaker;
+use App\Services\DeviceAlertService;
+
+class PollOltOnuStatusJob implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public $tries = 2;
+    public $timeout = 300;
+
+    public function handle(): void
+    {
+        $startTime = microtime(true);
+        $recordsProcessed = 0;
+
+        try {
+            $this->logCronStart();
+
+            $oltDevices = OltDevice::where('is_active', true)->get();
+
+            foreach ($oltDevices as $olt) {
+                $previousStatus = $olt->status;
+                try {
+                    if ($olt->snmp_enabled && $olt->snmp_community) {
+                        $recordsProcessed += $this->pollViaSnmp($olt);
+                    } else {
+                        $recordsProcessed += $this->pollFromDatabase($olt);
+                    }
+                    DeviceCircuitBreaker::onSuccess('olt', $olt->id, $olt->name);
+                    if ($previousStatus && $previousStatus !== 'online' && $previousStatus !== 'active') {
+                        $this->sendOltUpAlert($olt, $previousStatus);
+                    }
+                    if ($olt->status !== 'online') {
+                        $olt->update(['status' => 'online']);
+                    }
+                } catch (\Exception $e) {
+                    DeviceCircuitBreaker::onFailure('olt', $olt->id, $olt->name, $e->getMessage());
+                    $olt->update(['status' => 'error']);
+                    if ($previousStatus === 'online' || $previousStatus === 'active' || !$previousStatus) {
+                        $this->sendOltDownAlert($olt);
+                    }
+                }
+            }
+
+            MonitoringService::cleanupOldStats(7);
+
+            $this->logCronComplete($startTime, $recordsProcessed);
+
+        } catch (\Exception $e) {
+            Log::error("OLT ONU polling failed: " . $e->getMessage());
+            $this->logCronFailed($startTime, $e->getMessage());
+        }
+    }
+
+    protected function pollViaSnmp(OltDevice $olt): int
+    {
+        $monitor = new MonitoringService($olt);
+        $results = $monitor->pollAll();
+
+        $processed = 0;
+
+        if (!empty($results['onu_stats']['onus'])) {
+            $processed = count($results['onu_stats']['onus']);
+            $this->detectFiberCuts($olt, $results['onu_stats']['onus']);
+        }
+
+        if (!empty($results['errors'])) {
+            Log::warning("OLT [{$olt->name}] polling completed with errors: " . implode('; ', $results['errors']));
+        }
+
+        return $processed;
+    }
+
+    protected function isTcpPortOpen(string $ip, int $port, int $timeout = 4): bool
+    {
+        if (empty($ip) || empty($port)) return false;
+        $conn = @fsockopen($ip, $port, $errno, $errstr, $timeout);
+        if ($conn) {
+            fclose($conn);
+            return true;
+        }
+        return false;
+    }
+
+    protected function pollFromDatabase(OltDevice $olt): int
+    {
+        // TCP port check when SNMP is not enabled
+        $checkPort = $olt->port ?: 23;
+        if ($olt->ip_address && !$this->isTcpPortOpen($olt->ip_address, $checkPort, 4)) {
+            throw new \Exception("OLT {$olt->name} ({$olt->ip_address}:{$checkPort}) is unreachable (TCP connect failed)");
+        }
+
+        // For BDCOM OLTs with Telnet, use Telnet-based ONU polling
+        if (strtolower($olt->vendor ?? '') === 'bdcom' && strtolower($olt->connection_type ?? '') === 'telnet') {
+            return $this->pollBdcomViaTelnet($olt);
+        }
+
+        $onuDevices = DB::table('onus')
+            ->where('olt_device_id', $olt->id)
+            ->get();
+
+        $portOfflineCount = [];
+
+        foreach ($onuDevices as $onu) {
+            if ($onu->status === 'offline') {
+                $port = $onu->pon_port ?? 'unknown';
+                $portOfflineCount[$port] = ($portOfflineCount[$port] ?? 0) + 1;
+            }
+        }
+
+        foreach ($portOfflineCount as $port => $count) {
+            if ($count >= 3) {
+                $this->createFiberCutAlert($olt, $port, $count);
+            }
+        }
+
+        DB::table('olt_ports')
+            ->where('olt_device_id', $olt->id)
+            ->update(['last_polled' => now()]);
+
+        $olt->update(['last_sync' => now()]);
+
+        return $onuDevices->count();
+    }
+
+    protected function detectFiberCuts(OltDevice $olt, array $onus): void
+    {
+        $portOfflineCount = [];
+        foreach ($onus as $onu) {
+            if ($onu['status'] === 'offline') {
+                $portKey = $onu['port_index'];
+                $portOfflineCount[$portKey] = ($portOfflineCount[$portKey] ?? 0) + 1;
+            }
+        }
+
+        foreach ($portOfflineCount as $port => $count) {
+            if ($count >= 3) {
+                $this->createFiberCutAlert($olt, $port, $count);
+            }
+        }
+    }
+
+    protected function createFiberCutAlert(OltDevice $olt, $port, int $count): void
+    {
+        $source = "olt_{$olt->id}_port_{$port}";
+
+        $existingAlert = DB::table('network_event_logs')
+            ->where('event_type', 'fiber_cut')
+            ->where('source', $source)
+            ->where('is_resolved', false)
+            ->exists();
+
+        if (!$existingAlert) {
+            DB::table('network_event_logs')->insert([
+                'event_type' => 'fiber_cut',
+                'source' => $source,
+                'message' => "Fiber cut suspected on OLT {$olt->name} Port {$port} - {$count} ONUs offline",
+                'severity' => 'critical',
+                'metadata' => json_encode([
+                    'olt_id' => $olt->id,
+                    'port' => $port,
+                    'offline_count' => $count,
+                ]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            Log::critical("Fiber cut detected: OLT {$olt->name} Port {$port} - {$count} ONUs offline");
+        }
+    }
+
+    protected function logCronStart(): void
+    {
+        DB::table('cron_job_logs')->insert([
+            'job_name' => 'poll_olt_onu_status',
+            'job_class' => self::class,
+            'status' => 'started',
+            'started_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    protected function logCronComplete(float $startTime, int $records): void
+    {
+        $executionTime = (int)((microtime(true) - $startTime) * 1000);
+        DB::table('cron_job_logs')
+            ->where('job_class', self::class)
+            ->where('status', 'started')
+            ->orderByDesc('id')
+            ->limit(1)
+            ->update([
+                'status' => 'completed',
+                'records_processed' => $records,
+                'execution_time_ms' => $executionTime,
+                'completed_at' => now(),
+                'updated_at' => now(),
+            ]);
+    }
+
+    protected function logCronFailed(float $startTime, string $message): void
+    {
+        $executionTime = (int)((microtime(true) - $startTime) * 1000);
+        DB::table('cron_job_logs')
+            ->where('job_class', self::class)
+            ->where('status', 'started')
+            ->orderByDesc('id')
+            ->limit(1)
+            ->update([
+                'status' => 'failed',
+                'message' => $message,
+                'execution_time_ms' => $executionTime,
+                'completed_at' => now(),
+                'updated_at' => now(),
+            ]);
+    }
+
+    protected function pollBdcomViaTelnet(OltDevice $olt): int
+    {
+        $poller  = new BdcomTelnetPoller($olt);
+        $onuList = $poller->getOnuStatuses();
+        $telegram = new TelegramService();
+        $processed = 0;
+
+        // Build a set of (pon_port:onu_number) seen from OLT for stale-detection
+        $seenKeys = [];
+
+        foreach ($onuList as $data) {
+            $seenKeys[$data['pon_port'] . ':' . $data['onu_number']] = true;
+
+            $onu = DB::table('onus')
+                ->where('olt_device_id', $olt->id)
+                ->where('pon_port', $data['pon_port'])
+                ->where('onu_number', $data['onu_number'])
+                ->first();
+
+            if (!$onu) {
+                // Auto-create ONU discovered from OLT that is not yet in the database
+                DB::table('onus')->insert([
+                    'olt_device_id' => $olt->id,
+                    'company_id'    => $olt->company_id ?? null,
+                    'pon_port'      => $data['pon_port'],
+                    'onu_number'    => $data['onu_number'],
+                    'serial_number' => $data['serial_number'] ?? null,
+                    'mac_address'   => $data['mac_address'] ?? null,
+                    'vendor'        => $data['vendor'] ?? null,
+                    'model'         => $data['model'] ?? null,
+                    'status'        => $data['status'],
+                    'rx_power'      => $data['rx_power'] ?? null,
+                    'temperature'   => $data['temperature'] ?? null,
+                    'last_online'   => $data['status'] === 'online' ? now() : null,
+                    'last_offline'  => $data['status'] === 'offline' ? now() : null,
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
+                ]);
+                Log::info("BdcomTelnet: Auto-created ONU {$data['pon_port']}:{$data['onu_number']} (serial: " . ($data['serial_number'] ?? 'N/A') . ") rx_power=" . ($data['rx_power'] ?? 'N/A') . " for OLT {$olt->name}");
+                $processed++;
+                continue;
+            }
+
+            $prevStatus = $onu->status;
+            $newStatus  = $data['status'];
+
+            // Always update signal data + status
+            $updateData = [
+                'updated_at' => now(),
+            ];
+
+            if (($data['rx_power'] ?? null) !== null) {
+                $updateData['rx_power'] = $data['rx_power'];
+            }
+            if (($data['temperature'] ?? null) !== null) {
+                $updateData['temperature'] = $data['temperature'];
+            }
+
+            if ($prevStatus !== $newStatus) {
+                $timeField = $newStatus === 'offline' ? 'last_offline' : 'last_online';
+                $updateData['status']  = $newStatus;
+                $updateData[$timeField] = now();
+
+                DB::table('onus')->where('id', $onu->id)->update($updateData);
+
+                // Get PPPoE ID from linked client
+                $pppoeId = 'N/A';
+                if ($onu->client_id) {
+                    $client  = DB::table('clients')->where('id', $onu->client_id)->first();
+                    $pppoeId = $client->username ?? 'N/A';
+                }
+
+                if ($newStatus === 'offline' && $prevStatus === 'online') {
+                    $telegram->sendOnuDownAlert(
+                        onuSerial:  $onu->serial_number ?? '',
+                        ponPort:    $onu->pon_port,
+                        onuNumber:  (string) $onu->onu_number,
+                        rxPower:    $data['rx_power'] ?? $onu->rx_power ?? null,
+                        txPower:    $onu->tx_power ?? null,
+                        downReason: 'deregistered',
+                        vendor:     $onu->vendor ?? 'BDCOM',
+                        model:      $onu->model ?? '',
+                        clientId:   (string)($onu->client_id ?? ''),
+                        clientName: '',
+                        pppoeId:    $pppoeId,
+                        phone:      '',
+                        oltName:    $olt->name,
+                    );
+                } elseif ($newStatus === 'online' && $prevStatus === 'offline') {
+                    $telegram->sendOnuUpAlert(
+                        onuSerial:  $onu->serial_number ?? '',
+                        ponPort:    $onu->pon_port,
+                        onuNumber:  (string) $onu->onu_number,
+                        rxPower:    $data['rx_power'] ?? $onu->rx_power ?? null,
+                        txPower:    $onu->tx_power ?? null,
+                        pppoeId:    $pppoeId,
+                        clientId:   (string)($onu->client_id ?? ''),
+                        clientName: '',
+                        oltName:    $olt->name,
+                        downtime:   '',
+                    );
+                }
+            } else {
+                // Status unchanged — just update signal data silently
+                DB::table('onus')->where('id', $onu->id)->update($updateData);
+            }
+
+            $processed++;
+        }
+
+        // Mark ONUs as offline if they no longer appear in the OLT poll
+        // (ONU was physically removed or de-provisioned from the OLT)
+        if (!empty($seenKeys)) {
+            $dbOnus = DB::table('onus')
+                ->where('olt_device_id', $olt->id)
+                ->where('status', 'online')
+                ->get();
+
+            foreach ($dbOnus as $dbOnu) {
+                $key = $dbOnu->pon_port . ':' . $dbOnu->onu_number;
+                if (!isset($seenKeys[$key])) {
+                    DB::table('onus')->where('id', $dbOnu->id)->update([
+                        'status'       => 'offline',
+                        'last_offline' => now(),
+                        'updated_at'   => now(),
+                    ]);
+                    Log::info("BdcomTelnet: ONU {$dbOnu->pon_port}:{$dbOnu->onu_number} not seen in poll — marked offline for OLT {$olt->name}");
+                }
+            }
+        }
+
+        // Sync clients table with latest ONU status and RX power
+        DB::statement("
+            UPDATE clients
+            SET onu_status   = onus.status,
+                onu_rx_power = onus.rx_power,
+                onu_id       = onus.id
+            FROM onus
+            WHERE (clients.onu_serial = onus.serial_number
+               OR  clients.onu_mac   = onus.mac_address)
+              AND onus.olt_device_id = ?
+        ", [$olt->id]);
+
+        return $processed;
+    }
+    protected function sendOltDownAlert(OltDevice $olt): void
+    {
+        $source = "olt_{$olt->id}";
+        $existingAlert = DB::table('network_event_logs')
+            ->where('event_type', 'olt_down')
+            ->where('source', $source)
+            ->where('is_resolved', false)
+            ->exists();
+
+        if (!$existingAlert) {
+            DB::table('network_event_logs')->insert([
+                'event_type' => 'olt_down',
+                'source' => $source,
+                'message' => "OLT {$olt->name} ({$olt->ip_address}) is not responding",
+                'severity' => 'critical',
+                'metadata' => json_encode(['olt_id' => $olt->id, 'ip' => $olt->ip_address]),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        try {
+            $affectedClients = DB::table('onus')
+                ->where('olt_device_id', $olt->id)
+                ->distinct('client_id')
+                ->whereNotNull('client_id')
+                ->count('client_id');
+            $telegram = new \App\Services\TelegramService();
+            $telegram->sendNetworkDeviceAlert(
+                $olt->name ?? 'Unknown OLT',
+                'OLT',
+                $olt->ip_address ?? '',
+                'down',
+                $olt->location ?? '',
+                $affectedClients
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Telegram OLT down alert failed: ' . $e->getMessage());
+        }
+
+        try {
+            $affectedClients = DB::table('onus')
+                ->where('olt_device_id', $olt->id)
+                ->distinct('client_id')
+                ->whereNotNull('client_id')
+                ->count('client_id');
+            $alertService = new DeviceAlertService();
+            $alertService->notifyDeviceDown(
+                $olt->name ?? 'Unknown OLT',
+                'OLT',
+                $olt->ip_address ?? '',
+                $affectedClients,
+                $olt->location ?? ''
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Email/SMS OLT down alert failed: ' . $e->getMessage());
+        }
+    }
+
+    protected function sendOltUpAlert(OltDevice $olt, string $previousStatus): void
+    {
+        $source = "olt_{$olt->id}";
+
+        DB::table('network_event_logs')
+            ->where('event_type', 'olt_down')
+            ->where('source', $source)
+            ->where('is_resolved', false)
+            ->update([
+                'is_resolved' => true,
+                'resolved_at' => now(),
+                'resolution_notes' => 'OLT came back online automatically',
+                'updated_at' => now(),
+            ]);
+
+        try {
+            $downEvent = DB::table('network_event_logs')
+                ->where('event_type', 'olt_down')
+                ->where('source', $source)
+                ->orderByDesc('created_at')
+                ->first();
+
+            $downtime = '';
+            if ($downEvent && $downEvent->created_at) {
+                $downAt = \Carbon\Carbon::parse($downEvent->created_at);
+                $diff = $downAt->diff(now());
+                if ($diff->days > 0) {
+                    $downtime = $diff->days . 'd ' . $diff->h . 'h ' . $diff->i . 'min';
+                } elseif ($diff->h > 0) {
+                    $downtime = $diff->h . 'h ' . $diff->i . 'min';
+                } else {
+                    $downtime = $diff->i . ' min';
+                }
+            }
+
+            $affectedClients = DB::table('onus')
+                ->where('olt_device_id', $olt->id)
+                ->distinct('client_id')
+                ->whereNotNull('client_id')
+                ->count('client_id');
+            $telegram = new \App\Services\TelegramService();
+            $telegram->sendNetworkDeviceAlert(
+                $olt->name ?? 'Unknown OLT',
+                'OLT',
+                $olt->ip_address ?? '',
+                'online',
+                $olt->location ?? '',
+                $affectedClients,
+                $downtime
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Telegram OLT up alert failed: ' . $e->getMessage());
+        }
+
+        try {
+            $affectedClients = DB::table('onus')
+                ->where('olt_device_id', $olt->id)
+                ->distinct('client_id')
+                ->whereNotNull('client_id')
+                ->count('client_id');
+            $alertService = new DeviceAlertService();
+            $alertService->notifyDeviceUp(
+                $olt->name ?? 'Unknown OLT',
+                'OLT',
+                $olt->ip_address ?? '',
+                $affectedClients,
+                $olt->location ?? '',
+                $downtime
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Email/SMS OLT up alert failed: ' . $e->getMessage());
+        }
+    }
+}

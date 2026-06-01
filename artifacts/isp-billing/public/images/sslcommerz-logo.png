@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head >
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="profile" href="https://gmpg.org/xfn/11">
+    <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SSLCOMMERZ - Payment Gateway in Bangladesh - SSLCOMMERZ">
+<link rel="pingback" href="https://sslcommerz.com/xmlrpc.php" />
+<title>Page not found &#8211; SSLCOMMERZ</title>
+			<script type="text/javascript">
+			var WebFontConfig = WebFontConfig || {};
+			WebFontConfig['active'] = function() {
+				if ( typeof ( window.jQuery ) !== 'undefined' ) {
+					jQuery(window).trigger('liquid_async_fonts_active');
+				}
+			};
+			WebFontConfig['inactive'] = function() {
+				if ( typeof ( window.jQuery ) !== 'undefined' ) {
+					jQuery(window).trigger('liquid_async_fonts_inactive');
+				}
+			};
+			</script>
+			<meta name='robots' content='max-image-preview:large' />
+	<style>img:is([sizes="auto" i], [sizes^="auto," i]) { contain-intrinsic-size: 3000px 1500px }</style>
+	<link rel='dns-prefetch' href='//embed.runkit.com' />
+<link rel="alternate" type="application/rss+xml" title="SSLCOMMERZ &raquo; Feed" href="https://sslcommerz.com/feed/" />
+<link rel="alternate" type="application/rss+xml" title="SSLCOMMERZ &raquo; Comments Feed" href="https://sslcommerz.com/comments/feed/" />
+<link rel="preload" href="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/liquid-icon/lqd-essentials/fonts/lqd-essentials.woff2" as="font" type="font/woff2" crossorigin><script type="text/javascript">
+/* <![CDATA[ */
+window._wpemojiSettings = {"baseUrl":"https:\/\/s.w.org\/images\/core\/emoji\/16.0.1\/72x72\/","ext":".png","svgUrl":"https:\/\/s.w.org\/images\/core\/emoji\/16.0.1\/svg\/","svgExt":".svg","source":{"concatemoji":"https:\/\/sslcommerz.com\/wp-includes\/js\/wp-emoji-release.min.js?ver=6.8.3"}};
+/*! This file is auto-generated */
+!function(s,n){var o,i,e;function c(e){try{var t={supportTests:e,timestamp:(new Date).valueOf()};sessionStorage.setItem(o,JSON.stringify(t))}catch(e){}}function p(e,t,n){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);var t=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data),a=(e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(n,0,0),new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data));return t.every(function(e,t){return e===a[t]})}function u(e,t){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);for(var n=e.getImageData(16,16,1,1),a=0;a<n.data.length;a++)if(0!==n.data[a])return!1;return!0}function f(e,t,n,a){switch(t){case"flag":return n(e,"\ud83c\udff3\ufe0f\u200d\u26a7\ufe0f","\ud83c\udff3\ufe0f\u200b\u26a7\ufe0f")?!1:!n(e,"\ud83c\udde8\ud83c\uddf6","\ud83c\udde8\u200b\ud83c\uddf6")&&!n(e,"\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f","\ud83c\udff4\u200b\udb40\udc67\u200b\udb40\udc62\u200b\udb40\udc65\u200b\udb40\udc6e\u200b\udb40\udc67\u200b\udb40\udc7f");case"emoji":return!a(e,"\ud83e\udedf")}return!1}function g(e,t,n,a){var r="undefined"!=typeof WorkerGlobalScope&&self instanceof WorkerGlobalScope?new OffscreenCanvas(300,150):s.createElement("canvas"),o=r.getContext("2d",{willReadFrequently:!0}),i=(o.textBaseline="top",o.font="600 32px Arial",{});return e.forEach(function(e){i[e]=t(o,e,n,a)}),i}function t(e){var t=s.createElement("script");t.src=e,t.defer=!0,s.head.appendChild(t)}"undefined"!=typeof Promise&&(o="wpEmojiSettingsSupports",i=["flag","emoji"],n.supports={everything:!0,everythingExceptFlag:!0},e=new Promise(function(e){s.addEventListener("DOMContentLoaded",e,{once:!0})}),new Promise(function(t){var n=function(){try{var e=JSON.parse(sessionStorage.getItem(o));if("object"==typeof e&&"number"==typeof e.timestamp&&(new Date).valueOf()<e.timestamp+604800&&"object"==typeof e.supportTests)return e.supportTests}catch(e){}return null}();if(!n){if("undefined"!=typeof Worker&&"undefined"!=typeof OffscreenCanvas&&"undefined"!=typeof URL&&URL.createObjectURL&&"undefined"!=typeof Blob)try{var e="postMessage("+g.toString()+"("+[JSON.stringify(i),f.toString(),p.toString(),u.toString()].join(",")+"));",a=new Blob([e],{type:"text/javascript"}),r=new Worker(URL.createObjectURL(a),{name:"wpTestEmojiSupports"});return void(r.onmessage=function(e){c(n=e.data),r.terminate(),t(n)})}catch(e){}c(n=g(i,f,p,u))}t(n)}).then(function(e){for(var t in e)n.supports[t]=e[t],n.supports.everything=n.supports.everything&&n.supports[t],"flag"!==t&&(n.supports.everythingExceptFlag=n.supports.everythingExceptFlag&&n.supports[t]);n.supports.everythingExceptFlag=n.supports.everythingExceptFlag&&!n.supports.flag,n.DOMReady=!1,n.readyCallback=function(){n.DOMReady=!0}}).then(function(){return e}).then(function(){var e;n.supports.everything||(n.readyCallback(),(e=n.source||{}).concatemoji?t(e.concatemoji):e.wpemoji&&e.twemoji&&(t(e.twemoji),t(e.wpemoji)))}))}((window,document),window._wpemojiSettings);
+/* ]]> */
+</script>
+<style id='wp-emoji-styles-inline-css' type='text/css'>
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+</style>
+<style id='classic-theme-styles-inline-css' type='text/css'>
+/*! This file is auto-generated */
+.wp-block-button__link{color:#fff;background-color:#32373c;border-radius:9999px;box-shadow:none;text-decoration:none;padding:calc(.667em + 2px) calc(1.333em + 2px);font-size:1.125em}.wp-block-file__button{background:#32373c;color:#fff;text-decoration:none}
+</style>
+<style id='safe-svg-svg-icon-style-inline-css' type='text/css'>
+.safe-svg-cover{text-align:center}.safe-svg-cover .safe-svg-inside{display:inline-block;max-width:100%}.safe-svg-cover svg{fill:currentColor;height:100%;max-height:100%;max-width:100%;width:100%}
+
+</style>
+<style id='pdfemb-pdf-embedder-viewer-style-inline-css' type='text/css'>
+.wp-block-pdfemb-pdf-embedder-viewer{max-width:none}
+
+</style>
+<style id='global-styles-inline-css' type='text/css'>
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgba(6,147,227,1) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgba(252,185,0,1) 0%,rgba(255,105,0,1) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgba(255,105,0,1) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: 20px;--wp--preset--font-size--large: 36px;--wp--preset--font-size--x-large: 42px;--wp--preset--spacing--20: 0.44rem;--wp--preset--spacing--30: 0.67rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2.25rem;--wp--preset--spacing--70: 3.38rem;--wp--preset--spacing--80: 5.06rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgba(255, 255, 255, 1), 6px 6px rgba(0, 0, 0, 1);--wp--preset--shadow--crisp: 6px 6px 0px rgba(0, 0, 0, 1);}:where(.is-layout-flex){gap: 0.5em;}:where(.is-layout-grid){gap: 0.5em;}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}:where(.wp-block-columns.is-layout-flex){gap: 2em;}:where(.wp-block-columns.is-layout-grid){gap: 2em;}:where(.wp-block-post-template.is-layout-flex){gap: 1.25em;}:where(.wp-block-post-template.is-layout-grid){gap: 1.25em;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}
+:where(.wp-block-post-template.is-layout-flex){gap: 1.25em;}:where(.wp-block-post-template.is-layout-grid){gap: 1.25em;}
+:where(.wp-block-columns.is-layout-flex){gap: 2em;}:where(.wp-block-columns.is-layout-grid){gap: 2em;}
+:root :where(.wp-block-pullquote){font-size: 1.5em;line-height: 1.6;}
+</style>
+<link rel='stylesheet' id='contact-form-7-css' href='https://sslcommerz.com/wp-content/plugins/contact-form-7/includes/css/styles.css?ver=6.1.3' type='text/css' media='all' />
+<style id='contact-form-7-inline-css' type='text/css'>
+.wpcf7 .wpcf7-recaptcha iframe {margin-bottom: 0;}.wpcf7 .wpcf7-recaptcha[data-align="center"] > div {margin: 0 auto;}.wpcf7 .wpcf7-recaptcha[data-align="right"] > div {margin: 0 0 0 auto;}
+</style>
+<link rel='stylesheet' id='customer-feedback-style-css' href='https://sslcommerz.com/wp-content/plugins/customer-feedback-sslwireless/assets/css/style.css?v=1.8&#038;ver=2.5' type='text/css' media='all' />
+<link rel='stylesheet' id='datatable-stylesheet-css' href='https://sslcommerz.com/wp-content/plugins/customer-feedback-sslwireless/assets/dataTables/1.10.25/css/jquery.dataTables.css?ver=2.1' type='text/css' media='all' />
+<link rel='stylesheet' id='redux-extendify-styles-css' href='https://sslcommerz.com/wp-content/plugins/hub-core/extras/redux-framework/redux-core/assets/css/extendify-utilities.css?ver=4.4.12.2' type='text/css' media='all' />
+<link rel='stylesheet' id='bootstrap-css' href='https://sslcommerz.com/wp-content/themes/hub/assets/vendors/bootstrap/css/bootstrap.min.css' type='text/css' media='all' />
+<link rel='stylesheet' id='liquid-base-css' href='https://sslcommerz.com/wp-content/themes/hub/style.css' type='text/css' media='all' />
+<style id='liquid-base-inline-css' type='text/css'>
+.lqd-69e9dcaf8e744{
+			position: fixed;
+			left: 0;
+			bottom: 0;
+			right: 0;
+			margin: 0;
+			padding: 1em 1.41575em;
+			background-color: #3d9cd2;
+			color: #fff;
+			z-index: 9998;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 8px;
+			a{color:#fff}
+		}.lqd-69e9dcaf8e744.err{
+			background-color: #d63939;
+		}
+</style>
+<link rel='stylesheet' id='liquid-base-typography-css' href='https://sslcommerz.com/wp-content/themes/hub/assets/css/elements/base/typography.css' type='text/css' media='all' />
+<link rel='stylesheet' id='elementor-frontend-css' href='https://sslcommerz.com/wp-content/uploads/elementor/css/custom-frontend.min.css?ver=1775556319' type='text/css' media='all' />
+<style id='elementor-frontend-inline-css' type='text/css'>
+@media (max-width: 1199px){}@media (max-width: 767px){}
+</style>
+<link rel='stylesheet' id='tablepress-default-css' href='https://sslcommerz.com/wp-content/plugins/tablepress/css/build/default.css?ver=3.2.5' type='text/css' media='all' />
+<link rel='stylesheet' id='ld-gdpr-box-css' href='https://sslcommerz.com/wp-content/plugins/liquid-gdpr/assets/css/liquid-gdpr.min.css?ver=6.8.3' type='text/css' media='all' />
+<link rel='stylesheet' id='child-hub-style-css' href='https://sslcommerz.com/wp-content/themes/hub-child/style.css?ver=6.8.3' type='text/css' media='all' />
+<link rel='stylesheet' id='theme-elementor-css' href='https://sslcommerz.com/wp-content/plugins/hub-elementor-addons/assets/css/theme-elementor.min.css?ver=5.0.7' type='text/css' media='all' />
+<link rel='stylesheet' id='not-found-css' href='https://sslcommerz.com/wp-content/plugins/hub-elementor-addons/assets/css/pages/not-found.css?ver=5.0.7' type='text/css' media='all' />
+<script type="text/javascript" src="https://sslcommerz.com/wp-includes/js/jquery/jquery.min.js?ver=3.7.1" id="jquery-core-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1" id="jquery-migrate-js"></script>
+<script type="text/javascript" src="https://embed.runkit.com?ver=6.8.3" id="validation-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub-child/jquery.validate/1.13.1/js/jquery.validate.js?ver=6.8.3" id="jquery-validate-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub-child/jquery.validate/1.13.1/js/additional-methods.js?ver=6.8.3" id="additional-methods-js"></script>
+<link rel="https://api.w.org/" href="https://sslcommerz.com/wp-json/" /><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://sslcommerz.com/xmlrpc.php?rsd" />
+<meta name="generator" content="WordPress 6.8.3" />
+<meta name="generator" content="Redux 4.4.12.2" />	
+					<link rel="shortcut icon" href="https://sslcommerz.com/wp-content/uploads/2024/03/z.svg" />
+				
+			
+	<script type="text/javascript">
+				window.liquidParams = {
+					currentZIndex: 10,
+					lazyLoadOffset: 500,
+					ccOuterSize: 35,
+					ccActiveCircleBg: 1,
+					ccActiveCircleBc: 1,
+				};
+				window.liquidIsElementor = true;
+			</script><meta name="generator" content="Elementor 3.32.5; features: e_font_icon_svg, additional_custom_breakpoints; settings: css_print_method-internal, google_font-enabled, font_display-swap">
+			<style>
+				.e-con.e-parent:nth-of-type(n+4):not(.e-lazyloaded):not(.e-no-lazyload),
+				.e-con.e-parent:nth-of-type(n+4):not(.e-lazyloaded):not(.e-no-lazyload) * {
+					background-image: none !important;
+				}
+				@media screen and (max-height: 1024px) {
+					.e-con.e-parent:nth-of-type(n+3):not(.e-lazyloaded):not(.e-no-lazyload),
+					.e-con.e-parent:nth-of-type(n+3):not(.e-lazyloaded):not(.e-no-lazyload) * {
+						background-image: none !important;
+					}
+				}
+				@media screen and (max-height: 640px) {
+					.e-con.e-parent:nth-of-type(n+2):not(.e-lazyloaded):not(.e-no-lazyload),
+					.e-con.e-parent:nth-of-type(n+2):not(.e-lazyloaded):not(.e-no-lazyload) * {
+						background-image: none !important;
+					}
+				}
+			</style>
+			<meta name="generator" content="Powered by Slider Revolution 6.7.19 - responsive, Mobile-Friendly Slider Plugin for WordPress with comfortable drag and drop interface." />
+<link rel="icon" href="https://sslcommerz.com/wp-content/uploads/2024/03/z.svg" sizes="32x32" />
+<link rel="icon" href="https://sslcommerz.com/wp-content/uploads/2024/03/z.svg" sizes="192x192" />
+<link rel="apple-touch-icon" href="https://sslcommerz.com/wp-content/uploads/2024/03/z.svg" />
+<meta name="msapplication-TileImage" content="https://sslcommerz.com/wp-content/uploads/2024/03/z.svg" />
+<script>function setREVStartSize(e){
+			//window.requestAnimationFrame(function() {
+				window.RSIW = window.RSIW===undefined ? window.innerWidth : window.RSIW;
+				window.RSIH = window.RSIH===undefined ? window.innerHeight : window.RSIH;
+				try {
+					var pw = document.getElementById(e.c).parentNode.offsetWidth,
+						newh;
+					pw = pw===0 || isNaN(pw) || (e.l=="fullwidth" || e.layout=="fullwidth") ? window.RSIW : pw;
+					e.tabw = e.tabw===undefined ? 0 : parseInt(e.tabw);
+					e.thumbw = e.thumbw===undefined ? 0 : parseInt(e.thumbw);
+					e.tabh = e.tabh===undefined ? 0 : parseInt(e.tabh);
+					e.thumbh = e.thumbh===undefined ? 0 : parseInt(e.thumbh);
+					e.tabhide = e.tabhide===undefined ? 0 : parseInt(e.tabhide);
+					e.thumbhide = e.thumbhide===undefined ? 0 : parseInt(e.thumbhide);
+					e.mh = e.mh===undefined || e.mh=="" || e.mh==="auto" ? 0 : parseInt(e.mh,0);
+					if(e.layout==="fullscreen" || e.l==="fullscreen")
+						newh = Math.max(e.mh,window.RSIH);
+					else{
+						e.gw = Array.isArray(e.gw) ? e.gw : [e.gw];
+						for (var i in e.rl) if (e.gw[i]===undefined || e.gw[i]===0) e.gw[i] = e.gw[i-1];
+						e.gh = e.el===undefined || e.el==="" || (Array.isArray(e.el) && e.el.length==0)? e.gh : e.el;
+						e.gh = Array.isArray(e.gh) ? e.gh : [e.gh];
+						for (var i in e.rl) if (e.gh[i]===undefined || e.gh[i]===0) e.gh[i] = e.gh[i-1];
+											
+						var nl = new Array(e.rl.length),
+							ix = 0,
+							sl;
+						e.tabw = e.tabhide>=pw ? 0 : e.tabw;
+						e.thumbw = e.thumbhide>=pw ? 0 : e.thumbw;
+						e.tabh = e.tabhide>=pw ? 0 : e.tabh;
+						e.thumbh = e.thumbhide>=pw ? 0 : e.thumbh;
+						for (var i in e.rl) nl[i] = e.rl[i]<window.RSIW ? 0 : e.rl[i];
+						sl = nl[0];
+						for (var i in nl) if (sl>nl[i] && nl[i]>0) { sl = nl[i]; ix=i;}
+						var m = pw>(e.gw[ix]+e.tabw+e.thumbw) ? 1 : (pw-(e.tabw+e.thumbw)) / (e.gw[ix]);
+						newh =  (e.gh[ix] * m) + (e.tabh + e.thumbh);
+					}
+					var el = document.getElementById(e.c);
+					if (el!==null && el) el.style.height = newh+"px";
+					el = document.getElementById(e.c+"_wrapper");
+					if (el!==null && el) {
+						el.style.height = newh+"px";
+						el.style.display = "block";
+					}
+				} catch(e){
+					console.log("Failure at Presize of Slider:" + e)
+				}
+			//});
+		  };</script>
+		<style type="text/css" id="wp-custom-css">
+			.height-page-title-custom1{
+	min-height:450px;
+	height:450px;
+}
+.same-height-custom .elementor-widget-wrap{
+	background-color:#DDE7F9;
+	margin:10px 10px;
+	padding:20px !important;
+}
+ul.list-custom-style1{
+	margin:0 0 20px 0;
+}
+ul.list-custom-style1 li{
+	margin-bottom:20px;
+}
+ul.list-custom-style1 ol{
+	margin:20px 0;
+}
+ul.list-custom-style1 p{
+	margin-bottom:20px !important;
+}
+th {
+    vertical-align: middle !important;
+}
+.table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td{
+	line-height:28px;
+}
+.integration-documents 
+code {
+    color: #c0341d;
+    background-color: #fcefed;
+	  border-radius:0;
+    padding: 2px 6px;
+}
+.integration-documents .label {
+    display: inline;
+    padding: 2px 6px;
+	  background-color:#003E78;
+    color: #fff;
+	  font-size:80%;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0;
+}
+.integration-documents .label-danger {
+    background-color: #d9534f;
+}
+.integration-documents .label-primary {
+    background-color: #337ab7;
+}
+.integration-documents .label-info {
+    background-color: #5bc0de;
+}
+.integration-documents .label-success {
+    background-color: #5cb85c;
+}
+.text-danger {
+    color: #a94442;
+}
+.nav-item-children{
+	border-radius:0;
+}
+.btn{
+	border-radius: 0 !important;
+}
+.lqd-lp-style-20 .lqd-lp-cat a{
+	padding: 0.25em 0.25em;
+}
+p{
+	font-size:16px;
+	line-height:26px;
+}
+ol, ul{
+	margin:0 0 25px;
+}
+ol li, ul li{
+	margin-bottom:10px;
+} 
+.main-nav>li, .main-nav>li>a{
+	margin-bottom:0;
+}
+.nav-item-children>li{
+	margin-bottom:0;
+}
+.submenu-expander{
+	top:10px !important;
+}
+.hidden-in-desktop{
+	display:none;
+}
+.lqd-lp-excerpt{
+	text-align:justify;
+}
+.list-custom-style1 li, .list-custom-style1 li a, p, a {
+    word-wrap: break-word;
+}
+.inline-ul>li.d-none-md-custom{
+	display:none !important;
+}
+.wpcf7 form .wpcf7-response-output{
+	margin: 1.5em 0 1em;
+}
+.inline-radio-custom .wpcf7-radio{
+	display:flex;
+	flex-direction:row;
+}
+.inline-radio-custom .wpcf7-radio .wpcf7-list-item{
+	margin-right:20px;
+}
+h1,h2,h3,h4,h5,h6,p,li{
+	line-break:auto;
+}
+.icon-no-custom .iconbox-icon-wrap{
+	display:none;
+}
+.cf-custom-row input, .cf-custom-row select, .cf-custom-row textarea{
+	  padding: 10px 5px;
+    position: relative;
+    border: 1px solid #d5d6de;
+    background: 0 0;
+}
+.cf-custom-row input:focus, .cf-custom-row select:focus, .cf-custom-row textarea:focus{
+	  outline:none;
+	  border-radius: 0;
+}
+select#subject_matter, select#sub_subject_matter{
+	display:block !important;
+}
+#subject_matter-button, #sub_subject_matter-button{
+	display:none !important;
+}
+.top-header-custom svg{
+	height:12px !important;
+}
+.modal-custom .modal-body {
+    padding: 20px 0 0 0;
+}
+.modal-custom .modal-content {
+    box-shadow: none;
+    border: none;
+}
+.modal-custom .modal-close {
+    right: 0;
+    top: 0;
+    height: 30px;
+    width: 30px;
+}
+.modal-custom .modal-close svg{
+	  height: 20px;
+}
+.customer-feedback-result-sslwireless p{
+	margin:0;
+}
+.modal-custom .imageContent{
+		display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.customer-feedback-custom-ssl-wireless .cf-custom-row .cf-custom-column{
+	margin-bottom:20px;
+}
+.runkit-custom-section iframe{
+	width:100% !important;
+	margin:0 !important;
+}
+.runkit-custom-section .embedded-notebook {
+    margin: 0;
+    width: 100% !important;
+}
+.bordered-custom .elementor-widget-ld_fancy_image{
+	border:1px solid #e3e3e3;
+}
+.trusted-partners-custom img{
+	width:180px;
+}
+.bordered-grid-custom .e-con-inner>.elementor-widget{
+	height:100%;
+	width:100%;
+	display:flex;
+	align-items:center;
+	justify-content:center;
+	padding:50px 15px;
+	border-right:1px solid #e9e9e9;
+	border-bottom:1px solid #e9e9e9;
+}
+.bordered-grid-custom .e-con-inner > .elementor-widget:first-child{
+/* 	border-left:1px solid transparent !important;
+	border-top:1px solid transparent !important; */
+}
+.bordered-grid-custom .elementor-widget img{
+	 max-height:80px;
+	 width:auto;
+}
+.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(-n+4) {
+    border-top: 1px solid #e9e9e9;
+}
+.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(4n+1) {
+    border-left: 1px solid #e9e9e9;
+}
+.bordered-grid-custom .e-con-inner > .elementor-widget:not(:last-child) {
+    border-right: 1px solid #e9e9e9;
+	  border-bottom: 1px solid #e9e9e9;
+}
+.bordered-grid-custom .e-con-inner>.elementor-widget>.elementor-widget-container{
+	display:flex;
+	align-items:center;
+	justify-content:center;
+}
+.wpcf7 textarea{
+	height:100px !important;
+}
+.table>thead>tr>th{
+	background-color:#003E78;
+	color:#fff;
+}
+
+/*----These are used in Integration Document Page---*/
+/* pre.prettyprint {
+    font-size: 14px !important;
+} */
+pre.prettyprint .str {
+    color: #080 !important;
+}
+pre.prettyprint .com {
+    color: #800 !important;
+}
+pre.prettyprint .typ {
+    color: #606 !important;
+}
+pre.prettyprint .kwd {
+    color: #008 !important;
+}
+pre.prettyprint .clo, pre.prettyprint .opn, pre.prettyprint .pun {
+    color: #660 !important;
+}
+pre.prettyprint .lit {
+    color: #066 !important;
+}
+pre.prettyprint .tag {
+    color: #008 !important;
+}
+pre.prettyprint .atn {
+    color: #606 !important;
+}
+pre.prettyprint .atv {
+    color: #080 !important;
+}
+/*----These are used in Integration Document Page Ends here---*/
+
+table.dataTable thead th, table.dataTable thead td {
+    padding: 10px 12px;
+}
+
+.custom-table-style1{
+	border:1px solid #ddd;
+}
+.custom-table-style1 td{
+	border:1px solid #ddd;
+	padding:5px 15px;
+	font-size:15px;
+	line-height:22px;
+}
+.custom-table-style1 tr:nth-child(odd), .custom-table-style1 tr:nth-child(even){
+	background-color:#fff;
+}
+
+.elementor-6140 .elementor-element.elementor-element-756dca0 .btn{
+	background-color:transparent !important;
+}
+
+input[type=submit] {
+    background: #295cab !important;
+    border-color: #295cab !important;
+}
+
+.entry-meta{
+	flex-direction: column !important;
+	margin-top:40px !important;
+}
+
+.entry-meta .byline{
+	display:none !important;
+}
+
+.entry-meta .posted-on{
+	align-items:center !important;
+}
+
+.entry-meta .cat-links{
+	display:none !important;
+}
+
+.total_clients_sslcommerz{
+	font-weight:600;
+	font-size:91px;
+	color:#fff !important;
+}
+.pricing-custom .lqd-pt-price{
+	font-size:27px;
+}
+.pricing-custom .subheading-custom{
+	margin-top:30px;
+	font-size:16px;
+	font-style:italic;
+}
+.pricing-custom ul.pricing-list-custom li{
+	padding-left:35px;
+	position:relative;
+	line-height: 25px;
+}
+.pricing-custom ul.pricing-list-custom li::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='12' cy='12' r='12' fill='%2360dfb3'/%3E%3Cpath d='M7.5 12.5L11 15.5L16.5 9' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+}
+.pricing-custom .lqd-pt{
+	border:1px solid #f2f2f2;
+	border-radius:0;
+	margin: 0;
+}
+.join-here-section-custom{
+	  background-color: rgb(231, 237, 254);
+  height: 100%;
+}
+.join_us_custom{
+/*    display:inline-block;
+	 color:#fff !important;
+	 background:#003E78;
+	 padding:15px 45px;
+	 border-radius:0;
+	 border:10px solid #ffffff;
+	 font-size:22px; */
+	margin-top:30px;
+}
+.join_us_custom:hover{
+	 background:#2563EB;
+}
+.link-style-1{
+	background-color:#1c78bb;
+	color:#fff;
+	font-size: 21px;
+	font-weight:600;
+	display:block;
+	padding:10px 20px;
+	border-radius:15px;
+	margin-top:10px;
+}
+.link-style-1:hover{
+	background-color:#1c78bb;
+	color:#fff;
+}
+.requirend-documents.table.table-responsive.table>.table>tbody>tr>td{
+	white-space:normal;
+}
+.key_point li:before{
+	top:5px !important;
+	transform:none !important;
+}
+@media only screen and (max-width:1024px){
+	.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(-n+4) {
+    border-top: none;
+}
+		.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(-n+3) {
+			border-top: 1px solid #e9e9e9;
+	}
+		.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(4n+1) {
+			border-left: none;
+	}
+		.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(3n+1) {
+			border-left: 1px solid #e9e9e9;
+	}
+}
+
+@media only screen and (max-width: 720px) {
+    .bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(-n+4) {
+    border-top: none;
+}
+		.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(-n+3) {
+			border-top: none;
+	}
+	
+	.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(-n+2) {
+			border-top: 1px solid #e9e9e9;
+	}
+		.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(4n+1) {
+			border-left: none;
+	}
+		.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(3n+1) {
+			border-left: none;
+	}
+		.bordered-grid-custom .e-con-inner > .elementor-widget:nth-child(2n+1) {
+				border-left: 1px solid #e9e9e9;
+	}
+	.total_clients_sslcommerz{
+		font-size: 70px;
+	}
+}
+@media only screen and (max-width:828px){
+	.height-page-title-custom1{
+		height:auto;
+	}
+	.inline-ul>li.d-none-md-custom{
+		display:inline-flex !important;;
+	}
+	/* Make TablePress tables responsive */
+.tablepress {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
+}
+.tablepress .column-1,
+.tablepress .column-2,
+/* Add more selectors as per your table columns */
+{
+    word-wrap: break-word;
+}
+	.total_clients_sslcommerz{
+		font-size: 70px;
+	}
+	.requirend-documents.table tr{
+		display:flex;
+		flex-direction:column;
+	}
+	.requirend-documents.table td:first-child{
+		padding-top:15px;
+		padding-bottom:15px;
+	}
+}
+@media only screen and (max-width:992px){
+	.background-slider-custom{
+		background-image:url(https://sslcommerz.com/wp-content/uploads/2024/07/bg-video.jpg);
+		background-repeat:no-repeat;
+		background-size:cover;
+		background-position:center center;
+	}
+	.total_clients_sslcommerz{
+		font-size: 70px;
+	}
+}		</style>
+		<style id='liquid-stylesheet-inline-css' type='text/css'>body{--lqd-cc-size-inner:15px;--lqd-cc-bg:rgb(0, 62, 120);--lqd-cc-bc:rgb(0, 62, 120);--lqd-cc-active-bw:1px;--lqd-cc-active-bg:rgb(255, 255, 255);--lqd-cc-active-bc:rgb(255, 255, 255);--lqd-cc-active-circle-txt:rgb(0, 62, 120);--lqd-cc-active-circle-color:rgb(255, 255, 255);--lqd-cc-active-arrow-color:rgb(255, 255, 255);}.titlebar-inner h1{}.titlebar-inner p{}.titlebar-inner{padding-top:80px;padding-bottom:80px;}.titlebar{background-color:#ffffff;}#lqd-gdpr{padding:   ;border-radius:   ;}#lqd-gdpr .lqd-gdpr-accept{padding:   ;border-radius:   ;}@media screen and (min-width: 992px){body.has-sidebar #lqd-contents-wrap{padding-top:25px;}}.wpcf7-form-control {
+height: auto;
+}
+.key_point {
+    padding: 0;
+    margin: 0
+}
+
+.key_point li {
+    list-style: none;
+    padding-left: 42px;
+    margin-bottom: 12px;
+    font-size: 15px;
+    color: #5b5b5b;
+    font-weight: 400;
+    position: relative
+}
+
+.key_point li:before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    background: url(../wp-content/themes/hub-child/images/check-1-1b47deb7.svg);
+    width: 20px;
+    height: 20px;
+    transform: translateY(-50%)
+}
+.font-18 {
+    font-size: 18px;
+}
+.fw-bold {
+    font-weight: 600 !important;
+}</style>        <!---for iBot ----->
+    <script src="https://ibot.sslwireless.com/webcdn/main.js?v=1.3" ibot_key="ssl-5be38b96-2e19-423f" id="ibot_id" data_user="false"></script>
+</head>
+
+<body class="error404 wp-embed-responsive wp-theme-hub wp-child-theme-hub-child sidebar-widgets-outline lazyload-enabled elementor-default elementor-kit-16" dir="ltr" itemscope="itemscope" itemtype="http://schema.org/WebPage" data-mobile-nav-breakpoint="1200" data-mobile-nav-style="minimal" data-mobile-nav-scheme="gray" data-mobile-nav-trigger-alignment="right" data-mobile-header-scheme="gray" data-mobile-logo-alignment="default" data-overlay-onmobile="false">
+    
+    <script type="text/javascript">
+				window.liquidBreakpoints = {"mobile":{"label":"Mobile Portrait","value":767,"default_value":767,"direction":"max","is_enabled":true},"mobile_extra":{"label":"Mobile Landscape","value":880,"default_value":880,"direction":"max","is_enabled":false},"tablet":{"label":"Tablet Portrait","value":1199,"default_value":1024,"direction":"max","is_enabled":true},"tablet_extra":{"label":"Tablet Landscape","value":1200,"default_value":1200,"direction":"max","is_enabled":false},"laptop":{"label":"Laptop","value":1366,"default_value":1366,"direction":"max","is_enabled":false},"widescreen":{"label":"Widescreen","value":2400,"default_value":2400,"direction":"min","is_enabled":false}};
+
+				function getLiquidActiveBreakpoint() {
+					const mms = [ {
+						mm: window.matchMedia( "(min-width: 1201px)" ),
+						breakpointKey: "desktop"
+					} ];
+
+					Object.entries( window.liquidBreakpoints ).forEach( ( [ breakpointKey, { direction, is_enabled, value } ] ) => {
+						if ( !is_enabled ) return;
+
+						mms.push( {
+							mm: window.matchMedia( `(${ direction }-width: ${ value }px)` ),
+							breakpointKey
+						} );
+					} );
+
+					return mms.filter( ( { mm } ) => mm.matches )?.at( -1 )?.breakpointKey || "desktop";
+				}
+
+				document.body.setAttribute("data-elementor-device-mode", getLiquidActiveBreakpoint());
+			</script>
+    <div><div class="screen-reader-text">Skip links</div><ul class="liquid-skip-link screen-reader-text"><li><a href="#primary-nav" class="screen-reader-shortcut"> Skip to primary navigation</a></li><li><a href="#lqd-site-content" class="screen-reader-shortcut"> Skip to content</a></li></ul></div>
+
+    <div id="wrap">
+
+        <div class="lqd-sticky-placeholder d-none"></div><header class="header site-header main-header main-header-overlay sticky-header-noshadow  is-not-stuck main-header-dynamiccolors" data-sticky-header="true" data-sticky-values-measured="false" data-sticky-options="{&quot;dynamicColors&quot;:true}" id="header" itemscope="itemscope" itemtype="http://schema.org/WPHeader">
+    
+    <style id="elementor-post-6140">.elementor-6140 .elementor-element.elementor-element-6964e64:not(.elementor-motion-effects-element-type-background), .elementor-6140 .elementor-element.elementor-element-6964e64 > .elementor-motion-effects-container > .elementor-motion-effects-layer{background-color:#000000;}.elementor-6140 .elementor-element.elementor-element-6964e64 > .elementor-container{max-width:1200px;min-height:25px;}.elementor-6140 .elementor-element.elementor-element-6964e64{transition:background 0.3s, border 0.3s, border-radius 0.3s, box-shadow 0.3s;margin-top:0px;margin-bottom:0px;padding:0px 0px 0px 0px;}.elementor-6140 .elementor-element.elementor-element-6964e64 > .elementor-background-overlay{transition:background 0.3s, border-radius 0.3s, opacity 0.3s;}.elementor-6140 .elementor-element.elementor-element-048ab5b.elementor-column > .elementor-widget-wrap{justify-content:center;}.elementor-6140 .elementor-element.elementor-element-048ab5b > .elementor-element-populated{margin:0px 0px 0px 0px;--e-column-margin-right:0px;--e-column-margin-left:0px;padding:5px 0px 5px 0px;}.elementor-6140 .elementor-element.elementor-element-92d79e2 > .elementor-widget-container{margin:0px 0px 0px 0px;padding:0px 0px 0px 0px;}.elementor-6140 .elementor-element.elementor-element-92d79e2.elementor-element{--align-self:center;--flex-grow:0;--flex-shrink:0;}.elementor-6140 .elementor-element.elementor-element-92d79e2 .elementor-icon-list-icon i{color:#F98553;transition:color 0.3s;}.elementor-6140 .elementor-element.elementor-element-92d79e2 .elementor-icon-list-icon svg{fill:#F98553;transition:fill 0.3s;}.elementor-6140 .elementor-element.elementor-element-92d79e2{--e-icon-list-icon-size:12px;--icon-vertical-offset:0px;}.elementor-6140 .elementor-element.elementor-element-92d79e2 .elementor-icon-list-icon{padding-inline-end:0px;}.elementor-6140 .elementor-element.elementor-element-92d79e2 .elementor-icon-list-item > .elementor-icon-list-text, .elementor-6140 .elementor-element.elementor-element-92d79e2 .elementor-icon-list-item > a{font-family:"GT Walsheim", Sans-serif;font-size:12px;}.elementor-6140 .elementor-element.elementor-element-92d79e2 .elementor-icon-list-text{color:#FFFFFF;transition:color 0.3s;}.elementor-6140 .elementor-element.elementor-element-3cb84be > .elementor-container{min-height:47px;}.elementor-6140 .elementor-element.elementor-element-3cb84be{padding:2px 34px 2px 34px;}.elementor-bc-flex-widget .elementor-6140 .elementor-element.elementor-element-f92be94.elementor-column .elementor-widget-wrap{align-items:center;}.elementor-6140 .elementor-element.elementor-element-f92be94.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:center;align-items:center;}.elementor-6140 .elementor-element.elementor-element-370ce7e .module-logo{padding-top:0px;padding-inline-end:0px;padding-bottom:0px;padding-inline-start:0px;}.is-stuck .elementor-6140 .elementor-element.elementor-element-370ce7e .module-logo{padding-top:0px;padding-inline-end:0px;padding-bottom:0px;padding-inline-start:0px;}.elementor-bc-flex-widget .elementor-6140 .elementor-element.elementor-element-6d9e8be.elementor-column .elementor-widget-wrap{align-items:center;}.elementor-6140 .elementor-element.elementor-element-6d9e8be.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:center;align-items:center;}.elementor-6140 .elementor-element.elementor-element-6d9e8be.elementor-column > .elementor-widget-wrap{justify-content:center;}.elementor-6140 .elementor-element.elementor-element-68e1c0d .main-nav > li > a{font-size:14px;font-weight:500;}.elementor-6140 .elementor-element.elementor-element-68e1c0d{--lqd-menu-items-top-padding:0em;--lqd-menu-items-right-padding:1em;--lqd-menu-items-bottom-padding:0em;--lqd-menu-items-left-padding:1em;}.is-stuck .elementor-6140 .elementor-element.elementor-element-68e1c0d{--lqd-menu-items-top-padding:0em;--lqd-menu-items-right-padding:01em;--lqd-menu-items-bottom-padding:0em;--lqd-menu-items-left-padding:01em;}.elementor-6140 .elementor-element.elementor-element-68e1c0d .nav-item-children > li > a{font-size:14px;}.elementor-6140 .elementor-element.elementor-element-68e1c0d .main-nav > li > a, .navbar-fullscreen .elementor-6140 .elementor-element.elementor-element-68e1c0d .main-nav > li > a{color:#000000;}.elementor-6140 .elementor-element.elementor-element-358e119.elementor-column > .elementor-widget-wrap{justify-content:flex-end;}.elementor-6140 .elementor-element.elementor-element-430c7b6 > .elementor-widget-container{padding:0px 0px 4px 0px;}.elementor-6140 .elementor-element.elementor-element-430c7b6 .btn{font-size:14px;font-weight:500;text-decoration:underline;color:#000000;fill:#000000;}.elementor-6140 .elementor-element.elementor-element-430c7b6.lqd-active-row-dark .btn{color:#000000 !important;}.elementor-6140 .elementor-element.elementor-element-457e0df > .elementor-widget-container{padding:0px 0px 0px 0px;}.elementor-6140 .elementor-element.elementor-element-457e0df .ld-module-search .ld-module-trigger-icon i{font-size:20px;}.elementor-bc-flex-widget .elementor-6140 .elementor-element.elementor-element-9bc0f0e.elementor-column .elementor-widget-wrap{align-items:space-between;}.elementor-6140 .elementor-element.elementor-element-9bc0f0e.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:space-between;align-items:space-between;}.elementor-6140 .elementor-element.elementor-element-9bc0f0e > .elementor-element-populated{margin:100px 0px 40px 0px;--e-column-margin-right:0px;--e-column-margin-left:0px;padding:0px 20px 0px 0px;}.elementor-6140 .elementor-element.elementor-element-2892120 > .elementor-widget-container{margin:0px 0px 0px -6px;}.elementor-6140 .elementor-element.elementor-element-2892120 .ld-module-sd > .ld-module-dropdown{width:350px;}.elementor-6140 .elementor-element.elementor-element-2892120 .ld-module-sd > .nav-trigger{font-size:14px;}.elementor-6140 .elementor-element.elementor-element-2892120.lqd-active-row-dark .ld-module-sd > .nav-trigger .bar, .elementor-6140 .elementor-element.elementor-element-2892120.lqd-active-row-dark .ld-module-sd > .nav-trigger.style-2 .bar:before, .elementor-6140 .elementor-element.elementor-element-2892120.lqd-active-row-dark .ld-module-sd > .nav-trigger.style-2 .bar:after{background:#FFFFFF;color:#FFFFFF;}.elementor-6140 .elementor-element.elementor-element-2892120.lqd-active-row-dark .ld-module-sd > .nav-trigger > .txt{color:#FFFFFF;}.elementor-6140 .elementor-element.elementor-element-6ecf890 > .elementor-widget-container{margin:40px 0px 40px 0px;}.elementor-6140 .elementor-element.elementor-element-6ecf890 .ld-fh-element, .elementor-6140 .elementor-element.elementor-element-6ecf890 .ld-fh-element a{color:#000000;}.elementor-6140 .elementor-element.elementor-element-6ecf890 .ld-fh-element{font-size:14px;}.elementor-6140 .elementor-element.elementor-element-6ecf890 .lqd-highlight-inner, .elementor-6140 .elementor-element.elementor-element-6ecf890 .lqd-highlight-inner .lqd-highlight-brush-svg{height:0.275em;}.elementor-6140 .elementor-element.elementor-element-6ecf890 .lqd-highlight-inner{bottom:0em;left:0em;}.elementor-6140 .elementor-element.elementor-element-6ecf890.lqd-active-row-light .ld-fh-element, .elementor-6140 .elementor-element.elementor-element-6ecf890.lqd-active-row-light .ld-fh-element span, .elementor-6140 .elementor-element.elementor-element-6ecf890.lqd-active-row-light .ld-fh-element a{color:#000000 !important;}.elementor-6140 .elementor-element.elementor-element-6ecf890.lqd-active-row-dark .ld-fh-element, .elementor-6140 .elementor-element.elementor-element-6ecf890.lqd-active-row-dark .ld-fh-element span, .elementor-6140 .elementor-element.elementor-element-6ecf890.lqd-active-row-dark .ld-fh-element a{color:#FFFFFF !important;}.elementor-6140 .elementor-element.elementor-element-70f1d91.lqd-active-row-dark a{color:#FFFFFF;}.elementor-6140 .elementor-element.elementor-element-70f1d91.lqd-active-row-dark .lqd-scrl-indc-line{background-color:#FFFFFF;}.elementor-bc-flex-widget .elementor-6140 .elementor-element.elementor-element-c923649.elementor-column .elementor-widget-wrap{align-items:flex-end;}.elementor-6140 .elementor-element.elementor-element-c923649.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:flex-end;align-items:flex-end;}.main-header > .elementor > .elementor-section{background:#FFFFFF;}.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light .nav-trigger.bordered .bars:before{border-color:#000000;}.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light .nav-trigger .bar{background:#000000;}.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .lqd-custom-menu,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .lqd-custom-menu > ul > li > a,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .lqd-custom-menu .lqd-custom-menu-dropdown-btn,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > p,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .btn-naked,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .btn-underlined,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .ld-fancy-heading .ld-fh-element,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .social-icon li a,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .iconbox h3,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .iconbox .iconbox-icon-container,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light .nav-trigger,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light .lqd-scrl-indc
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light .main-nav > li > a,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light .ld-module-trigger .ld-module-trigger-txt,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light .ld-module-trigger .ld-module-trigger-count,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light .ld-module-trigger-icon{color:#000000;}.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-light > .elementor-widget-container > .ld-fancy-heading .ld-fh-element span{color:#000000 !important;}.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark .nav-trigger.bordered .bars:before{border-color:#FFFFFF;}.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark .nav-trigger .bar{background:#FFFFFF;}.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .lqd-custom-menu,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .lqd-custom-menu > ul > li > a,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .lqd-custom-menu .lqd-custom-menu-dropdown-btn,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > p,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .btn-naked,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .btn-underlined,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .ld-fancy-heading .ld-fh-element,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .social-icon li a,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .iconbox h3,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .iconbox .iconbox-icon-container,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark .nav-trigger,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark .lqd-scrl-indc
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark .main-nav > li > a,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark .ld-module-trigger .ld-module-trigger-txt,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark .ld-module-trigger .ld-module-trigger-count,
+						.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark .ld-module-trigger-icon{color:#FFFFFF;}.main-header > .elementor > .elementor-section > .elementor-container > .elementor-column > .elementor-widget-wrap > .elementor-element.lqd-active-row-dark > .elementor-widget-container > .ld-fancy-heading .ld-fh-element span{color:#FFFFFF !important;}@media(max-width:1199px){.elementor-6140 .elementor-element.elementor-element-2892120 .ld-module-sd > .nav-trigger{font-size:13px;}.elementor-6140 .elementor-element.elementor-element-6ecf890 .ld-fh-element{font-size:13px;}}@media(min-width:768px){.elementor-6140 .elementor-element.elementor-element-f92be94{width:12%;}.elementor-6140 .elementor-element.elementor-element-6d9e8be{width:75.332%;}.elementor-6140 .elementor-element.elementor-element-358e119{width:12%;}.elementor-6140 .elementor-element.elementor-element-9bc0f0e{width:100%;}}</style>		<div data-elementor-type="wp-post" data-elementor-id="6140" class="elementor elementor-6140">
+						<section class="lqd-hide-onstuck elementor-section elementor-top-section elementor-element elementor-element-6964e64 elementor-section-height-min-height elementor-hidden-tablet elementor-hidden-mobile elementor-section-boxed elementor-section-height-default elementor-section-items-middle" data-id="6964e64" data-element_type="section" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+						<div class="elementor-container elementor-column-gap-no">
+					<div class="elementor-column elementor-col-100 elementor-top-column elementor-element elementor-element-048ab5b top-header-custom" data-id="048ab5b" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-92d79e2 elementor-icon-list--layout-inline elementor-list-item-link-full_width elementor-widget elementor-widget-icon-list" data-id="92d79e2" data-element_type="widget" data-widget_type="icon-list.default">
+				<div class="elementor-widget-container">
+							<ul class="elementor-icon-list-items elementor-inline-items">
+							<li class="elementor-icon-list-item elementor-inline-item">
+											<a href="tel:+88%2009677726222">
+
+												<span class="elementor-icon-list-icon">
+							<svg aria-hidden="true" class="e-font-icon-svg e-fas-phone-alt" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M497.39 361.8l-112-48a24 24 0 0 0-28 6.9l-49.6 60.6A370.66 370.66 0 0 1 130.6 204.11l60.6-49.6a23.94 23.94 0 0 0 6.9-28l-48-112A24.16 24.16 0 0 0 122.6.61l-104 24A24 24 0 0 0 0 48c0 256.5 207.9 464 464 464a24 24 0 0 0 23.4-18.6l24-104a24.29 24.29 0 0 0-14.01-27.6z"></path></svg>						</span>
+										<span class="elementor-icon-list-text"> +88 09677726222</span>
+											</a>
+									</li>
+						</ul>
+						</div>
+				</div>
+					</div>
+		</div>
+					</div>
+		</section>
+				<section class="elementor-section elementor-top-section elementor-element elementor-element-3cb84be elementor-section-height-min-height elementor-section-full_width elementor-hidden-tablet elementor-hidden-mobile elementor-section-height-default elementor-section-items-middle" data-id="3cb84be" data-element_type="section">
+						<div class="elementor-container elementor-column-gap-no">
+					<div class="elementor-column elementor-col-33 elementor-top-column elementor-element elementor-element-f92be94" data-id="f92be94" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-370ce7e elementor-widget elementor-widget-ld_header_image" data-id="370ce7e" data-element_type="widget" data-widget_type="ld_header_image.default">
+				<div class="elementor-widget-container">
+							
+		<div class="module-logo d-flex   navbar-brand-plain" id="size-logo" itemscope="itemscope" itemtype="https://schema.org/Brand">
+			<a class="navbar-brand d-flex p-0 pos-rel" href="https://sslcommerz.com/" rel="home" itemprop="url"><span class="navbar-brand-inner post-rel">    <img class="logo-default" src="https://sslcommerz.com/wp-content/uploads/2021/11/logo.png" alt="SSLCOMMERZ" itemprop="url"  /></span></a>		</div>
+
+						</div>
+				</div>
+					</div>
+		</div>
+				<div class="elementor-column elementor-col-33 elementor-top-column elementor-element elementor-element-6d9e8be" data-id="6d9e8be" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-68e1c0d elementor-widget elementor-widget-ld_header_menu" data-id="68e1c0d" data-element_type="widget" data-widget_type="ld_header_menu.default">
+				<div class="elementor-widget-container">
+							<div class="module-primary-nav d-flex">
+			<div class="collapse navbar-collapse d-inline-flex p-0 lqd-submenu-default-style  " id="main-header-collapse" aria-expanded="false" role="navigation">
+			<ul id="primary-nav" class="main-nav d-flex reset-ul inline-ul lqd-menu-counter-right lqd-menu-items-inline main-nav-hover-fade-inactive" itemtype="http://schema.org/SiteNavigationElement" itemscope="itemscope" data-submenu-options='{"toggleType":"fade","handler":"mouse-in-out"}' ><li id="menu-item-6661" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-6661"><a href="#.">Services<span class="submenu-expander pos-abs"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32" style="width: 1em; height: 1em;"><path fill="currentColor" d="M10.5 18.375l7.938-7.938c.562-.562 1.562-.562 2.125 0s.562 1.563 0 2.126l-9 9c-.563.562-1.5.625-2.063.062L.437 12.562C.126 12.25 0 11.876 0 11.5s.125-.75.438-1.063c.562-.562 1.562-.562 2.124 0z"></path></svg></span><span class="link-icon d-inline-flex hide-if-empty right-icon"><i class="lqd-icn-ess icon-ion-ios-arrow-down"></i></span></a>
+<ul class="nav-item-children">
+	<li id="menu-item-13469" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-13469"><a href="https://sslcommerz.com/payment-gateway/">Payment Gateway</a></li>
+	<li id="menu-item-9386" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-9386"><a href="https://sslcommerz.com/payment-invoices/">Payment Invoices</a></li>
+	<li id="menu-item-9441" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-9441"><a href="https://sslcommerz.com/payment-links/">Payment Links</a></li>
+	<li id="menu-item-10218" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-10218"><a href="https://sslcommerz.com/emi/">EMI</a></li>
+	<li id="menu-item-10768" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-10768"><a href="https://sslcommerz.com/bangla-qr/">Bangla QR</a></li>
+</ul>
+</li>
+<li id="menu-item-6664" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-6664"><a href="#.">Businesses<span class="submenu-expander pos-abs"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32" style="width: 1em; height: 1em;"><path fill="currentColor" d="M10.5 18.375l7.938-7.938c.562-.562 1.562-.562 2.125 0s.562 1.563 0 2.126l-9 9c-.563.562-1.5.625-2.063.062L.437 12.562C.126 12.25 0 11.876 0 11.5s.125-.75.438-1.063c.562-.562 1.562-.562 2.124 0z"></path></svg></span><span class="link-icon d-inline-flex hide-if-empty right-icon"><i class="lqd-icn-ess icon-ion-ios-arrow-down"></i></span></a>
+<ul class="nav-item-children">
+	<li id="menu-item-6799" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-6799"><a target="_blank" href="https://merchant.sslcommerz.com/">Merchant Login</a></li>
+	<li id="menu-item-6800" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-6800"><a target="_blank" href="https://join.sslcommerz.com/">Register as a Merchant</a></li>
+	<li id="menu-item-17070" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-17070"><a href="https://sslcommerz.com/refer-a-business/">Refer a business</a></li>
+</ul>
+</li>
+<li id="menu-item-15381" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-15381"><a href="https://sslcommerz.com/partners/">Partners</a></li>
+<li id="menu-item-14669" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-14669"><a href="https://sslcommerz.com/clients/">Clients</a></li>
+<li id="menu-item-16861" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-16861"><a href="https://sslcommerz.com/certifications/">Certifications</a></li>
+<li id="menu-item-13623" class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-13623"><a href="https://sslcommerz.com/about-company/">About Company</a></li>
+<li id="menu-item-13625" class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-13625"><a href="https://sslcommerz.com/blog/">Blog</a></li>
+<li id="menu-item-13626" class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-13626"><a href="https://sslcommerz.com/news/">News</a></li>
+<li id="menu-item-14471" class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-14471"><a href="https://sslcommerz.com/privacy-policy/">Privacy Policy</a></li>
+<li id="menu-item-16862" class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-16862"><a href="https://sslcommerz.com/terms-and-conditions/">Terms and Conditions</a></li>
+<li id="menu-item-13812" class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-13812"><a href="https://sslcommerz.com/contact/">Contact Us</a></li>
+<li id="menu-item-6662" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-6662"><a href="#.">Join us<span class="submenu-expander pos-abs"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32" style="width: 1em; height: 1em;"><path fill="currentColor" d="M10.5 18.375l7.938-7.938c.562-.562 1.562-.562 2.125 0s.562 1.563 0 2.126l-9 9c-.563.562-1.5.625-2.063.062L.437 12.562C.126 12.25 0 11.876 0 11.5s.125-.75.438-1.063c.562-.562 1.562-.562 2.124 0z"></path></svg></span><span class="link-icon d-inline-flex hide-if-empty right-icon"><i class="lqd-icn-ess icon-ion-ios-arrow-down"></i></span></a>
+<ul class="nav-item-children">
+	<li id="menu-item-17284" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-17284"><a target="_blank" href="https://join.sslcommerz.com/">Sign-up in 5 minutes</a></li>
+	<li id="menu-item-18685" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-18685"><a href="https://sslcommerz.com/pricing/">Pricing</a></li>
+	<li id="menu-item-6794" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-6794"><a target="_blank" href="https://developer.sslcommerz.com/registration/">Try the Sandbox</a></li>
+	<li id="menu-item-6795" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-6795"><a target="_blank" href="https://github.com/sslcommerz">View Our Library</a></li>
+	<li id="menu-item-14277" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-14277"><a href="https://sslcommerz.com/integration-document/">Integration Document</a></li>
+	<li id="menu-item-18730" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-18730"><a href="https://sslcommerz.com/onboarding-requirements/">Onboarding Requirements</a></li>
+</ul>
+</li>
+<li id="menu-item-6663" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-6663"><a href="#">Help<span class="submenu-expander pos-abs"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32" style="width: 1em; height: 1em;"><path fill="currentColor" d="M10.5 18.375l7.938-7.938c.562-.562 1.562-.562 2.125 0s.562 1.563 0 2.126l-9 9c-.563.562-1.5.625-2.063.062L.437 12.562C.126 12.25 0 11.876 0 11.5s.125-.75.438-1.063c.562-.562 1.562-.562 2.124 0z"></path></svg></span><span class="link-icon d-inline-flex hide-if-empty right-icon"><i class="lqd-icn-ess icon-ion-ios-arrow-down"></i></span></a>
+<ul class="nav-item-children">
+	<li id="menu-item-15786" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-15786"><a href="https://sslcommerz.com/raise-a-request/">Raise a request</a></li>
+	<li id="menu-item-9740" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-9740"><a href="https://sslcommerz.com/faq/">FAQ</a></li>
+</ul>
+</li>
+</ul>			</div>
+		</div>
+						</div>
+				</div>
+					</div>
+		</div>
+				<div class="elementor-column elementor-col-33 elementor-top-column elementor-element elementor-element-358e119" data-id="358e119" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-430c7b6 elementor-widget elementor-widget-ld_button" data-id="430c7b6" data-element_type="widget" data-widget_type="ld_button.default">
+				<div class="elementor-widget-container">
+					
+			<a
+				href="https://sslcommerz.com/contact/"class="elementor-button btn btn-naked btn-hover-txt-switch btn-hover-txt-switch-y btn-icon-shaped btn-has-label"			>
+									<span data-text="Contact" class="btn-txt" data-transition-delay="true" data-delay-options="{&quot;elements&quot;: &quot;.lqd-chars&quot;, &quot;delayType&quot;: &quot;animation&quot;, &quot;startDelay&quot;: 0, &quot;delayBetween&quot;: 32.5}" data-split-text="true" data-split-options="{&quot;type&quot;: &quot;chars, words&quot;}">
+						Contact					</span>
+											</a>
+							</div>
+				</div>
+				<div class="elementor-element elementor-element-457e0df elementor-widget elementor-widget-ld_header_search" data-id="457e0df" data-element_type="widget" data-widget_type="ld_header_search.default">
+				<div class="elementor-widget-container">
+							
+			<div class="d-flex ">
+				<div class="ld-module-search lqd-module-search-slide-top d-flex align-items-center " data-module-style='lqd-search-style-slide-top'>
+
+	
+	<span class="ld-module-trigger collapsed lqd-module-trigger-txt-left lqd-module-show-icon lqd-module-icon-plain" role="button" data-ld-toggle="true" data-toggle="collapse" data-bs-toggle="collapse" data-target="#search-69e9dcafe61ae" data-bs-target="#search-69e9dcafe61ae" aria-controls="search-69e9dcafe61ae" aria-expanded="false" aria-label="Search">
+		<span class="ld-module-trigger-txt">
+					</span>
+					<span class="ld-module-trigger-icon">
+				<i class="lqd-icn-ess icon-ld-search"></i>
+			</span>
+			</span>
+
+	<div class="ld-module-dropdown collapse d-flex w-100 flex-column pos-fix overflow-hidden backface-hidden" id="search-69e9dcafe61ae">
+
+		<div class="ld-search-form-container d-flex flex-column justify-content-center h-100 mx-auto backface-hidden">
+			<form role="search" method="get" action="https://sslcommerz.com/" class="ld-search-form w-100">
+				<label class="screen-reader-text" for="s">Search</label>
+				<input class="w-100" type="search" placeholder="Search" value="" name="s">
+				<span role="button" class="input-icon d-inline-flex align-items-center justify-content-center pos-abs" data-ld-toggle="true" data-toggle="collapse" data-bs-toggle="collapse" data-target="#search-69e9dcafe61ae" data-bs-target="#search-69e9dcafe61ae" aria-controls="search-69e9dcafe61ae" aria-expanded="false" aria-label="Close">
+					<i class="lqd-icn-ess icon-ld-search"></i>
+				</span>
+				<input type="hidden" name="post_type" value="all" />
+			</form>
+							<p class="lqd-module-search-info">Type and hit enter</p>
+					</div>
+
+	</div>
+
+</div>			</div>
+						</div>
+				</div>
+					</div>
+		</div>
+					</div>
+		</section>
+				<section class="lqd-stickybar-wrap lqd-stickybar-left elementor-section elementor-top-section elementor-element elementor-element-6199d9b elementor-section-full_width elementor-section-height-default elementor-section-height-default" data-id="6199d9b" data-element_type="section">
+						<div class="elementor-container elementor-column-gap-wider">
+					<div class="elementor-column elementor-col-100 elementor-top-column elementor-element elementor-element-9bc0f0e" data-id="9bc0f0e" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-2892120 elementor-widget elementor-widget-ld_header_sidedrawer" data-id="2892120" data-element_type="widget" data-widget_type="ld_header_sidedrawer.default">
+				<div class="elementor-widget-container">
+					
+		<div class="ld-module-sd ld-module-sd-hover ld-module-sd-left">
+
+			<button class="nav-trigger d-flex pos-rel align-items-center justify-content-center style-2   txt-left collapsed lqd-drawer-69e9dcafe93ab" role="button" type="button" data-ld-toggle="1" data-toggle-options="{&quot;cloneTriggerInTarget&quot;:false,&quot;type&quot;:&quot;click&quot;}" data-toggle="collapse" data-bs-toggle="collapse" data-target="#lqd-drawer-69e9dcafe93ab" data-bs-target="#lqd-drawer-69e9dcafe93ab" aria-expanded="false" aria-label="Menu" aria-controls="2892120">
+
+			<span class="bars d-inline-block pos-rel z-index-1">
+				<span class="bars-inner d-flex flex-column w-100 h-100">
+					<span class="bar d-inline-block pos-rel"></span>
+					<span class="bar d-inline-block pos-rel"></span>
+					<span class="bar d-inline-block pos-rel"></span>
+														</span>
+			</span>
+							<span class="txt d-inline-block">Menu</span>			
+			</button>
+
+			<div
+				class="ld-module-dropdown collapse pos-abs lqd-drawer-69e9dcafe93ab"
+				id="lqd-drawer-69e9dcafe93ab"
+				data-move-element='{ "target": ".elementor", "type": "appendTo", "wrapWithElementorWidgetEl": true, "wrapper": "<div />", "wrapperClass": "ld-module-sd ld-module-sd-hover ld-module-sd-left" }'>
+				<div class="ld-sd-wrap">
+									<div class="ld-sd-inner justify-content-center">
+					<style id="elementor-post-6139">.elementor-6139 .elementor-element.elementor-element-7c9b03e6 > .elementor-container > .elementor-column > .elementor-widget-wrap{align-content:center;align-items:center;}.elementor-6139 .elementor-element.elementor-element-7c9b03e6{padding:60px 60px 60px 60px;}.elementor-bc-flex-widget .elementor-6139 .elementor-element.elementor-element-66c599c6.elementor-column .elementor-widget-wrap{align-items:space-between;}.elementor-6139 .elementor-element.elementor-element-66c599c6.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:space-between;align-items:space-between;}.elementor-6139 .elementor-element.elementor-element-47da49{text-align:left;}.elementor-6139 .elementor-element.elementor-element-47da49 img{height:50px;}.elementor-6139 .elementor-element.elementor-element-2d65827f{width:100%;max-width:100%;}.elementor-6139 .elementor-element.elementor-element-2d65827f > .elementor-widget-container{margin:0px 0px 40px 0px;}.elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-custom-menu > .reset-ul > li:not(:last-child), .elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-custom-menu-btn-wrap{margin-bottom:15px;}.elementor-6139 .elementor-element.elementor-element-2d65827f .reset-ul > li > a{line-height:1.5em;}.elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-fancy-menu > .reset-ul > li > a{color:#000000;}.elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-fancy-menu > .reset-ul > li > a:hover, .elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-fancy-menu li.is-active > a{color:#F13C46;}.elementor-6139 .elementor-element.elementor-element-3ef005aa{width:100%;max-width:100%;}.elementor-6139 .elementor-element.elementor-element-3ef005aa .ld-fh-element{font-size:14px;line-height:1.5em;margin:0em 0em 2em 0em;}.elementor-6139 .elementor-element.elementor-element-3ef005aa .lqd-highlight-inner, .elementor-6139 .elementor-element.elementor-element-3ef005aa .lqd-highlight-inner .lqd-highlight-brush-svg{height:0.275em;}.elementor-6139 .elementor-element.elementor-element-3ef005aa .lqd-highlight-inner{bottom:0em;left:0em;}.elementor-6139 .elementor-element.elementor-element-3fd2e456{width:100%;max-width:100%;}.elementor-6139 .elementor-element.elementor-element-3fd2e456 .ld-fh-element{font-size:19px;line-height:1.5em;margin:0em 0em 1.5em 0em;}.elementor-6139 .elementor-element.elementor-element-3fd2e456 .lqd-highlight-inner, .elementor-6139 .elementor-element.elementor-element-3fd2e456 .lqd-highlight-inner .lqd-highlight-brush-svg{height:0.275em;}.elementor-6139 .elementor-element.elementor-element-3fd2e456 .lqd-highlight-inner{bottom:0em;left:0em;}.elementor-6139 .elementor-element.elementor-element-32a22e8c{--grid-template-columns:repeat(0, auto);--icon-size:20px;--grid-column-gap:20px;--grid-row-gap:0px;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon{background-color:#FFFFFF;--icon-padding:0em;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon i{color:#000000;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon svg{fill:#000000;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon:hover i{color:#4A4A4A;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon:hover svg{fill:#4A4A4A;}</style><style>.elementor-6139 .elementor-element.elementor-element-7c9b03e6 > .elementor-container > .elementor-column > .elementor-widget-wrap{align-content:center;align-items:center;}.elementor-6139 .elementor-element.elementor-element-7c9b03e6{padding:60px 60px 60px 60px;}.elementor-bc-flex-widget .elementor-6139 .elementor-element.elementor-element-66c599c6.elementor-column .elementor-widget-wrap{align-items:space-between;}.elementor-6139 .elementor-element.elementor-element-66c599c6.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:space-between;align-items:space-between;}.elementor-6139 .elementor-element.elementor-element-47da49{text-align:left;}.elementor-6139 .elementor-element.elementor-element-47da49 img{height:50px;}.elementor-6139 .elementor-element.elementor-element-2d65827f{width:100%;max-width:100%;}.elementor-6139 .elementor-element.elementor-element-2d65827f > .elementor-widget-container{margin:0px 0px 40px 0px;}.elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-custom-menu > .reset-ul > li:not(:last-child), .elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-custom-menu-btn-wrap{margin-bottom:15px;}.elementor-6139 .elementor-element.elementor-element-2d65827f .reset-ul > li > a{line-height:1.5em;}.elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-fancy-menu > .reset-ul > li > a{color:#000000;}.elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-fancy-menu > .reset-ul > li > a:hover, .elementor-6139 .elementor-element.elementor-element-2d65827f .lqd-fancy-menu li.is-active > a{color:#F13C46;}.elementor-6139 .elementor-element.elementor-element-3ef005aa{width:100%;max-width:100%;}.elementor-6139 .elementor-element.elementor-element-3ef005aa .ld-fh-element{font-size:14px;line-height:1.5em;margin:0em 0em 2em 0em;}.elementor-6139 .elementor-element.elementor-element-3ef005aa .lqd-highlight-inner, .elementor-6139 .elementor-element.elementor-element-3ef005aa .lqd-highlight-inner .lqd-highlight-brush-svg{height:0.275em;}.elementor-6139 .elementor-element.elementor-element-3ef005aa .lqd-highlight-inner{bottom:0em;left:0em;}.elementor-6139 .elementor-element.elementor-element-3fd2e456{width:100%;max-width:100%;}.elementor-6139 .elementor-element.elementor-element-3fd2e456 .ld-fh-element{font-size:19px;line-height:1.5em;margin:0em 0em 1.5em 0em;}.elementor-6139 .elementor-element.elementor-element-3fd2e456 .lqd-highlight-inner, .elementor-6139 .elementor-element.elementor-element-3fd2e456 .lqd-highlight-inner .lqd-highlight-brush-svg{height:0.275em;}.elementor-6139 .elementor-element.elementor-element-3fd2e456 .lqd-highlight-inner{bottom:0em;left:0em;}.elementor-6139 .elementor-element.elementor-element-32a22e8c{--grid-template-columns:repeat(0, auto);--icon-size:20px;--grid-column-gap:20px;--grid-row-gap:0px;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon{background-color:#FFFFFF;--icon-padding:0em;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon i{color:#000000;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon svg{fill:#000000;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon:hover i{color:#4A4A4A;}.elementor-6139 .elementor-element.elementor-element-32a22e8c .elementor-social-icon:hover svg{fill:#4A4A4A;}</style>		<div data-elementor-type="section" data-elementor-id="6139" class="elementor elementor-6139">
+						<section class="elementor-section elementor-top-section elementor-element elementor-element-7c9b03e6 elementor-section-height-full elementor-section-items-stretch elementor-section-content-middle elementor-section-boxed elementor-section-height-default" data-id="7c9b03e6" data-element_type="section">
+						<div class="elementor-container elementor-column-gap-no">
+					<div class="elementor-column elementor-col-100 elementor-top-column elementor-element elementor-element-66c599c6" data-id="66c599c6" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-47da49 elementor-widget elementor-widget-image" data-id="47da49" data-element_type="widget" data-widget_type="image.default">
+				<div class="elementor-widget-container">
+															<img width="462" height="100" src="https://sslcommerz.com/wp-content/uploads/2021/11/logo.png" class="attachment-full size-full wp-image-6671" alt="" srcset="https://sslcommerz.com/wp-content/uploads/2021/11/logo.png 462w, https://sslcommerz.com/wp-content/uploads/2021/11/logo-300x65.png 300w" sizes="(max-width: 462px) 100vw, 462px" />															</div>
+				</div>
+				<div class="elementor-element elementor-element-2d65827f elementor-widget__width-inherit elementor-widget elementor-widget-ld_custom_menu" data-id="2d65827f" data-element_type="widget" data-widget_type="ld_custom_menu.default">
+				<div class="elementor-widget-container">
+					
+			<div				class="lqd-fancy-menu lqd-custom-menu pos-rel lqd-menu-td-none"
+							>
+			
+						<ul id="lqd-custom-menu-2d65827f" class="reset-ul   " itemtype="http://schema.org/SiteNavigationElement" itemscope="itemscope"><li id="menu-item-11859" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-11859"><a href="https://sslcommerz.com/about-company/">About Company</a></li>
+<li id="menu-item-11049" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-11049"><a href="https://sslcommerz.com/blog/">Blog</a></li>
+<li id="menu-item-9693" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-9693"><a href="https://sslcommerz.com/news/">News</a></li>
+<li id="menu-item-11808" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-11808"><a href="https://sslcommerz.com/privacy-policy/">Privacy Policy</a></li>
+<li id="menu-item-16859" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-16859"><a href="https://sslcommerz.com/terms-and-conditions/">Terms and Conditions</a></li>
+</ul>									</div>
+						</div>
+				</div>
+				<section class="elementor-section elementor-inner-section elementor-element elementor-element-3d3bc0dc elementor-section-boxed elementor-section-height-default elementor-section-height-default" data-id="3d3bc0dc" data-element_type="section">
+						<div class="elementor-container elementor-column-gap-no">
+					<div class="elementor-column elementor-col-100 elementor-inner-column elementor-element elementor-element-43fb2ca9" data-id="43fb2ca9" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-3ef005aa elementor-widget__width-inherit elementor-widget elementor-widget-hub_fancy_heading" data-id="3ef005aa" data-element_type="widget" data-widget_type="hub_fancy_heading.default">
+				<div class="elementor-widget-container">
+					
+		<div id="ld-fancy-heading-69e9dcb00bf37" class="ld-fancy-heading pos-rel">
+			<p class="ld-fh-element d-inline-block pos-rel  lqd-highlight-classic lqd-highlight-grow-left p"  > Looking for collaboration for your next project? Do not hesitate to contact us to say hello.</p>		</div>
+
+						</div>
+				</div>
+				<div class="elementor-element elementor-element-3fd2e456 elementor-widget__width-inherit elementor-widget elementor-widget-hub_fancy_heading" data-id="3fd2e456" data-element_type="widget" data-widget_type="hub_fancy_heading.default">
+				<div class="elementor-widget-container">
+					
+		<div id="ld-fancy-heading-69e9dcb00c4ba" class="ld-fancy-heading pos-rel">
+			<p class="ld-fh-element d-inline-block pos-rel  lqd-highlight-classic lqd-highlight-grow-left p" ><a href="mailto:support@sslcommerz.com" > support@sslcommerz.com</a></p>		</div>
+
+						</div>
+				</div>
+				<div class="elementor-element elementor-element-32a22e8c elementor-shape-rounded elementor-grid-0 elementor-widget elementor-widget-social-icons" data-id="32a22e8c" data-element_type="widget" data-widget_type="social-icons.default">
+				<div class="elementor-widget-container">
+							<div class="elementor-social-icons-wrapper elementor-grid" role="list">
+							<span class="elementor-grid-item" role="listitem">
+					<a class="elementor-icon elementor-social-icon elementor-social-icon-facebook elementor-repeater-item-7c3ac94" href="https://www.facebook.com/SSLCOMMERZ/" target="_blank">
+						<span class="elementor-screen-only">Facebook</span>
+						<svg aria-hidden="true" class="e-font-icon-svg e-fab-facebook" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M504 256C504 119 393 8 256 8S8 119 8 256c0 123.78 90.69 226.38 209.25 245V327.69h-63V256h63v-54.64c0-62.15 37-96.48 93.67-96.48 27.14 0 55.52 4.84 55.52 4.84v61h-31.28c-30.8 0-40.41 19.12-40.41 38.73V256h68.78l-11 71.69h-57.78V501C413.31 482.38 504 379.78 504 256z"></path></svg>					</a>
+				</span>
+							<span class="elementor-grid-item" role="listitem">
+					<a class="elementor-icon elementor-social-icon elementor-social-icon-twitter elementor-repeater-item-c50a588" href="https://twitter.com/sslcommerzbd" target="_blank">
+						<span class="elementor-screen-only">Twitter</span>
+						<svg aria-hidden="true" class="e-font-icon-svg e-fab-twitter" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"></path></svg>					</a>
+				</span>
+							<span class="elementor-grid-item" role="listitem">
+					<a class="elementor-icon elementor-social-icon elementor-social-icon-youtube elementor-repeater-item-b3c3d72" href="https://www.youtube.com/c/SSLCOMMERZLTD" target="_blank">
+						<span class="elementor-screen-only">Youtube</span>
+						<svg aria-hidden="true" class="e-font-icon-svg e-fab-youtube" viewBox="0 0 576 512" xmlns="http://www.w3.org/2000/svg"><path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.321 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"></path></svg>					</a>
+				</span>
+							<span class="elementor-grid-item" role="listitem">
+					<a class="elementor-icon elementor-social-icon elementor-social-icon-linkedin elementor-repeater-item-48a0931" href="https://www.linkedin.com/company/sslcommerz/" target="_blank">
+						<span class="elementor-screen-only">Linkedin</span>
+						<svg aria-hidden="true" class="e-font-icon-svg e-fab-linkedin" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"></path></svg>					</a>
+				</span>
+					</div>
+						</div>
+				</div>
+					</div>
+		</div>
+					</div>
+		</section>
+					</div>
+		</div>
+					</div>
+		</section>
+				</div>
+							</div>
+								</div>
+			</div>
+
+			<div class="lqd-module-backdrop"></div>
+
+		</div>
+						</div>
+				</div>
+				<div class="elementor-element elementor-element-6ecf890 elementor-widget elementor-widget-hub_fancy_heading" data-id="6ecf890" data-element_type="widget" data-widget_type="hub_fancy_heading.default">
+				<div class="elementor-widget-container">
+					
+		<div id="ld-fancy-heading-69e9dcb00cb9a" class="ld-fancy-heading pos-rel">
+			<p class="ld-fh-element d-inline-block pos-rel  lqd-highlight-classic lqd-highlight-grow-left p" ><a href="mailto:support@sslcommerz.com" > support@sslcommerz.com</a></p>		</div>
+
+						</div>
+				</div>
+				<div class="elementor-element elementor-element-70f1d91 elementor-widget elementor-widget-ld_header_scroll_indicator" data-id="70f1d91" data-element_type="widget" data-widget_type="ld_header_scroll_indicator.default">
+				<div class="elementor-widget-container">
+					
+            <div class="lqd-scrl-indc d-flex ws-nowrap lqd-scrl-indc-style-dot" data-lqd-scroll-indicator="true">
+                <a href="#wrap" data-localscroll="true">
+                    <span class="lqd-scrl-indc-inner d-flex align-items-center">
+                        <span class="lqd-scrl-indc-txt">scroll to top</span>
+                        <span class="lqd-scrl-indc-line flex-grow-1 pos-rel">
+                            <span class="lqd-scrl-indc-el d-inline-block pos-abs border-radius-4"></span>
+                        </span>
+                    </span>
+                </a>
+            </div>
+                
+        				</div>
+				</div>
+					</div>
+		</div>
+					</div>
+		</section>
+				<section class="lqd-stickybar-wrap lqd-stickybar-right elementor-section elementor-top-section elementor-element elementor-element-ba6e6cb elementor-section-full_width elementor-section-height-default elementor-section-height-default" data-id="ba6e6cb" data-element_type="section">
+						<div class="elementor-container elementor-column-gap-no">
+					<div class="elementor-column elementor-col-100 elementor-top-column elementor-element elementor-element-c923649" data-id="c923649" data-element_type="column">
+			<div class="elementor-widget-wrap">
+							</div>
+		</div>
+					</div>
+		</section>
+				</div>
+		<div class="lqd-mobile-sec pos-rel">
+		<div class="lqd-mobile-sec-inner navbar-header d-flex align-items-stretch w-100">
+			<div class="lqd-mobile-modules-container empty"></div>
+			<button
+			type="button"
+			class="navbar-toggle collapsed nav-trigger style-mobile d-flex pos-rel align-items-center justify-content-center"
+			data-ld-toggle="true"
+			data-toggle="collapse"
+			data-bs-toggle="collapse"
+			data-target="#lqd-mobile-sec-nav"
+			data-bs-target="#lqd-mobile-sec-nav"
+			aria-expanded="false"
+			data-toggle-options='{ "changeClassnames": {"html": "mobile-nav-activated"} }'>
+				<span class="sr-only">Toggle navigation</span>
+				<span class="bars d-inline-block pos-rel z-index-1">
+					<span class="bars-inner d-flex flex-column w-100 h-100">
+						<span class="bar d-inline-block"></span>
+						<span class="bar d-inline-block"></span>
+						<span class="bar d-inline-block"></span>
+					</span>
+				</span>
+			</button>
+
+			<a class="navbar-brand d-flex pos-rel" href="https://sslcommerz.com/">
+				<span class="navbar-brand-inner">
+					<img class="logo-default" src="https://sslcommerz.com/wp-content/uploads/2021/11/logo.png" alt="SSLCOMMERZ"  />
+				</span>
+			</a>
+
+		</div>
+
+		<div class="lqd-mobile-sec-nav w-100 pos-abs z-index-10">
+
+			<div class="mobile-navbar-collapse navbar-collapse collapse w-100" id="lqd-mobile-sec-nav" aria-expanded="false" role="navigation"><ul id="mobile-primary-nav" class="reset-ul lqd-mobile-main-nav main-nav nav" itemtype="http://schema.org/SiteNavigationElement" itemscope="itemscope"><li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-6661"><a href="#.">Services<span class="submenu-expander pos-abs"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32" style="width: 1em; height: 1em;"><path fill="currentColor" d="M10.5 18.375l7.938-7.938c.562-.562 1.562-.562 2.125 0s.562 1.563 0 2.126l-9 9c-.563.562-1.5.625-2.063.062L.437 12.562C.126 12.25 0 11.876 0 11.5s.125-.75.438-1.063c.562-.562 1.562-.562 2.124 0z"></path></svg></span><span class="link-icon d-inline-flex hide-if-empty right-icon"><i class="lqd-icn-ess icon-ion-ios-arrow-down"></i></span></a>
+<ul class="nav-item-children">
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-13469"><a href="https://sslcommerz.com/payment-gateway/">Payment Gateway</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-9386"><a href="https://sslcommerz.com/payment-invoices/">Payment Invoices</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-9441"><a href="https://sslcommerz.com/payment-links/">Payment Links</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-10218"><a href="https://sslcommerz.com/emi/">EMI</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-10768"><a href="https://sslcommerz.com/bangla-qr/">Bangla QR</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-6664"><a href="#.">Businesses<span class="submenu-expander pos-abs"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32" style="width: 1em; height: 1em;"><path fill="currentColor" d="M10.5 18.375l7.938-7.938c.562-.562 1.562-.562 2.125 0s.562 1.563 0 2.126l-9 9c-.563.562-1.5.625-2.063.062L.437 12.562C.126 12.25 0 11.876 0 11.5s.125-.75.438-1.063c.562-.562 1.562-.562 2.124 0z"></path></svg></span><span class="link-icon d-inline-flex hide-if-empty right-icon"><i class="lqd-icn-ess icon-ion-ios-arrow-down"></i></span></a>
+<ul class="nav-item-children">
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-6799"><a target="_blank" href="https://merchant.sslcommerz.com/">Merchant Login</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-6800"><a target="_blank" href="https://join.sslcommerz.com/">Register as a Merchant</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-17070"><a href="https://sslcommerz.com/refer-a-business/">Refer a business</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-15381"><a href="https://sslcommerz.com/partners/">Partners</a></li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-14669"><a href="https://sslcommerz.com/clients/">Clients</a></li>
+<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-16861"><a href="https://sslcommerz.com/certifications/">Certifications</a></li>
+<li class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-13623"><a href="https://sslcommerz.com/about-company/">About Company</a></li>
+<li class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-13625"><a href="https://sslcommerz.com/blog/">Blog</a></li>
+<li class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-13626"><a href="https://sslcommerz.com/news/">News</a></li>
+<li class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-14471"><a href="https://sslcommerz.com/privacy-policy/">Privacy Policy</a></li>
+<li class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-16862"><a href="https://sslcommerz.com/terms-and-conditions/">Terms and Conditions</a></li>
+<li class="d-none-md-custom menu-item menu-item-type-post_type menu-item-object-page menu-item-13812"><a href="https://sslcommerz.com/contact/">Contact Us</a></li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-6662"><a href="#.">Join us<span class="submenu-expander pos-abs"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32" style="width: 1em; height: 1em;"><path fill="currentColor" d="M10.5 18.375l7.938-7.938c.562-.562 1.562-.562 2.125 0s.562 1.563 0 2.126l-9 9c-.563.562-1.5.625-2.063.062L.437 12.562C.126 12.25 0 11.876 0 11.5s.125-.75.438-1.063c.562-.562 1.562-.562 2.124 0z"></path></svg></span><span class="link-icon d-inline-flex hide-if-empty right-icon"><i class="lqd-icn-ess icon-ion-ios-arrow-down"></i></span></a>
+<ul class="nav-item-children">
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-17284"><a target="_blank" href="https://join.sslcommerz.com/">Sign-up in 5 minutes</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-18685"><a href="https://sslcommerz.com/pricing/">Pricing</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-6794"><a target="_blank" href="https://developer.sslcommerz.com/registration/">Try the Sandbox</a></li>
+	<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-6795"><a target="_blank" href="https://github.com/sslcommerz">View Our Library</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-14277"><a href="https://sslcommerz.com/integration-document/">Integration Document</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-18730"><a href="https://sslcommerz.com/onboarding-requirements/">Onboarding Requirements</a></li>
+</ul>
+</li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-has-children menu-item-6663"><a href="#">Help<span class="submenu-expander pos-abs"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="32" viewBox="0 0 21 32" style="width: 1em; height: 1em;"><path fill="currentColor" d="M10.5 18.375l7.938-7.938c.562-.562 1.562-.562 2.125 0s.562 1.563 0 2.126l-9 9c-.563.562-1.5.625-2.063.062L.437 12.562C.126 12.25 0 11.876 0 11.5s.125-.75.438-1.063c.562-.562 1.562-.562 2.124 0z"></path></svg></span><span class="link-icon d-inline-flex hide-if-empty right-icon"><i class="lqd-icn-ess icon-ion-ios-arrow-down"></i></span></a>
+<ul class="nav-item-children">
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-15786"><a href="https://sslcommerz.com/raise-a-request/">Raise a request</a></li>
+	<li class="menu-item menu-item-type-post_type menu-item-object-page menu-item-9740"><a href="https://sslcommerz.com/faq/">FAQ</a></li>
+</ul>
+</li>
+</ul></div>
+
+		</div>
+
+	</div>
+</header>
+        <main class="content" id="lqd-site-content">
+
+            
+            <div >
+
+            <article id="post-404" class="page-404 error-404 not-found entry elementor">
+	
+	<div class="container e-con">
+		<div class="row e-con-inner">	
+			<div class="col-md-12 mx-auto text-center">
+	
+				<div class="text-404">
+		
+					<h1 class="liquid-counter-element text-primary">
+						<!--/.THIS IS NOT TRANSLATABLE OR DYNAMIC THING, IT NEEDS FOR THE EFFECTS -->
+						<span>404</span>
+					</h1>
+	
+				</div>
+	
+				
+					<h3 class="font-weight-normal mb-3">Looks like you are lost.</h3>
+											<p>We can’t seem to find the page you’re looking for.</p>
+																<a href="https://sslcommerz.com/" class="btn elementor-button btn-solid btn-md pt-3 pb-3 px-5 ps-5 pe-5">
+						<span class="p-0 d-flex align-items-center">
+							<span class="btn-txt">Back to home</span>
+							<span class="btn-icon">
+								<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" style="height: 1em;"><path d="M5.313 17.336h16.231l-7.481 7.481L16 26.687 26.688 16 16 5.312l-1.87 1.87 7.414 7.482H5.312v2.672z" fill="currentColor"></path></svg>
+							</span>
+						</span>
+					</a>
+													
+			</div>
+	
+		</div>
+	
+	</div>
+	
+</article>
+
+
+						</div>
+					</main>
+		<footer class="main-footer site-footer footer" id="footer" itemscope="itemscope" itemtype="http://schema.org/WPFooter" data-sticky-footer="true" data-sticky-footer-options="{&quot;shadow&quot;:&quot;0&quot;}">
+
+	<style id="elementor-post-326">.elementor-326 .elementor-element.elementor-element-d2e9cff:not(.elementor-motion-effects-element-type-background), .elementor-326 .elementor-element.elementor-element-d2e9cff > .elementor-motion-effects-container > .elementor-motion-effects-layer{background-color:#003E78;}.elementor-326 .elementor-element.elementor-element-d2e9cff{transition:background 0.3s, border 0.3s, border-radius 0.3s, box-shadow 0.3s;padding:100px 0px 100px 0px;}.elementor-326 .elementor-element.elementor-element-d2e9cff > .elementor-background-overlay{transition:background 0.3s, border-radius 0.3s, opacity 0.3s;}.elementor-326 .elementor-element.elementor-element-6edc88f{--grid-template-columns:repeat(0, auto);--icon-size:20px;--grid-column-gap:40px;--grid-row-gap:0px;}.elementor-326 .elementor-element.elementor-element-6edc88f .elementor-widget-container{text-align:left;}.elementor-326 .elementor-element.elementor-element-6edc88f .elementor-social-icon{background-color:#FFFFFF00;--icon-padding:0em;}.elementor-326 .elementor-element.elementor-element-6edc88f .elementor-social-icon i{color:#FFFFFF;}.elementor-326 .elementor-element.elementor-element-6edc88f .elementor-social-icon svg{fill:#FFFFFF;}.elementor-326 .elementor-element.elementor-element-6edc88f .elementor-social-icon:hover i{color:#FFFFFF;}.elementor-326 .elementor-element.elementor-element-6edc88f .elementor-social-icon:hover svg{fill:#FFFFFF;}.elementor-326 .elementor-element.elementor-element-1d01c9d{padding:40px 0px 80px 0px;}.elementor-bc-flex-widget .elementor-326 .elementor-element.elementor-element-eadb23f.elementor-column .elementor-widget-wrap{align-items:center;}.elementor-326 .elementor-element.elementor-element-eadb23f.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:center;align-items:center;}.elementor-326 .elementor-element.elementor-element-a787c0f{width:auto;max-width:auto;}.elementor-326 .elementor-element.elementor-element-a787c0f .ld-fh-element, .elementor-326 .elementor-element.elementor-element-a787c0f .ld-fh-element a{color:#FFFFFF;}.elementor-326 .elementor-element.elementor-element-a787c0f .ld-fh-element{font-size:75px;font-weight:400;text-decoration:underline;line-height:70px;margin:0em 0.2em 0em 0em;}.elementor-326 .elementor-element.elementor-element-a787c0f .lqd-highlight-inner, .elementor-326 .elementor-element.elementor-element-a787c0f .lqd-highlight-inner .lqd-highlight-brush-svg{height:0.275em;}.elementor-326 .elementor-element.elementor-element-a787c0f .lqd-highlight-inner{bottom:0em;left:0em;}.elementor-326 .elementor-element.elementor-element-790b34b{width:auto;max-width:auto;align-self:flex-end;}.elementor-326 .elementor-element.elementor-element-790b34b > .elementor-widget-container{padding:5px 0px 0px 0px;}.elementor-bc-flex-widget .elementor-326 .elementor-element.elementor-element-bb4dd43.elementor-column .elementor-widget-wrap{align-items:flex-start;}.elementor-326 .elementor-element.elementor-element-bb4dd43.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:flex-start;align-items:flex-start;}.elementor-326 .elementor-element.elementor-element-bb4dd43 > .elementor-widget-wrap > .elementor-widget:not(.elementor-widget__width-auto):not(.elementor-widget__width-initial):not(:last-child):not(.elementor-absolute){margin-bottom:20px;}.elementor-326 .elementor-element.elementor-element-7b6327a{color:#FFFFFF;}.elementor-bc-flex-widget .elementor-326 .elementor-element.elementor-element-ce0122a.elementor-column .elementor-widget-wrap{align-items:flex-start;}.elementor-326 .elementor-element.elementor-element-ce0122a.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:flex-start;align-items:flex-start;}.elementor-326 .elementor-element.elementor-element-ce0122a > .elementor-element-populated{padding:0px 0px 0px 60px;}.elementor-326 .elementor-element.elementor-element-604ebda .ld-fh-element, .elementor-326 .elementor-element.elementor-element-604ebda .ld-fh-element a{color:#FFFFFF;}.elementor-326 .elementor-element.elementor-element-604ebda .ld-fh-element{font-size:15px;font-weight:500;line-height:22px;margin:0em 0em 1em 0em;}.elementor-326 .elementor-element.elementor-element-604ebda .lqd-highlight-inner, .elementor-326 .elementor-element.elementor-element-604ebda .lqd-highlight-inner .lqd-highlight-brush-svg{height:0.275em;}.elementor-326 .elementor-element.elementor-element-604ebda .lqd-highlight-inner{bottom:0em;left:0em;}.elementor-326 .elementor-element.elementor-element-796a5b8 .ld-fh-element, .elementor-326 .elementor-element.elementor-element-796a5b8 .ld-fh-element a{color:#FFFFFF;}.elementor-326 .elementor-element.elementor-element-796a5b8 .ld-fh-element{font-size:13px;font-weight:400;line-height:22px;letter-spacing:0.4px;margin:0em 0em 0em 0em;}.elementor-326 .elementor-element.elementor-element-796a5b8 .lqd-highlight-inner, .elementor-326 .elementor-element.elementor-element-796a5b8 .lqd-highlight-inner .lqd-highlight-brush-svg{height:0.275em;}.elementor-326 .elementor-element.elementor-element-796a5b8 .lqd-highlight-inner{bottom:0em;left:0em;}.elementor-326 .elementor-element.elementor-element-87b6689 .btn{background-color:#FFFFFF00;width:71px;height:71px;--icon-font-size:2em;--icon-mt:0px;--icon-me:0px;--icon-mb:0px;--icon-ms:0px;border-radius:35px 35px 35px 35px;}.elementor-326 .elementor-element.elementor-element-11e76d5{padding:40px 0px 0px 0px;}.elementor-bc-flex-widget .elementor-326 .elementor-element.elementor-element-b00c3e7.elementor-column .elementor-widget-wrap{align-items:center;}.elementor-326 .elementor-element.elementor-element-b00c3e7.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:center;align-items:center;}.elementor-326 .elementor-element.elementor-element-ca7b7cd .lqd-custom-menu > .reset-ul > li:not(:last-child), .elementor-326 .elementor-element.elementor-element-ca7b7cd .lqd-custom-menu-btn-wrap{margin-bottom:10px;}.elementor-326 .elementor-element.elementor-element-ca7b7cd .lqd-custom-menu > .reset-ul > li:not(:last-child){margin-inline-end:10px;}.elementor-326 .elementor-element.elementor-element-ca7b7cd .lqd-custom-menu-btn-wrap{margin-inline-start:10px;}.elementor-326 .elementor-element.elementor-element-ca7b7cd .reset-ul > li > a{font-size:14px;line-height:24px;}.elementor-326 .elementor-element.elementor-element-ca7b7cd .lqd-fancy-menu > .reset-ul > li > a{color:#D1CECE;}.elementor-326 .elementor-element.elementor-element-ca7b7cd .lqd-fancy-menu > .reset-ul > li > a:hover, .elementor-326 .elementor-element.elementor-element-ca7b7cd .lqd-fancy-menu li.is-active > a{color:#FFFFFF;}.elementor-bc-flex-widget .elementor-326 .elementor-element.elementor-element-b305d59.elementor-column .elementor-widget-wrap{align-items:center;}.elementor-326 .elementor-element.elementor-element-b305d59.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:center;align-items:center;}.elementor-326 .elementor-element.elementor-element-8dd1cfe{text-align:right;font-size:14px;line-height:24px;color:#D1CECE;}@media(max-width:1199px) and (min-width:768px){.elementor-326 .elementor-element.elementor-element-b00c3e7{width:100%;}.elementor-326 .elementor-element.elementor-element-b305d59{width:100%;}}@media(max-width:1199px){.elementor-326 .elementor-element.elementor-element-d2e9cff{padding:12% 4% 12% 4%;}.elementor-326 .elementor-element.elementor-element-1d01c9d{padding:40px 0px 40px 0px;}.elementor-326 .elementor-element.elementor-element-a787c0f .ld-fh-element{font-size:62px;}.elementor-bc-flex-widget .elementor-326 .elementor-element.elementor-element-ce0122a.elementor-column .elementor-widget-wrap{align-items:flex-start;}.elementor-326 .elementor-element.elementor-element-ce0122a.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:flex-start;align-items:flex-start;}.elementor-326 .elementor-element.elementor-element-11e76d5{padding:40px 0px 0px 0px;}.elementor-326 .elementor-element.elementor-element-ca7b7cd{text-align:center;}.elementor-326 .elementor-element.elementor-element-ca7b7cd .reset-ul li a{justify-content:center;}.elementor-326 .elementor-element.elementor-element-8dd1cfe{text-align:center;}}@media(max-width:767px){.elementor-326 .elementor-element.elementor-element-d2e9cff{padding:60px 20px 60px 20px;}.elementor-326 .elementor-element.elementor-element-1d01c9d{padding:4% 0% 10% 0%;}.elementor-bc-flex-widget .elementor-326 .elementor-element.elementor-element-eadb23f.elementor-column .elementor-widget-wrap{align-items:center;}.elementor-326 .elementor-element.elementor-element-eadb23f.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:center;align-items:center;}.elementor-326 .elementor-element.elementor-element-a787c0f{width:auto;max-width:auto;}.elementor-326 .elementor-element.elementor-element-a787c0f .ld-fancy-heading{text-align:left;}.elementor-326 .elementor-element.elementor-element-a787c0f .ld-fh-element{font-size:32px;}.elementor-326 .elementor-element.elementor-element-790b34b{width:auto;max-width:auto;align-self:center;text-align:center;}.elementor-326 .elementor-element.elementor-element-790b34b > .elementor-widget-container{padding:0% 0% 0% 0%;}.elementor-326 .elementor-element.elementor-element-790b34b .lqd-imggrp-img-container{width:65%;}.elementor-326 .elementor-element.elementor-element-bb4dd43{width:100%;}.elementor-326 .elementor-element.elementor-element-ce0122a{width:100%;}.elementor-326 .elementor-element.elementor-element-ce0122a > .elementor-element-populated{padding:0px 0px 0px 0px;}.elementor-bc-flex-widget .elementor-326 .elementor-element.elementor-element-b00c3e7.elementor-column .elementor-widget-wrap{align-items:center;}.elementor-326 .elementor-element.elementor-element-b00c3e7.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:center;align-items:center;}.elementor-326 .elementor-element.elementor-element-ca7b7cd{text-align:center;}.elementor-326 .elementor-element.elementor-element-ca7b7cd .reset-ul li a{justify-content:center;}.elementor-326 .elementor-element.elementor-element-ca7b7cd .reset-ul > li > a{font-size:14px;line-height:24px;}.elementor-bc-flex-widget .elementor-326 .elementor-element.elementor-element-b305d59.elementor-column .elementor-widget-wrap{align-items:center;}.elementor-326 .elementor-element.elementor-element-b305d59.elementor-column.elementor-element[data-element_type="column"] > .elementor-widget-wrap.elementor-element-populated{align-content:center;align-items:center;}.elementor-326 .elementor-element.elementor-element-8dd1cfe{text-align:center;font-size:14px;line-height:24px;}}</style>		<div data-elementor-type="wp-post" data-elementor-id="326" class="elementor elementor-326">
+						<section data-section-luminosity="dark" class="elementor-section elementor-top-section elementor-element elementor-element-d2e9cff elementor-section-boxed elementor-section-height-default elementor-section-height-default" data-id="d2e9cff" data-element_type="section" data-settings="{&quot;background_background&quot;:&quot;classic&quot;}">
+						<div class="elementor-container elementor-column-gap-no">
+					<div class="elementor-column elementor-col-100 elementor-top-column elementor-element elementor-element-c4526de" data-id="c4526de" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-6edc88f elementor-shape-circle e-grid-align-left elementor-grid-0 elementor-widget elementor-widget-social-icons" data-id="6edc88f" data-element_type="widget" data-widget_type="social-icons.default">
+				<div class="elementor-widget-container">
+							<div class="elementor-social-icons-wrapper elementor-grid" role="list">
+							<span class="elementor-grid-item" role="listitem">
+					<a class="elementor-icon elementor-social-icon elementor-social-icon-facebook elementor-repeater-item-86a8d05" href="https://www.facebook.com/SSLCOMMERZ/" target="_blank">
+						<span class="elementor-screen-only">Facebook</span>
+						<svg aria-hidden="true" class="e-font-icon-svg e-fab-facebook" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M504 256C504 119 393 8 256 8S8 119 8 256c0 123.78 90.69 226.38 209.25 245V327.69h-63V256h63v-54.64c0-62.15 37-96.48 93.67-96.48 27.14 0 55.52 4.84 55.52 4.84v61h-31.28c-30.8 0-40.41 19.12-40.41 38.73V256h68.78l-11 71.69h-57.78V501C413.31 482.38 504 379.78 504 256z"></path></svg>					</a>
+				</span>
+							<span class="elementor-grid-item" role="listitem">
+					<a class="elementor-icon elementor-social-icon elementor-social-icon-twitter elementor-repeater-item-1c979be" href="https://twitter.com/sslcommerzbd" target="_blank">
+						<span class="elementor-screen-only">Twitter</span>
+						<svg aria-hidden="true" class="e-font-icon-svg e-fab-twitter" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"></path></svg>					</a>
+				</span>
+							<span class="elementor-grid-item" role="listitem">
+					<a class="elementor-icon elementor-social-icon elementor-social-icon-youtube elementor-repeater-item-f36e08d" href="https://www.youtube.com/c/SSLCOMMERZLTD" target="_blank">
+						<span class="elementor-screen-only">Youtube</span>
+						<svg aria-hidden="true" class="e-font-icon-svg e-fab-youtube" viewBox="0 0 576 512" xmlns="http://www.w3.org/2000/svg"><path d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.321 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305zm-317.51 213.508V175.185l142.739 81.205-142.739 81.201z"></path></svg>					</a>
+				</span>
+							<span class="elementor-grid-item" role="listitem">
+					<a class="elementor-icon elementor-social-icon elementor-social-icon-linkedin elementor-repeater-item-2f22da6" href="https://www.linkedin.com/company/sslcommerz/" target="_blank">
+						<span class="elementor-screen-only">Linkedin</span>
+						<svg aria-hidden="true" class="e-font-icon-svg e-fab-linkedin" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"></path></svg>					</a>
+				</span>
+					</div>
+						</div>
+				</div>
+				<section class="elementor-section elementor-inner-section elementor-element elementor-element-1d01c9d elementor-section-full_width elementor-section-height-default elementor-section-height-default" data-id="1d01c9d" data-element_type="section">
+						<div class="elementor-container elementor-column-gap-no">
+					<div class="elementor-column elementor-col-100 elementor-inner-column elementor-element elementor-element-eadb23f" data-id="eadb23f" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-a787c0f elementor-widget__width-auto elementor-widget-mobile__width-auto elementor-widget elementor-widget-hub_fancy_heading lqd-el-has-inner-anim" data-id="a787c0f" data-element_type="widget" data-settings="{&quot;enable_split&quot;:&quot;true&quot;,&quot;split_type&quot;:&quot;chars, words&quot;}" data-widget_type="hub_fancy_heading.default">
+				<div class="elementor-widget-container">
+					
+		<div id="ld-fancy-heading-69e9dcb010c84" class="ld-fancy-heading pos-rel">
+			<h2 class="ld-fh-element d-inline-block pos-rel  elementor-heading-title lqd-highlight-classic lqd-highlight-grow-left lqd-split-chars h2" ><a href="mailto:support@sslcommerz.com" data-split-text="true" data-split-options='{"type":"chars, words"}'> support@sslcommerz.com</a></h2>		</div>
+
+						</div>
+				</div>
+				<div class="elementor-element elementor-element-790b34b elementor-widget__width-auto elementor-widget-mobile__width-auto elementor-widget elementor-widget-ld_fancy_image" data-id="790b34b" data-element_type="widget" data-widget_type="ld_fancy_image.default">
+				<div class="elementor-widget-container">
+					
+		<div class="lqd-imggrp-single d-block pos-rel ">
+			<div class="lqd-imggrp-img-container d-inline-flex pos-rel align-items-center justify-content-center ">
+								<figure class="w-100 pos-rel">
+					<img width="59" height="59" src="https://sslcommerz.com/wp-content/uploads/2021/11/Arrow.svg" class="attachment-full size-full wp-image-353" alt="" decoding="async" itemprop="image" />																													</figure>
+			</div>
+		</div>
+
+					</div>
+				</div>
+					</div>
+		</div>
+					</div>
+		</section>
+				<section class="elementor-section elementor-inner-section elementor-element elementor-element-6d3b2ab elementor-section-full_width elementor-section-height-default elementor-section-height-default" data-id="6d3b2ab" data-element_type="section">
+						<div class="elementor-container elementor-column-gap-no">
+					<div class="elementor-column elementor-col-50 elementor-inner-column elementor-element elementor-element-bb4dd43" data-id="bb4dd43" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-7b6327a elementor-widget elementor-widget-text-editor" data-id="7b6327a" data-element_type="widget" data-widget_type="text-editor.default">
+				<div class="elementor-widget-container">
+									<p style="text-align: justify;">SSLCOMMERZ is the largest payment gateway aggregator in Bangladesh and a pioneer in the FinTech industry since 2010. We empower over 16513 businesses by offering the best-in-class digital payment solutions, which enable them to extend their businesses across mobile and web platforms.</p>								</div>
+				</div>
+					</div>
+		</div>
+				<div class="elementor-column elementor-col-50 elementor-inner-column elementor-element elementor-element-ce0122a" data-id="ce0122a" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-604ebda elementor-widget elementor-widget-hub_fancy_heading" data-id="604ebda" data-element_type="widget" data-widget_type="hub_fancy_heading.default">
+				<div class="elementor-widget-container">
+					
+		<div id="ld-fancy-heading-69e9dcb01393d" class="ld-fancy-heading pos-rel">
+			<span class="ld-fh-element d-inline-block pos-rel  lqd-highlight-classic lqd-highlight-grow-left span"  > Dhaka Office</span>		</div>
+
+						</div>
+				</div>
+				<div class="elementor-element elementor-element-796a5b8 elementor-widget elementor-widget-hub_fancy_heading" data-id="796a5b8" data-element_type="widget" data-widget_type="hub_fancy_heading.default">
+				<div class="elementor-widget-container">
+					
+		<div id="ld-fancy-heading-69e9dcb013eac" class="ld-fancy-heading pos-rel">
+			<span class="ld-fh-element d-inline-block pos-rel  lqd-highlight-classic lqd-highlight-grow-left span"  > +88 09677726222<br>
+Borak Zahir Tower, 1 Kazi Nazrul Islam Avenue, <br>Karwan Bazar, Dhaka: 1215</span>		</div>
+
+						</div>
+				</div>
+				<div class="elementor-element elementor-element-87b6689 elementor-align-right elementor-widget elementor-widget-ld_button" data-id="87b6689" data-element_type="widget" data-widget_type="ld_button.default">
+				<div class="elementor-widget-container">
+					
+			<a
+				class="elementor-button btn btn-solid btn-custom-size btn-icon-right btn-icon-circle btn-icon-lg btn-icon-shaped btn-icon-bordered btn-no-label" data-localscroll="1" href="#lqd-site-content"			>
+														<span class="btn-icon">
+							<i aria-hidden="true" class="lqd-icn-ess icon-ion-ios-arrow-round-up"></i>						</span>
+									</a>
+							</div>
+				</div>
+					</div>
+		</div>
+					</div>
+		</section>
+				<section class="elementor-section elementor-inner-section elementor-element elementor-element-11e76d5 elementor-section-full_width elementor-section-height-default elementor-section-height-default" data-id="11e76d5" data-element_type="section">
+						<div class="elementor-container elementor-column-gap-no">
+					<div class="elementor-column elementor-col-50 elementor-inner-column elementor-element elementor-element-b00c3e7" data-id="b00c3e7" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-ca7b7cd elementor-widget elementor-widget-ld_custom_menu" data-id="ca7b7cd" data-element_type="widget" data-widget_type="ld_custom_menu.default">
+				<div class="elementor-widget-container">
+					
+			<div				class="lqd-fancy-menu lqd-custom-menu pos-rel lqd-menu-td-none"
+							>
+			
+							<ul class="reset-ul inline-ul" id="lqd-custom-menu-ca7b7cd" >
+				
+						<li>
+							<a  href="/privacy-policy/" target="_self" >
+
+																	<span class="link-icon d-inline-flex hide-if-empty left-icon icon-next-to-label"></span>
+								
+																	Privacy Policy																							</a>
+													</li>
+
+						
+						<li>
+							<a  href="/terms-and-conditions/" target="_self" >
+
+																	<span class="link-icon d-inline-flex hide-if-empty left-icon icon-next-to-label"></span>
+								
+																	Terms and Conditions																							</a>
+													</li>
+
+										</ul>
+									</div>
+						</div>
+				</div>
+					</div>
+		</div>
+				<div class="elementor-column elementor-col-50 elementor-inner-column elementor-element elementor-element-b305d59" data-id="b305d59" data-element_type="column">
+			<div class="elementor-widget-wrap elementor-element-populated">
+						<div class="elementor-element elementor-element-8dd1cfe elementor-widget elementor-widget-text-editor" data-id="8dd1cfe" data-element_type="widget" data-widget_type="text-editor.default">
+				<div class="elementor-widget-container">
+									<p>© 2026 SSLCOMMERZ Ltd. All rights reserved.</p>								</div>
+				</div>
+					</div>
+		</div>
+					</div>
+		</section>
+					</div>
+		</div>
+					</div>
+		</section>
+				</div>
+		</footer>
+	</div>
+
+	
+	
+		<script>
+			window.RS_MODULES = window.RS_MODULES || {};
+			window.RS_MODULES.modules = window.RS_MODULES.modules || {};
+			window.RS_MODULES.waiting = window.RS_MODULES.waiting || [];
+			window.RS_MODULES.defered = true;
+			window.RS_MODULES.moduleWaiting = window.RS_MODULES.moduleWaiting || {};
+			window.RS_MODULES.type = 'compiled';
+		</script>
+		<script type="speculationrules">
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"\/*"},{"not":{"href_matches":["\/wp-*.php","\/wp-admin\/*","\/wp-content\/uploads\/*","\/wp-content\/*","\/wp-content\/plugins\/*","\/wp-content\/themes\/hub-child\/*","\/wp-content\/themes\/hub\/*","\/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}
+</script>
+	<script>
+	if (jQuery('#my-element2').length) {
+      var notebook = RunKit.createNotebook({
+       // the parent element for the new notebook
+       element: document.getElementById("my-element2"),
+       // specify the source of the notebook
+
+       source: "const SSLCommerz = require('sslcommerz-nodejs');" +
+                "let settings = {\n" +
+                " isSandboxMode: true, //false if live version\n"+
+                "        store_id:'testbox',\n" +
+                "        store_passwd: 'qwerty',\n"+
+                "    };\n" +
+                "let sslcommerz = new SSLCommerz(settings);\n" +
+                "let valId = '1709162025351ElIuHtUtFReBwE';\n"+
+                "await sslcommerz.validate_transaction_order(valId).then(response => {\n" +
+                "    return response;\n" +
+                "}).catch(error => {\n" +
+                "    console.log(error);\n" +
+                "})"
+      });
+     };
+</script>
+
+<script>
+	if (jQuery('#my-element3').length) {
+      var notebook = RunKit.createNotebook({
+       // the parent element for the new notebook
+       element: document.getElementById("my-element3"),
+       // specify the source of the notebook
+
+       source: "const SSLCommerz = require('sslcommerz-nodejs');" +
+                "let settings = {\n" +
+                " isSandboxMode: true, //false if live version\n"+
+                "        store_id:'testbox',\n" +
+                "        store_passwd: 'qwerty',\n"+
+                "    };\n" +
+                "let sslcommerz = new SSLCommerz(settings);\n" +
+                    "let tranId = '59C2A4F6432F8';\n"+
+                "await sslcommerz.transaction_status_id(tranId).then(response => {\n" +
+                "    return response;\n" +
+                "}).catch(error => {\n" +
+                "    console.log(error);\n" +
+                "})"
+      });
+     };
+
+</script>
+
+<script>
+	  if (jQuery('#my-element4').length) {
+      var notebook = RunKit.createNotebook({
+       // the parent element for the new notebook
+       element: document.getElementById("my-element4"),
+       // specify the source of the notebook
+
+       source: "const SSLCommerz = require('sslcommerz-nodejs');" +
+                "let settings = {\n" +
+                " isSandboxMode: true, //false if live version\n"+
+                "        store_id:'testbox',\n" +
+                "        store_passwd: 'qwerty',\n"+
+                "    };\n" +
+                "let sslcommerz = new SSLCommerz(settings);\n" +
+                "let sessionId = 'EEC25A9F3088F54BF14487983B91E01B';\n"+
+                "await sslcommerz.transaction_status_session(sessionId).then(response => {\n" +
+                "    return response;\n" +
+                "}).catch(error => {\n" +
+                "    console.log(error);\n" +
+                "})"
+      });
+     };
+</script>
+			<script>
+				const lazyloadRunObserver = () => {
+					const lazyloadBackgrounds = document.querySelectorAll( `.e-con.e-parent:not(.e-lazyloaded)` );
+					const lazyloadBackgroundObserver = new IntersectionObserver( ( entries ) => {
+						entries.forEach( ( entry ) => {
+							if ( entry.isIntersecting ) {
+								let lazyloadBackground = entry.target;
+								if( lazyloadBackground ) {
+									lazyloadBackground.classList.add( 'e-lazyloaded' );
+								}
+								lazyloadBackgroundObserver.unobserve( entry.target );
+							}
+						});
+					}, { rootMargin: '200px 0px 200px 0px' } );
+					lazyloadBackgrounds.forEach( ( lazyloadBackground ) => {
+						lazyloadBackgroundObserver.observe( lazyloadBackground );
+					} );
+				};
+				const events = [
+					'DOMContentLoaded',
+					'elementor/lazyload/observe',
+				];
+				events.forEach( ( event ) => {
+					document.addEventListener( event, lazyloadRunObserver );
+				} );
+			</script>
+			<style id="elementor-post-16">.elementor-kit-16{--e-global-color-primary:#003E78;--e-global-color-secondary:#54595F;--e-global-color-text:#7A7A7A;--e-global-color-accent:#61CE70;color:#000000;font-family:"Be Vietnam Pro", Sans-serif;font-size:16px;font-weight:400;line-height:21px;}body.elementor-page{--color-gradient-start:#007fff;--color-gradient-stop:#ff4d54;}.main-header .navbar-brand{max-width:200px;}h1, .h1{color:#000000;font-family:"Be Vietnam Pro", Sans-serif;font-size:47px;font-weight:700;line-height:1em;letter-spacing:-0.32px;}h2, .h2{color:#000000;font-family:"Be Vietnam Pro", Sans-serif;font-size:22px;font-weight:700;line-height:29px;letter-spacing:-0.32px;}h3, .h3{color:#000000;font-family:"Be Vietnam Pro", Sans-serif;font-size:32px;font-weight:600;line-height:1.2em;}h4, .h4{color:#000000;font-family:"Be Vietnam Pro", Sans-serif;font-size:25px;font-weight:600;line-height:1.2em;}h5, .h5{color:#000000;font-family:"Be Vietnam Pro", Sans-serif;font-size:21px;font-weight:600;line-height:1.2em;}h6, .h6{color:#000000;font-family:"Be Vietnam Pro", Sans-serif;font-size:18px;font-weight:600;line-height:1.2em;}.page-scheme-dark{color:rgba(255, 255, 255, 0.8);}.page-scheme-dark h1, .page-scheme-dark .h1{color:#ffffff;}.page-scheme-dark h2, .page-scheme-dark .h2{color:#ffffff;}.page-scheme-dark h3, .page-scheme-dark .h3{color:#ffffff;}.page-scheme-dark h4, .page-scheme-dark .h4{color:#ffffff;}.page-scheme-dark h5, .page-scheme-dark .h5{color:#ffffff;}.page-scheme-dark h6, .page-scheme-dark .h6{color:#ffffff;}.elementor-section.elementor-section-boxed > .elementor-container{max-width:1140px;}.e-con{--container-max-width:1140px;}.elementor-widget:not(:last-child){margin-block-end:0px;}.elementor-element{--widgets-spacing:0px 0px;--widgets-spacing-row:0px;--widgets-spacing-column:0px;}{}h1.entry-title{display:var(--page-title-display);}@media(max-width:1199px){.main-header .lqd-mobile-sec .navbar-brand img{max-width:200px;}.elementor-section.elementor-section-boxed > .elementor-container{max-width:1024px;}.e-con{--container-max-width:1024px;}}@media(max-width:767px){.main-header .lqd-mobile-sec .navbar-brand img{max-width:200px;}.elementor-section.elementor-section-boxed > .elementor-container{max-width:767px;}.e-con{--container-max-width:767px;}}</style><link rel='stylesheet' id='elementor-icons-lqd-essentials-css' href='https://sslcommerz.com/wp-content/themes/hub/assets/vendors/liquid-icon/lqd-essentials/lqd-essentials.min.css?ver=1.0.0' type='text/css' media='all' />
+<link rel='stylesheet' id='widget-image-css' href='https://sslcommerz.com/wp-content/plugins/elementor/assets/css/widget-image.min.css?ver=3.32.5' type='text/css' media='all' />
+<link rel='stylesheet' id='widget-social-icons-css' href='https://sslcommerz.com/wp-content/plugins/elementor/assets/css/widget-social-icons.min.css?ver=3.32.5' type='text/css' media='all' />
+<link rel='stylesheet' id='e-apple-webkit-css' href='https://sslcommerz.com/wp-content/uploads/elementor/css/custom-apple-webkit.min.css?ver=1775556319' type='text/css' media='all' />
+<link rel='stylesheet' id='fresco-css' href='https://sslcommerz.com/wp-content/themes/hub/assets/vendors/fresco/css/fresco.css' type='text/css' media='all' />
+<link rel='stylesheet' id='liquid-icons-css' href='https://sslcommerz.com/wp-content/themes/hub/assets/vendors/liquid-icon/lqd-essentials/lqd-essentials.min.css' type='text/css' media='all' />
+<link rel='stylesheet' id='elementor-gf-bevietnampro-css' href='https://fonts.googleapis.com/css?family=Be+Vietnam+Pro:100,100italic,200,200italic,300,300italic,400,400italic,500,500italic,600,600italic,700,700italic,800,800italic,900,900italic&#038;display=swap' type='text/css' media='all' />
+<link rel='stylesheet' id='rs-plugin-settings-css' href='//sslcommerz.com/wp-content/plugins/revslider/sr6/assets/css/rs6.css?ver=6.7.19' type='text/css' media='all' />
+<style id='rs-plugin-settings-inline-css' type='text/css'>
+#rs-demo-id {}
+</style>
+<script type="text/javascript" src="https://sslcommerz.com/wp-includes/js/dist/hooks.min.js?ver=4d63a3d491d11ffd8ac6" id="wp-hooks-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-includes/js/dist/i18n.min.js?ver=5e580eb46a90c2b997e6" id="wp-i18n-js"></script>
+<script type="text/javascript" id="wp-i18n-js-after">
+/* <![CDATA[ */
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'ltr' ] } );
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'ltr' ] } );
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/plugins/contact-form-7/includes/swv/js/index.js?ver=6.1.3" id="swv-js"></script>
+<script type="text/javascript" id="contact-form-7-js-before">
+/* <![CDATA[ */
+var wpcf7 = {
+    "api": {
+        "root": "https:\/\/sslcommerz.com\/wp-json\/",
+        "namespace": "contact-form-7\/v1"
+    }
+};
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/plugins/contact-form-7/includes/js/index.js?ver=6.1.3" id="contact-form-7-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/plugins/customer-feedback-sslwireless/assets/jquery-validator/1.13.1/js/jquery.validate.js?ver=1.4" id="jq-validate-script1-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/plugins/customer-feedback-sslwireless/assets/jquery-validator/1.13.1/js/additional-methods.js?ver=1.4" id="jq-validate-script2-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/plugins/customer-feedback-sslwireless/assets/dataTables/1.10.25/js/jquery.dataTables.js?ver=1.4" id="datatable-script-js"></script>
+<script type="text/javascript" src="//sslcommerz.com/wp-content/plugins/revslider/sr6/assets/js/rbtools.min.js?ver=6.7.19" defer async id="tp-tools-js"></script>
+<script type="text/javascript" src="//sslcommerz.com/wp-content/plugins/revslider/sr6/assets/js/rs6.min.js?ver=6.7.19" defer async id="revmin-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub-child/remove-other-subject-matters.js" id="remove-other-subject-matters-js"></script>
+<script type="text/javascript" id="getEmailPhone-script-js-extra">
+/* <![CDATA[ */
+var my_ajax_object = {"ajax_url":"https:\/\/sslcommerz.com\/wp-admin\/admin-ajax.php","pdf_url":"https:\/\/sslcommerz.com\/wp-content\/themes\/hub-child\/E-Commerce-Business-Starting-Check-list.pdf"};
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub-child/getEmailPhone.js" id="getEmailPhone-script-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/fastdom/fastdom.min.js" id="fastdom-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/bootstrap/js/bootstrap.min.js" id="bootstrap-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-includes/js/imagesloaded.min.js?ver=5.0.0" id="imagesloaded-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/jquery-ui/jquery-ui.min.js" id="jquery-ui-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/fresco/js/fresco.js" id="jquery-fresco-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/lity/lity.min.js" id="lity-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/gsap/minified/gsap.min.js" id="gsap-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/gsap/minified/ScrollTrigger.min.js" id="scrollTrigger-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/fontfaceobserver.js" id="jquery-fontfaceobserver-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/intersection-observer.js" id="intersection-observer-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/lazyload.min.js" id="jquery-lazyload-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/tinycolor-min.js" id="jquery-tinycolor-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/particles.min.js" id="jquery-particles-js"></script>
+<script type="text/javascript" id="liquid-theme-js-extra">
+/* <![CDATA[ */
+var liquidTheme = {"uris":{"ajax":"\/wp-admin\/admin-ajax.php"}};
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/js/theme.min.js" id="liquid-theme-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/plugins/liquid-gdpr/assets/js/liquid-gdpr.min.js?ver=1.0.0" id="ld-gdpr-box-js-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/plugins/elementor/assets/js/webpack.runtime.min.js?ver=3.32.5" id="elementor-webpack-runtime-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/plugins/elementor/assets/js/frontend-modules.min.js?ver=3.32.5" id="elementor-frontend-modules-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-includes/js/jquery/ui/core.min.js?ver=1.13.3" id="jquery-ui-core-js"></script>
+<script type="text/javascript" id="elementor-frontend-js-before">
+/* <![CDATA[ */
+var elementorFrontendConfig = {"environmentMode":{"edit":false,"wpPreview":false,"isScriptDebug":false},"i18n":{"shareOnFacebook":"Share on Facebook","shareOnTwitter":"Share on Twitter","pinIt":"Pin it","download":"Download","downloadImage":"Download image","fullscreen":"Fullscreen","zoom":"Zoom","share":"Share","playVideo":"Play Video","previous":"Previous","next":"Next","close":"Close","a11yCarouselPrevSlideMessage":"Previous slide","a11yCarouselNextSlideMessage":"Next slide","a11yCarouselFirstSlideMessage":"This is the first slide","a11yCarouselLastSlideMessage":"This is the last slide","a11yCarouselPaginationBulletMessage":"Go to slide"},"is_rtl":false,"breakpoints":{"xs":0,"sm":480,"md":768,"lg":1200,"xl":1440,"xxl":1600},"responsive":{"breakpoints":{"mobile":{"label":"Mobile Portrait","value":767,"default_value":767,"direction":"max","is_enabled":true},"mobile_extra":{"label":"Mobile Landscape","value":880,"default_value":880,"direction":"max","is_enabled":false},"tablet":{"label":"Tablet Portrait","value":1199,"default_value":1024,"direction":"max","is_enabled":true},"tablet_extra":{"label":"Tablet Landscape","value":1200,"default_value":1200,"direction":"max","is_enabled":false},"laptop":{"label":"Laptop","value":1366,"default_value":1366,"direction":"max","is_enabled":false},"widescreen":{"label":"Widescreen","value":2400,"default_value":2400,"direction":"min","is_enabled":false}},"hasCustomBreakpoints":true},"version":"3.32.5","is_static":false,"experimentalFeatures":{"e_font_icon_svg":true,"additional_custom_breakpoints":true,"container":true,"nested-elements":true,"home_screen":true,"global_classes_should_enforce_capabilities":true,"e_variables":true,"cloud-library":true,"e_opt_in_v4_page":true,"import-export-customization":true},"urls":{"assets":"https:\/\/sslcommerz.com\/wp-content\/plugins\/elementor\/assets\/","ajaxurl":"https:\/\/sslcommerz.com\/wp-admin\/admin-ajax.php","uploadUrl":"https:\/\/sslcommerz.com\/wp-content\/uploads"},"nonces":{"floatingButtonsClickTracking":"64668a09b0"},"swiperClass":"swiper","settings":{"editorPreferences":[]},"kit":{"viewport_tablet":1199,"lqd_body_background_background":"classic","active_breakpoints":["viewport_mobile","viewport_tablet"],"global_image_lightbox":"yes","lightbox_enable_counter":"yes","lightbox_enable_fullscreen":"yes","lightbox_enable_zoom":"yes","lightbox_enable_share":"yes","lightbox_title_src":"title","lightbox_description_src":"description"},"post":{"id":0,"title":"Page not found &#8211; SSLCOMMERZ","excerpt":""}};
+/* ]]> */
+</script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/plugins/elementor/assets/js/frontend.min.js?ver=3.32.5" id="elementor-frontend-js"></script>
+<script type="text/javascript" src="https://sslcommerz.com/wp-content/themes/hub/assets/vendors/gsap/utils/SplitText.min.js" id="splittext-js"></script>
+<template id="lqd-temp-snickersbar">
+			<div class="lqd-snickersbar d-flex flex-wrap lqd-snickersbar-in" data-item-id>
+				<div class="lqd-snickersbar-inner d-flex flex-wrap align-items-center">
+					<div class="lqd-snickersbar-detail">
+						<p style="display: none;" class="lqd-snickersbar-addding-temp mt-0 mb-0">Adding {{itemName}} to cart</p>
+						<p style="display: none;" class="lqd-snickersbar-added-temp mt-0 mb-0">Added {{itemName}} to cart</p>
+						<p class="lqd-snickersbar-msg d-flex align-items-center mt-0 mb-0"></p>
+						<p class="lqd-snickersbar-msg-done d-flex align-items-center mt-0 mb-0"></p>
+					</div>
+					<div class="lqd-snickersbar-ext ml-4 ms-4"></div>
+				</div>
+			</div>
+		</template><template id="lqd-temp-sticky-header-sentinel">
+		<div class="lqd-sticky-sentinel invisible pos-abs pointer-events-none"></div>
+	</template><template id="lqd-temp-modal-box">
+		<div class="lqd-lity-top-wrap">
+			<div class="lqd-lity" role="dialog" aria-label="Dialog Window (Press escape to close)" tabindex="-1" data-modal-type="{{MODAL-TYPE}}">
+				<div class="lqd-lity-backdrop"></div>
+				<div class="lqd-lity-wrap" role="document">
+					<div class="lqd-lity-loader" aria-hidden="true">Loading...</div>
+					<div class="lqd-lity-container">
+						<div class="lqd-lity-content"></div>
+					</div>
+					<div class="lqd-lity-close-btn-wrap">
+						<svg class="lqd-lity-close-arrow" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 32 32"><path fill="currentColor" d="M26.688 14.664H10.456l7.481-7.481L16 5.313 5.312 16 16 26.688l1.87-1.87-7.414-7.482h16.232v-2.672z"></path></svg>
+						<button class="lqd-lity-close" type="button" aria-label="Close (Press escape to close)" data-lqd-lity-close>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 6l-12 12" />
+                                <path d="M6 6l12 12" />
+                            </svg>
+                        </button>
+						<span class="lqd-lity-trigger-txt"></span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</template>
+</body>
+</html>

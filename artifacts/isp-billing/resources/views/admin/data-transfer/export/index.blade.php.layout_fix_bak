@@ -1,0 +1,109 @@
+@extends('layouts.admin')
+
+@section('title', 'Export Data')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Export History</h3>
+                <div class="card-tools">
+                    <a href="{{ route('admin.data-transfer.export.create') }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-plus mr-1"></i> New Export
+                    </a>
+                </div>
+            </div>
+            <div class="card-body table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Data Types</th>
+                            <th>Format</th>
+                            <th>Size</th>
+                            <th>Status</th>
+                            <th>User</th>
+                            <th>Date</th>
+                            <th>Expires</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($exports as $export)
+                        <tr>
+                            <td>{{ $export->id }}</td>
+                            <td>{{ $export->name }}</td>
+                            <td>
+                                @foreach($export->data_types as $type)
+                                <span class="badge badge-info">{{ ucfirst($type) }}</span>
+                                @endforeach
+                            </td>
+                            <td>{{ strtoupper($export->file_format) }}</td>
+                            <td>{{ $export->getFileSizeFormatted() }}</td>
+                            <td><span class="badge {{ $export->getStatusBadgeClass() }}">{{ ucfirst($export->status) }}</span></td>
+                            <td>{{ $export->user->name ?? '-' }}</td>
+                            <td>{{ $export->created_at->format('d-m-y H:i') }}</td>
+                            <td>
+                                @if($export->expires_at)
+                                    @if($export->isExpired())
+                                    <span class="text-danger">Expired</span>
+                                    @else
+                                    {{ $export->expires_at->format('d-m-Y') }}
+                                    @endif
+                                @else
+                                -
+                                @endif
+                            </td>
+                            <td>
+                                @if($export->status === 'completed' && !$export->isExpired())
+                                <a href="{{ route('admin.data-transfer.export.download', $export->id) }}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                @elseif($export->status === 'failed')
+                                <span class="text-danger" title="{{ $export->error_message }}">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                </span>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="10" class="text-center text-muted">No exports yet. Create your first export!</td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 mb-1">
+    <div class="d-flex align-items-center">
+        <label class="small text-muted mb-0 mr-2" style="white-space:nowrap;">SHOW</label>
+        <select class="form-control form-control-sm bulk-show-entries" style="width:80px;">
+            <option value="20" {{ request('per_page',20)==20?'selected':'' }}>20</option>
+            <option value="50" {{ request('per_page',20)==50?'selected':'' }}>50</option>
+            <option value="100" {{ request('per_page',20)==100?'selected':'' }}>100</option>
+            <option value="200" {{ request('per_page',20)==200?'selected':'' }}>200</option>
+        </select>
+        <label class="small text-muted mb-0 ml-2" style="white-space:nowrap;">ENTRIES</label>
+    </div>
+    <div>
+        {{ $exports->appends(request()->query())->links() }}
+    </div>
+</div>
+<script>
+(function(){
+    var sel = document.querySelector('.bulk-show-entries');
+    if(sel){ sel.addEventListener('change',function(){
+        var p=new URLSearchParams(window.location.search);
+        p.set('per_page',this.value); p.delete('page');
+        window.location=window.location.pathname+'?'+p.toString();
+    }); }
+})();
+</script>
+            </div>
+        </div>
+    </div>
+</section>
+@endsection

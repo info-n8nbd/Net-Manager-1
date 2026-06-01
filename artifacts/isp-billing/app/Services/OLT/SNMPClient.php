@@ -1,0 +1,400 @@
+<?php
+
+namespace App\Services\OLT;
+
+use Illuminate\Support\Facades\Log;
+
+class SNMPClient
+{
+    protected string $host;
+    protected int $port;
+    protected string $readCommunity;
+    protected string $writeCommunity;
+    protected int $timeoutMicroseconds;
+    protected int $retries;
+    protected bool $useExtension;
+    protected string $lastError = '';
+
+    public function __construct(
+        string $host,
+        int $port = 161,
+        string $readCommunity = 'public',
+        string $writeCommunity = 'private',
+        int $timeoutSeconds = 5,
+        int $retries = 1
+    ) {
+        $this->host = $host;
+        $this->port = $port;
+        $this->readCommunity = $readCommunity;
+        $this->writeCommunity = $writeCommunity;
+        $this->timeoutMicroseconds = $timeoutSeconds * 1000000;
+        $this->retries = $retries;
+        $this->useExtension = function_exists('snmp2_get');
+    }
+
+    public static function fromDevice($device): self
+    {
+        $snmpPort = $device->snmp_port ?? 161;
+        if ($snmpPort == 161 && $device->port && $device->port != 161) {
+            $snmpPort = $device->port;
+        }
+
+        return new self(
+            $device->ip_address,
+            $snmpPort,
+            $device->snmp_community ?? 'public',
+            $device->snmp_write_community ?? 'private',
+        );
+    }
+
+    public function getLastError(): string
+    {
+        return $this->lastError;
+    }
+
+    public function testConnection(): array
+    {
+        $this->lastError = '';
+        $startTime = microtime(true);
+
+        $sysDescr = $this->get(OIDMapping::SYSTEM_DESCR);
+        if ($sysDescr === null) {
+            return [
+                'success' => false,
+                'error' => $this->lastError ?: 'SNMP connection failed',
+                'latency_ms' => round((microtime(true) - $startTime) * 1000),
+            ];
+        }
+
+        $sysName = $this->get(OIDMapping::SYSTEM_NAME);
+        $sysUptime = $this->get(OIDMapping::SYSTEM_UPTIME);
+        $sysLocation = $this->get(OIDMapping::SYSTEM_LOCATION);
+
+        return [
+            'success' => true,
+            'system_description' => $sysDescr,
+            'system_name' => $sysName,
+            'uptime' => $sysUptime,
+            'location' => $sysLocation,
+            'latency_ms' => round((microtime(true) - $startTime) * 1000),
+            'snmp_port' => $this->port,
+            'method' => $this->useExtension ? 'PHP SNMP Extension' : 'CLI (snmpget/snmpwalk)',
+        ];
+    }
+
+    public function get(string $oid): ?string
+    {
+        $this->lastError = '';
+
+        if ($this->useExtension) {
+            return $this->extensionGet($oid);
+        }
+
+        return $this->cliGet($oid);
+    }
+
+    public function walk(string $oid): array
+    {
+        $this->lastError = '';
+
+        if ($this->useExtension) {
+            return $this->extensionWalk($oid);
+        }
+
+        return $this->cliWalk($oid);
+    }
+
+    public function set(string $oid, string $type, $value): bool
+    {
+        $this->lastError = '';
+
+        if ($this->useExtension) {
+            return $this->extensionSet($oid, $type, $value);
+        }
+
+        return $this->cliSet($oid, $type, $value);
+    }
+
+    public function getSystemInfo(): array
+    {
+        $info = [];
+
+        $descr = $this->get(OIDMapping::SYSTEM_DESCR);
+        if ($descr !== null) $info['system_description'] = $descr;
+
+        $name = $this->get(OIDMapping::SYSTEM_NAME);
+        if ($name !== null) $info['system_name'] = $name;
+
+        $uptime = $this->get(OIDMapping::SYSTEM_UPTIME);
+        if ($uptime !== null) $info['uptime_raw'] = $uptime;
+
+        $location = $this->get(OIDMapping::SYSTEM_LOCATION);
+        if ($location !== null) $info['location'] = $location;
+
+        return $info;
+    }
+
+    public function getInterfaceTraffic(int $ifIndex): array
+    {
+        $inOctets = $this->get(OIDMapping::IF_HC_IN_OCTETS . ".{$ifIndex}");
+        if ($inOctets === null) {
+            $inOctets = $this->get(OIDMapping::IF_IN_OCTETS . ".{$ifIndex}");
+        }
+
+        $outOctets = $this->get(OIDMapping::IF_HC_OUT_OCTETS . ".{$ifIndex}");
+        if ($outOctets === null) {
+            $outOctets = $this->get(OIDMapping::IF_OUT_OCTETS . ".{$ifIndex}");
+        }
+
+        return [
+            'in_octets' => $inOctets !== null ? (int)$inOctets : null,
+            'out_octets' => $outOctets !== null ? (int)$outOctets : null,
+        ];
+    }
+
+    protected function extensionGet(string $oid): ?string
+    {
+        try {
+            @snmp_set_quick_print(1);
+            @snmp_set_oid_output_format(SNMP_OID_OUTPUT_NUMERIC);
+
+            $target = "{$this->host}:{$this->port}";
+            $result = @snmp2_get($target, $this->readCommunity, $oid, $this->timeoutMicroseconds, $this->retries);
+
+            if ($result === false) {
+                $error = error_get_last();
+                $this->classifyError($error['message'] ?? 'SNMP GET failed');
+                return null;
+            }
+
+            return $this->cleanValue($result);
+        } catch (\Exception $e) {
+            $this->classifyError($e->getMessage());
+            return null;
+        }
+    }
+
+    protected function extensionWalk(string $oid): array
+    {
+        try {
+            @snmp_set_quick_print(1);
+            @snmp_set_oid_output_format(SNMP_OID_OUTPUT_NUMERIC);
+
+            $target = "{$this->host}:{$this->port}";
+
+            // snmp2_real_walk returns OID-keyed array (snmp2_walk returns numeric-indexed array)
+            $result = @snmp2_real_walk($target, $this->readCommunity, $oid, $this->timeoutMicroseconds, $this->retries);
+
+            if ($result === false || !is_array($result)) {
+                $error = error_get_last();
+                $this->classifyError($error['message'] ?? 'SNMP WALK failed');
+                return [];
+            }
+
+            $cleaned = [];
+            foreach ($result as $fullOid => $value) {
+                $key = str_starts_with($fullOid, '.') ? $fullOid : '.' . $fullOid;
+                $cleaned[$key] = $this->cleanValue($value);
+            }
+            return $cleaned;
+        } catch (\Exception $e) {
+            $this->classifyError($e->getMessage());
+            return [];
+        }
+    }
+
+    protected function extensionSet(string $oid, string $type, $value): bool
+    {
+        try {
+            $target = "{$this->host}:{$this->port}";
+            $result = @snmp2_set($target, $this->writeCommunity, $oid, $type, $value, $this->timeoutMicroseconds, $this->retries);
+
+            if ($result === false) {
+                $error = error_get_last();
+                $this->classifyError($error['message'] ?? 'SNMP SET failed');
+                return false;
+            }
+            return true;
+        } catch (\Exception $e) {
+            $this->classifyError($e->getMessage());
+            return false;
+        }
+    }
+
+    protected function cliGet(string $oid): ?string
+    {
+        $cmd = sprintf(
+            'snmpget -v2c -OQn -c %s -t %d -r %d %s:%d %s 2>&1',
+            escapeshellarg($this->readCommunity),
+            max(1, intdiv($this->timeoutMicroseconds, 1000000)),
+            $this->retries,
+            escapeshellarg($this->host),
+            $this->port,
+            escapeshellarg($oid)
+        );
+
+        $output = @shell_exec($cmd);
+
+        if ($output === null || $output === '') {
+            $this->lastError = 'SNMP_ERROR_TIMEOUT: No response from ' . $this->host;
+            return null;
+        }
+
+        if ($this->isCliError($output)) {
+            return null;
+        }
+
+        return $this->parseCliValue($output);
+    }
+
+    protected function cliWalk(string $oid): array
+    {
+        $cmd = sprintf(
+            'snmpwalk -v2c -c %s -t %d -r %d -OQn %s:%d %s 2>&1',
+            escapeshellarg($this->readCommunity),
+            max(1, intdiv($this->timeoutMicroseconds, 1000000)),
+            $this->retries,
+            escapeshellarg($this->host),
+            $this->port,
+            escapeshellarg($oid)
+        );
+
+        $output = @shell_exec($cmd);
+
+        if ($output === null || $output === '') {
+            $this->lastError = 'SNMP_ERROR_TIMEOUT: No response from ' . $this->host;
+            return [];
+        }
+
+        if ($this->isCliError($output)) {
+            return [];
+        }
+
+        $results = [];
+        foreach (explode("\n", trim($output)) as $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+
+            if (preg_match('/^(\.[\d.]+)\s*=\s*(.+)$/', $line, $m)) {
+                $resultOid = trim($m[1]);
+                $rawVal = trim($m[2]);
+                $results[$resultOid] = $this->parseCliRawValue($rawVal);
+            }
+        }
+
+        return $results;
+    }
+
+    protected function cliSet(string $oid, string $type, $value): bool
+    {
+        $cmd = sprintf(
+            'snmpset -v2c -c %s -t %d -r %d %s:%d %s %s %s 2>&1',
+            escapeshellarg($this->writeCommunity),
+            max(1, intdiv($this->timeoutMicroseconds, 1000000)),
+            $this->retries,
+            escapeshellarg($this->host),
+            $this->port,
+            escapeshellarg($oid),
+            escapeshellarg($type),
+            escapeshellarg((string)$value)
+        );
+
+        $output = @shell_exec($cmd);
+
+        if ($output === null || $this->isCliError($output)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function isCliError(string $output): bool
+    {
+        $output = strtolower(trim($output));
+
+        if (str_contains($output, 'timeout')) {
+            $this->lastError = 'SNMP_ERROR_TIMEOUT: Device ' . $this->host . ' did not respond within timeout';
+            return true;
+        }
+
+        if (str_contains($output, 'no response') || str_contains($output, 'unknown host') || str_contains($output, 'connection refused')) {
+            $this->lastError = 'SNMP_ERROR_UNREACHABLE: Device ' . $this->host . ' is unreachable';
+            return true;
+        }
+
+        if (str_contains($output, 'authentication') || str_contains($output, 'noauth') || str_contains($output, 'no access')) {
+            $this->lastError = 'SNMP_ERROR_AUTH: Invalid community string for ' . $this->host;
+            return true;
+        }
+
+        if (str_contains($output, 'no such object') || str_contains($output, 'nosuchobject') || str_contains($output, 'nosuchinstance')) {
+            $this->lastError = 'SNMP_ERROR_NOSUCHOBJECT: OID not found on device ' . $this->host;
+            return true;
+        }
+
+        if (str_contains($output, 'error')) {
+            $this->lastError = 'SNMP_ERROR_GENERAL: ' . trim($output);
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function classifyError(string $message): void
+    {
+        $msg = strtolower($message);
+
+        if (str_contains($msg, 'timeout') || str_contains($msg, 'no response')) {
+            $this->lastError = 'SNMP_ERROR_TIMEOUT: Device ' . $this->host . ' did not respond within timeout';
+        } elseif (str_contains($msg, 'unreachable') || str_contains($msg, 'refused') || str_contains($msg, 'unknown host')) {
+            $this->lastError = 'SNMP_ERROR_UNREACHABLE: Device ' . $this->host . ' is unreachable';
+        } elseif (str_contains($msg, 'authentication') || str_contains($msg, 'community')) {
+            $this->lastError = 'SNMP_ERROR_AUTH: Invalid community string for ' . $this->host;
+        } elseif (str_contains($msg, 'no such object') || str_contains($msg, 'nosuchobject')) {
+            $this->lastError = 'SNMP_ERROR_NOSUCHOBJECT: OID not found on device ' . $this->host;
+        } else {
+            $this->lastError = 'SNMP_ERROR_GENERAL: ' . $message;
+        }
+
+        Log::warning("SNMP Client [{$this->host}]: {$this->lastError}");
+    }
+
+    protected function parseCliValue(string $output): ?string
+    {
+        $output = trim($output);
+
+        if (preg_match('/=\s*(?:\S+:\s*)?(.+)$/m', $output, $m)) {
+            return $this->cleanValue(trim($m[1]));
+        }
+
+        return null;
+    }
+
+    protected function parseCliRawValue(string $rawVal): string
+    {
+        if (preg_match('/^\S+:\s*(.+)$/', $rawVal, $m)) {
+            return $this->cleanValue(trim($m[1]));
+        }
+        return $this->cleanValue($rawVal);
+    }
+
+    protected function cleanValue(string $value): string
+    {
+        $value = trim($value, '" ');
+
+        if ($value === 'noSuchInstance' || $value === 'noSuchObject' || $value === 'No Such Instance' || $value === 'No Such Object') {
+            return '';
+        }
+
+        return $value;
+    }
+
+    public function getErrorType(): string
+    {
+        if (str_contains($this->lastError, 'TIMEOUT')) return 'timeout';
+        if (str_contains($this->lastError, 'UNREACHABLE')) return 'unreachable';
+        if (str_contains($this->lastError, 'AUTH')) return 'auth_error';
+        if (str_contains($this->lastError, 'NOSUCHOBJECT')) return 'oid_not_found';
+        return 'general';
+    }
+}

@@ -1,0 +1,386 @@
+@extends('layouts.admin')
+
+@section('title', 'Phase 1: Data Ingestion')
+
+@section('content')
+<section class="content">
+    <div class="container-fluid">
+        @include('partials.alerts')
+
+        @include('admin.migration._phase-steps', ['currentPhase' => 1, 'run' => $run])
+
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card card-outline card-info mb-4">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-file-excel"></i> Required Data Format</h3>
+                        <div class="card-tools">
+                            <a href="{{ route('admin.migration.download-sample', ['format' => 'csv']) }}" class="btn btn-sm btn-success mr-1">
+                                <i class="fas fa-download"></i> Download Sample CSV
+                            </a>
+                            <a href="{{ route('admin.migration.download-sample', ['format' => 'xls']) }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-download"></i> Download Sample XLS
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm table-striped mb-0">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>Column Name</th>
+                                        <th>Required</th>
+                                        <th>Type</th>
+                                        <th>Description</th>
+                                        <th>Example</th>
+                                        <th>Accepted Aliases</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="table-warning">
+                                        <td><strong>name</strong></td>
+                                        <td><span class="badge badge-danger">Required</span></td>
+                                        <td>Text</td>
+                                        <td>Client's full name</td>
+                                        <td>Mohammad Rahim Uddin</td>
+                                        <td><code>client_name</code>, <code>customer_name</code>, <code>full_name</code></td>
+                                    </tr>
+                                    <tr class="table-warning">
+                                        <td><strong>phone</strong></td>
+                                        <td><span class="badge badge-danger">Required</span></td>
+                                        <td>Text</td>
+                                        <td>Primary phone number</td>
+                                        <td>01712345678</td>
+                                        <td><code>mobile</code>, <code>phone_number</code>, <code>contact</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>username</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>PPPoE login username</td>
+                                        <td>rahim_pppoe</td>
+                                        <td><code>pppoe_username</code>, <code>pppoe_user</code>, <code>login</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>pppoe_password</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>PPPoE password</td>
+                                        <td>pass123</td>
+                                        <td><code>password</code>, <code>pass</code>, <code>ppp_pass</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>email</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Email</td>
+                                        <td>Client email address</td>
+                                        <td>rahim@email.com</td>
+                                        <td><code>email_address</code>, <code>mail</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>address</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>Full address</td>
+                                        <td>House 10, Road 5, Dhanmondi</td>
+                                        <td><code>full_address</code>, <code>location</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>package_name</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>Package/plan name (must match MikroTik profile)</td>
+                                        <td>10Mbps-Home</td>
+                                        <td><code>package</code>, <code>plan</code>, <code>profile</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>monthly_fee</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Number</td>
+                                        <td>Monthly rent in BDT</td>
+                                        <td>500</td>
+                                        <td><code>fee</code>, <code>monthly</code>, <code>rent</code>, <code>price</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>due_amount</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Number</td>
+                                        <td>Outstanding due from old system</td>
+                                        <td>1500</td>
+                                        <td><code>due</code>, <code>outstanding</code>, <code>arrears</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>advance_balance</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Number</td>
+                                        <td>Prepaid/advance amount</td>
+                                        <td>300</td>
+                                        <td><code>advance</code>, <code>credit</code>, <code>wallet</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>status</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>Client status</td>
+                                        <td>active</td>
+                                        <td><code>state</code>, <code>account_status</code> | Values: active, inactive, expired</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>connection_type</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>Connection type</td>
+                                        <td>pppoe</td>
+                                        <td><code>conn_type</code>, <code>type</code> | Values: pppoe, hotspot, static, dhcp</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>zone_name</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>Zone/region name (auto-created if new)</td>
+                                        <td>Dhanmondi</td>
+                                        <td><code>zone</code>, <code>region</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>area_name</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>Subzone/area name (auto-created if new)</td>
+                                        <td>Road 5 Block</td>
+                                        <td><code>area</code>, <code>subzone</code>, <code>sub_area</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>router_name</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>MikroTik device name</td>
+                                        <td>MK-Router-01</td>
+                                        <td><code>router</code>, <code>mikrotik</code>, <code>device</code>, <code>pop</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>connection_date</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Date</td>
+                                        <td>Client activation date</td>
+                                        <td>2024-01-15</td>
+                                        <td><code>start_date</code>, <code>activation_date</code>, <code>join_date</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>nid</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>National ID number</td>
+                                        <td>1990123456789</td>
+                                        <td><code>national_id</code>, <code>id_number</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>mac_address</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>Device MAC address</td>
+                                        <td>AA:BB:CC:DD:EE:FF</td>
+                                        <td><code>mac</code>, <code>onu_mac</code></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>ip_address</strong></td>
+                                        <td><span class="badge badge-secondary">Optional</span></td>
+                                        <td>Text</td>
+                                        <td>Static IP (if applicable)</td>
+                                        <td>192.168.1.100</td>
+                                        <td><code>ip</code>, <code>static_ip</code></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fas fa-lightbulb text-warning"></i>
+                                    <strong>Tip:</strong> Column names are matched automatically. Use any of the accepted aliases and the system will recognize them.
+                                </small>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <small class="text-muted">
+                                    <i class="fas fa-shield-alt text-success"></i>
+                                    Duplicate phone/username records are flagged for review before import.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-outline card-success mb-4">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-table"></i> Sample Data Preview</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm mb-0" style="font-size: 0.85rem;">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>name</th>
+                                        <th>phone</th>
+                                        <th>username</th>
+                                        <th>password</th>
+                                        <th>package_name</th>
+                                        <th>monthly_fee</th>
+                                        <th>due_amount</th>
+                                        <th>advance_balance</th>
+                                        <th>status</th>
+                                        <th>zone_name</th>
+                                        <th>area_name</th>
+                                        <th>address</th>
+                                        <th>router_name</th>
+                                        <th>connection_date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Mohammad Rahim</td>
+                                        <td>01712345678</td>
+                                        <td>rahim_pppoe</td>
+                                        <td>pass123</td>
+                                        <td>10Mbps-Home</td>
+                                        <td>500</td>
+                                        <td>0</td>
+                                        <td>300</td>
+                                        <td>active</td>
+                                        <td>Dhanmondi</td>
+                                        <td>Road 5</td>
+                                        <td>House 10, Road 5</td>
+                                        <td>MK-Router-01</td>
+                                        <td>2024-01-15</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Fatema Begum</td>
+                                        <td>01898765432</td>
+                                        <td>fatema_net</td>
+                                        <td>abc456</td>
+                                        <td>20Mbps-Premium</td>
+                                        <td>800</td>
+                                        <td>1600</td>
+                                        <td>0</td>
+                                        <td>active</td>
+                                        <td>Mirpur</td>
+                                        <td>Section 10</td>
+                                        <td>Flat 3B, Mirpur DOHS</td>
+                                        <td>MK-Router-02</td>
+                                        <td>2023-06-20</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Abdul Karim</td>
+                                        <td>01612345000</td>
+                                        <td>karim123</td>
+                                        <td>karim@99</td>
+                                        <td>5Mbps-Basic</td>
+                                        <td>400</td>
+                                        <td>800</td>
+                                        <td>0</td>
+                                        <td>inactive</td>
+                                        <td>Uttara</td>
+                                        <td>Sector 7</td>
+                                        <td>Shop 12, Rajlaxmi Market</td>
+                                        <td>MK-Router-01</td>
+                                        <td>2022-11-01</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Nusrat Jahan</td>
+                                        <td>01512340000</td>
+                                        <td>nusrat_ppp</td>
+                                        <td>nj2024</td>
+                                        <td>30Mbps-Business</td>
+                                        <td>1500</td>
+                                        <td>0</td>
+                                        <td>1500</td>
+                                        <td>active</td>
+                                        <td>Gulshan</td>
+                                        <td>Block A</td>
+                                        <td>House 22, Gulshan 2</td>
+                                        <td>MK-Router-03</td>
+                                        <td>2024-03-10</td>
+                                    </tr>
+                                    <tr class="text-muted">
+                                        <td>Hasan Ali</td>
+                                        <td>01912340000</td>
+                                        <td>hasan_ali</td>
+                                        <td>hali55</td>
+                                        <td>10Mbps-Home</td>
+                                        <td>500</td>
+                                        <td>500</td>
+                                        <td>0</td>
+                                        <td>inactive</td>
+                                        <td>Dhanmondi</td>
+                                        <td>Road 27</td>
+                                        <td>Flat 5A, Green Tower</td>
+                                        <td>MK-Router-01</td>
+                                        <td>2023-09-05</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        <a href="{{ route('admin.migration.download-sample', ['format' => 'csv']) }}" class="btn btn-success mr-2">
+                            <i class="fas fa-file-csv"></i> Download Sample CSV
+                        </a>
+                        <a href="{{ route('admin.migration.download-sample', ['format' => 'xls']) }}" class="btn btn-primary">
+                            <i class="fas fa-file-excel"></i> Download Sample XLS
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-primary">
+                        <h3 class="card-title"><i class="fas fa-upload"></i> Upload Client Data File</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="callout callout-warning">
+                            <h5><i class="fas fa-exclamation-triangle"></i> Before You Upload</h5>
+                            <ul class="mb-0">
+                                <li>Only <strong>name</strong> and <strong>phone</strong> columns are required. All other columns are optional.</li>
+                                <li><strong>Package names</strong> should match your MikroTik PPPoE profile names for auto-provisioning to work.</li>
+                                <li>Duplicate phone numbers or usernames will be flagged for your review before import.</li>
+                                <li>Missing packages will be auto-created with the given monthly fee.</li>
+                                <li>Zones and areas will be auto-created if they don't exist.</li>
+                            </ul>
+                        </div>
+
+                        <form action="{{ route('admin.migration.phase1-upload', $run) }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="form-group">
+                                <label>Select File <span class="text-danger">*</span></label>
+                                <div class="custom-file">
+                                    <input type="file" name="file" class="custom-file-input" id="migrationFile" accept=".xlsx,.xls,.csv,.json" required>
+                                    <label class="custom-file-label" for="migrationFile">Choose file...</label>
+                                </div>
+                                <small class="text-muted">Supported formats: XLSX, XLS, CSV, JSON (max 50MB)</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-lg btn-block">
+                                <i class="fas fa-upload"></i> Upload & Map Fields
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var fileInput = document.getElementById('migrationFile');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            var fileName = e.target.files[0] ? e.target.files[0].name : 'Choose file...';
+            var label = e.target.nextElementSibling;
+            if (label) label.textContent = fileName;
+        });
+    }
+});
+</script>
+@endpush

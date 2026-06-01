@@ -1,0 +1,463 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Bill;
+use App\Models\Client;
+use App\Models\Payment;
+use App\Models\PaymentMethod;
+use App\Models\ActivityLog;
+use App\Services\BillCalculationService;
+use App\Services\BillingService;
+use App\Services\LedgerService;
+use App\Models\SystemSetting;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
+
+class BillingController extends Controller
+{
+    protected BillCalculationService $billCalculationService;
+    protected BillingService $billingService;
+    protected LedgerService $ledgerService;
+
+    public function __construct(BillCalculationService $billCalculationService, BillingService $billingService, LedgerService $ledgerService)
+    {
+        $this->billCalculationService = $billCalculationService;
+        $this->billingService = $billingService;
+        $this->ledgerService = $ledgerService;
+    }
+
+    public function index(Request $request)
+    {
+        $query = Bill::with(['client'])
+            ->whereHas('client', function($q) {
+                $q->whereNull('reseller_id');
+            });
+        
+        // Quick search by PPPoE username
+        if ($request->search) {
+            $search = $request->search;
+            $query->whereHas('client', function($q) use ($search) {
+                $q->whereNull('reseller_id')
+                  ->where(function($q2) use ($search) {
+                      $q2->where('username', 'ilike', "%{$search}%")
+                         ->orWhere('client_id', 'ilike', "%{$search}%")
+                         ->orWhere('name', 'ilike', "%{$search}%");
+                  });
+            });
+        }
+        
+        if ($request->month) {
+            $query->where('billing_month', $request->month);
+        }
+        if ($request->year) {
+            $query->where('billing_year', $request->year);
+        }
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+        
+        $bills = $query->orderBy('created_at', 'desc')->paginate(in_array((int)request()->per_page,[20,50,100,200])?(int)request()->per_page:20);
+        return view('admin.billing.index', compact('bills'));
+    }
+
+    public function generate()
+    {
+        $clients = Client::where('status', 'active')->whereNull('reseller_id')->get();
+        return view('admin.billing.generate', compact('clients'));
+    }
+
+    public function generateBills(Request $request)
+    {
+        $request->validate([
+            'billing_month' => 'required|integer|min:1|max:12',
+            'billing_year' => 'required|integer|min:2020',
+        ]);
+
+        $month = $request->billing_month;
+        $year = $request->billing_year;
+        
+        $result = $this->billingService->generateMonthlyBillsForAllClients($month, $year);
+        
+        ActivityLog::log('create', 'billing', "Generated {$result['generated']} bills for {$month}/{$year}");
+        
+        $message = "{$result['generated']} bills generated successfully.";
+        if ($result['skipped'] > 0) {
+            $message .= " ({$result['skipped']} skipped - already exist)";
+        }
+        
+        return redirect()->route('admin.billing.index')->with('success', $message);
+    }
+
+    public function show(Bill $bill)
+    {
+        $bill->load(['client', 'items', 'payments']);
+        return view('admin.billing.show', compact('bill'));
+    }
+
+    public function due()
+    {
+        $user = auth()->user();
+        $zoneIds = $this->getUserAssignedZoneIds($user);
+        $search = request('search');
+        $statusFilter = request('status_filter');
+        $zoneFilter = request('zone_filter');
+
+        $baseConstraint = function($q) use ($zoneIds) {
+            $q->whereNull('reseller_id');
+            if (!empty($zoneIds)) {
+                $q->whereIn('zone_id', $zoneIds);
+            }
+        };
+
+        $baseQuery = Bill::whereHas('client', $baseConstraint)
+            ->where('status', '!=', 'paid')
+            ->where('due_amount', '>', 0);
+
+        $query = Bill::with(['client.package', 'client.zone'])
+            ->whereHas('client', $baseConstraint)
+            ->where('status', '!=', 'paid')
+            ->where('due_amount', '>', 0);
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('bill_no', 'like', "%{$search}%")
+                  ->orWhereHas('client', function($sq) use ($search) {
+                      $sq->where('name', 'like', "%{$search}%")
+                         ->orWhere('phone', 'like', "%{$search}%")
+                         ->orWhere('username', 'like', "%{$search}%")
+                         ->orWhere('client_id', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($statusFilter === 'overdue') {
+            $query->whereDate('due_date', '<', today());
+        } elseif ($statusFilter === 'due_today') {
+            $query->whereDate('due_date', today());
+        } elseif ($statusFilter === 'upcoming') {
+            $query->whereDate('due_date', '>=', today());
+        }
+
+        if ($zoneFilter) {
+            $query->whereHas('client', function($q) use ($zoneFilter) {
+                $q->where('zone_id', $zoneFilter);
+            });
+        }
+
+        $totalDue      = (clone $baseQuery)->sum('due_amount');
+        $overdueCount  = (clone $baseQuery)->whereDate('due_date', '<', today())->count();
+        $dueTodayCount = (clone $baseQuery)->whereDate('due_date', today())->count();
+        $totalClients  = (clone $baseQuery)->distinct('client_id')->count('client_id');
+
+        $zones = \App\Models\Zone::orderBy('name')->get(['id', 'name']);
+
+        $sortBy  = request('sort_by', 'due_date');
+        $sortDir = request('sort_dir', 'asc') === 'desc' ? 'desc' : 'asc';
+        $allowedSorts = ['due_date', 'due_amount', 'bill_no', 'billing_month'];
+        if (!in_array($sortBy, $allowedSorts)) { $sortBy = 'due_date'; }
+        $query->orderBy($sortBy, $sortDir);
+
+        $bills = $query->paginate(in_array((int)request()->per_page,[20,50,100,200])?(int)request()->per_page:20);
+
+        return view('admin.billing.due', compact('bills', 'totalDue', 'overdueCount', 'dueTodayCount', 'totalClients', 'zones'));
+    }
+
+    private function getUserAssignedZoneIds($user): array
+    {
+        if (!$user || $user->hasRole('Super Admin') || $user->hasRole('admin') || $user->hasRole('Manager') || $user->hasRole('Assistant Admin') || $user->hasRole('Assistant Manager')) {
+            return [];
+        }
+        $zoneRestrictedRoles = ['Collection Agent', 'billman', 'Billman'];
+        $isZoneRestricted = false;
+        foreach ($zoneRestrictedRoles as $roleName) {
+            if ($user->hasRole($roleName)) { $isZoneRestricted = true; break; }
+        }
+        if (!$isZoneRestricted) return [];
+        $employee = \App\Models\Employee::where('user_id', $user->id)->first();
+        if (!$employee) return [];
+        $zoneIds = $employee->zone_ids;
+        if (is_string($zoneIds)) $zoneIds = json_decode($zoneIds, true);
+        return (!empty($zoneIds) && is_array($zoneIds)) ? $zoneIds : [];
+    }
+
+    public function invoice(Bill $bill)
+    {
+        $bill->load(['client.zone', 'client.package', 'items']);
+        
+        $logo = SystemSetting::get('site_logo', '');
+        $companyName = SystemSetting::get('company_name', config('app.name', 'ISP Billing System'));
+        $companyAddress = SystemSetting::get('company_address', '');
+        $companyPhone = SystemSetting::get('company_phone', '');
+        $companyEmail = SystemSetting::get('company_email', '');
+        
+        $pdf = Pdf::loadView('admin.billing.invoice', compact('bill', 'logo', 'companyName', 'companyAddress', 'companyPhone', 'companyEmail'));
+        return $pdf->download("invoice-{$bill->bill_no}.pdf");
+    }
+
+    public function edit(Bill $bill)
+    {
+        $bill->load('client');
+        return view('admin.billing.edit', compact('bill'));
+    }
+
+    public function update(Request $request, Bill $bill)
+    {
+        $request->validate([
+            'total_amount' => 'required|numeric|min:0',
+            'due_amount' => 'required|numeric|min:0',
+            'status' => 'required|in:unpaid,partial,paid',
+            'discount' => 'nullable|numeric|min:0',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Get input values with precision
+            $discount = round($request->discount ?? 0, 2);
+            $packageAmount = round($request->package_amount ?? $bill->package_amount, 2);
+            $previousDue = round($request->previous_due ?? $bill->previous_due, 2);
+            
+            // Calculate total amount accurately using service
+            $totalAmount = $this->billCalculationService->calculateTotalAmount($packageAmount, $previousDue, $discount);
+            
+            // Get ACTUAL paid amount from Payment records for 100% accuracy
+            $actualPaidAmount = round(\App\Models\Payment::where('bill_id', $bill->id)->sum('amount'), 2);
+            
+            // Calculate final due amount using the service
+            $dueAmount = $this->billCalculationService->calculateDueAmount($totalAmount, $actualPaidAmount);
+            
+            // Determine status based on calculated amounts (enforced, not from request)
+            if ($dueAmount <= 0.01) {
+                $status = 'paid';
+                $dueAmount = 0;
+            } elseif ($actualPaidAmount > 0.01) {
+                $status = 'partial';
+            } else {
+                $status = 'unpaid';
+            }
+            
+            $bill->update([
+                'package_amount' => $packageAmount,
+                'previous_due' => $previousDue,
+                'total_amount' => $totalAmount,
+                'discount' => $discount,
+                'discount_reason' => $request->discount_reason,
+                'due_amount' => $dueAmount,
+                'paid_amount' => $actualPaidAmount,
+                'status' => $status,
+            ]);
+            
+            // Validate bill accuracy - treat all validation failures as errors
+            $validation = $this->billCalculationService->validateBillAccuracy($bill->fresh());
+            if (!$validation['is_valid']) {
+                throw new \Exception('Bill calculation error: ' . implode(', ', $validation['errors']));
+            }
+
+            // Update client due amount accurately
+            $this->billCalculationService->updateClientDueAmount($bill->client_id);
+
+            ActivityLog::log('update', 'billing', "Updated bill #{$bill->bill_no} for {$bill->client->name}");
+            
+            DB::commit();
+            return redirect()->route('admin.billing.index')->with('success', 'Bill updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error updating bill: ' . $e->getMessage());
+        }
+    }
+
+    public function destroy(Bill $bill)
+    {
+        $user = auth()->user();
+        if ($user && !$user->hasRole('Super Admin') && !\App\Services\MenuPermissionService::canAction($user, 'billing', 'delete_bill')) {
+            abort(403, 'You do not have permission to delete bills.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $client = $bill->client;
+            $billNo = $bill->bill_no;
+            $clientName = $client->name;
+
+            BillingService::permanentlyDeleteBill($bill->id);
+
+            $this->billingService->recalculateClientBalance($client);
+
+            ActivityLog::log('delete', 'billing', "Permanently deleted bill #{$billNo} and all related data for {$clientName}");
+
+            DB::commit();
+            return redirect()->route('admin.billing.index')->with('success', 'Bill and all related data permanently deleted from database.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error deleting bill: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkAction(Request $request)
+    {
+        $request->validate([
+            'bill_ids' => 'required|array|min:1',
+            'bill_ids.*' => 'integer|exists:bills,id',
+            'action' => 'required|in:delete,mark_paid,mark_unpaid',
+        ]);
+
+        $billIds = $request->bill_ids;
+        $action = $request->action;
+
+        DB::beginTransaction();
+        try {
+            $bills = Bill::whereIn('id', $billIds)->get();
+            $count = $bills->count();
+
+            if ($action === 'delete') {
+                $affectedClients = [];
+                foreach ($bills as $bill) {
+                    $affectedClients[$bill->client_id] = $bill->client;
+                    BillingService::permanentlyDeleteBill($bill->id);
+                }
+                foreach ($affectedClients as $client) {
+                    if ($client) $this->billingService->recalculateClientBalance($client);
+                }
+                ActivityLog::log('delete', 'billing', "Bulk deleted {$count} bills permanently");
+                DB::commit();
+                return back()->with('success', "{$count} bills permanently deleted from database.");
+            }
+
+            if ($action === 'mark_paid') {
+                $cashMethodId = PaymentMethod::where(function ($q) {
+                    $q->where('code', 'cash')
+                      ->orWhere('name', 'ILIKE', 'cash');
+                })->value('id');
+
+                if (!$cashMethodId) {
+                    throw new \Exception('Cash payment method not found. Please configure a payment method with code "cash".');
+                }
+
+                foreach ($bills as $bill) {
+                    $due = $bill->total_amount - $bill->paid_amount;
+                    if ($due <= 0) continue;
+
+                    $payment = Payment::create([
+                        'client_id' => $bill->client_id,
+                        'bill_id' => $bill->id,
+                        'payment_no' => 'BULK-' . time() . '-' . $bill->id,
+                        'amount' => $due,
+                        'payment_date' => now(),
+                        'payment_method_id' => $cashMethodId,
+                        'collected_by' => auth()->id(),
+                        'status' => 'approved',
+                        'remarks' => 'Bulk mark as paid',
+                        'company_id' => $bill->company_id,
+                    ]);
+
+                    $bill->update([
+                        'paid_amount' => $bill->total_amount,
+                        'due_amount' => 0,
+                        'status' => 'paid',
+                    ]);
+
+                    if ($bill->client) {
+                        $this->billingService->recalculateClientBalance($bill->client);
+                        $this->creditAgentForBulkPayment($bill->client, $payment, $due);
+                    }
+                }
+                ActivityLog::log('update', 'billing', "Bulk marked {$count} bills as paid");
+                DB::commit();
+                return back()->with('success', "{$count} bills marked as paid.");
+            }
+
+            if ($action === 'mark_unpaid') {
+                foreach ($bills as $bill) {
+                    $paymentIds = DB::table('payments')->where('bill_id', $bill->id)->pluck('id')->toArray();
+                    BillingService::permanentlyDeletePayments($paymentIds);
+
+                    $bill->update([
+                        'paid_amount' => 0,
+                        'due_amount' => $bill->total_amount,
+                        'status' => 'unpaid',
+                    ]);
+
+                    if ($bill->client) {
+                        $this->billingService->recalculateClientBalance($bill->client);
+                    }
+                }
+                ActivityLog::log('update', 'billing', "Bulk marked {$count} bills as unpaid");
+                DB::commit();
+                return back()->with('success', "{$count} bills marked as unpaid.");
+            }
+
+            DB::commit();
+            return back();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Bulk action failed: ' . $e->getMessage());
+        }
+    }
+
+    public function generateClientBill(Request $request, Client $client)
+    {
+        $request->validate([
+            'billing_month' => 'required|integer|min:1|max:12',
+            'billing_year' => 'required|integer|min:2020',
+        ]);
+
+        $month = $request->billing_month;
+        $year = $request->billing_year;
+
+        try {
+            $bill = $this->billingService->generateBill($client, $month, $year);
+            ActivityLog::log('create', 'billing', "Generated bill for {$client->name} - {$month}/{$year}");
+            
+            $message = "Bill generated successfully for {$month}/{$year}";
+            if ($bill->advance_used > 0) {
+                $message .= " (৳" . number_format($bill->advance_used) . " auto-paid from advance)";
+            }
+            
+            return back()->with('success', $message);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error generating bill: ' . $e->getMessage());
+        }
+    }
+
+    private function creditAgentForBulkPayment($client, $payment, $amount)
+    {
+        if (!$client->agent_id) return;
+
+        $agent = \App\Models\Agent::find($client->agent_id);
+        if (!$agent || $agent->status !== 'active') return;
+
+        $commissionPercent = $client->commission_percent !== null ? (float)$client->commission_percent : $agent->default_commission;
+        if ($commissionPercent <= 0) return;
+
+        $existing = \App\Models\AgentCommission::where('payment_id', $payment->id)
+            ->where('type', 'commission')
+            ->where('agent_id', $agent->id)
+            ->exists();
+        if ($existing) return;
+
+        $commissionAmount = ($amount * $commissionPercent) / 100;
+        $date = now();
+
+        \App\Models\AgentCommission::create([
+            'agent_id' => $agent->id,
+            'type' => 'commission',
+            'client_id' => $client->id,
+            'payment_id' => $payment->id,
+            'client_name' => $client->name,
+            'client_pppoe_id' => $client->username,
+            'zone_address' => $client->zone ? $client->zone->name : ($client->address ?? null),
+            'purpose' => 'Monthly Bill',
+            'note' => 'Auto-credited from bulk payment',
+            'date' => $date->toDateString(),
+            'payment_amount' => $amount,
+            'commission_percent' => $commissionPercent,
+            'commission_amount' => $commissionAmount,
+            'month' => $date->month,
+            'year' => $date->year,
+            'company_id' => $client->company_id,
+            'created_by' => auth()->id(),
+        ]);
+    }
+}

@@ -1,0 +1,260 @@
+@extends('layouts.admin')
+
+@section('title', 'Serial Search')
+
+@section('content')
+
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-barcode"></i> Search Device by Serial Number</h3>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ route('admin.inventory.serial.search.results') }}">
+                    <div class="input-group">
+                        <input type="text" name="serial" class="form-control form-control-lg" placeholder="Enter Serial Number, Barcode or MAC Address..." value="{{ request('serial') }}" required autofocus>
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fa-solid fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @if(isset($searched) && !isset($data))
+            <div class="alert alert-warning">
+                <i class="fa-solid fa-triangle-exclamation"></i> No device found with the given serial number. Please check and try again.
+            </div>
+        @endif
+
+        @isset($data)
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card card-info card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fa-solid fa-microchip"></i> Device Details</h3>
+                        <div class="card-tools">
+                            @php
+                                $status = $data->status ?? 'unknown';
+                                $statusBadge = match($status) {
+                                    'stock' => 'badge-success',
+                                    'assigned' => 'badge-primary',
+                                    'damaged' => 'badge-danger',
+                                    'returned' => 'badge-warning',
+                                    default => 'badge-secondary'
+                                };
+                            @endphp
+                            <span class="badge {{ $statusBadge }} badge-lg" style="font-size: 14px; padding: 5px 15px;">
+                                {{ ucfirst($status) }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered table-sm">
+                            <tr>
+                                <th style="width: 40%"><i class="fa-solid fa-box"></i> Product</th>
+                                <td>{{ $data->product->name ?? $data->product_name ?? 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fa-solid fa-hashtag"></i> Serial Number</th>
+                                <td><code>{{ $data->serial_number }}</code></td>
+                            </tr>
+                            <tr>
+                                <th><i class="fa-solid fa-barcode"></i> Barcode</th>
+                                <td>{{ $data->barcode ?? 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fa-solid fa-network-wired"></i> MAC Address</th>
+                                <td><code>{{ $data->mac_address ?? 'N/A' }}</code></td>
+                            </tr>
+                            @if($data->client || $data->client_id)
+                            <tr>
+                                <th><i class="fa-solid fa-user"></i> Assigned Client</th>
+                                <td>{{ $data->client->name ?? 'Client #' . $data->client_id }}</td>
+                            </tr>
+                            @endif
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card card-warning card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fa-solid fa-shield-halved"></i> Warranty Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-bordered table-sm">
+                            <tr>
+                                <th style="width: 40%">Warranty Start</th>
+                                <td>{{ $data->warranty_start ? \Carbon\Carbon::parse($data->warranty_start)->format('d-m-Y') : 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Warranty End</th>
+                                <td>{{ $data->warranty_end ? \Carbon\Carbon::parse($data->warranty_end)->format('d-m-Y') : 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Warranty Status</th>
+                                <td>
+                                    @if(method_exists($data, 'isUnderWarranty') || isset($data->isUnderWarranty))
+                                        @php $underWarranty = is_callable([$data, 'isUnderWarranty']) ? $data->isUnderWarranty() : $data->isUnderWarranty; @endphp
+                                        @if($underWarranty)
+                                            <span class="badge badge-success"><i class="fa-solid fa-check"></i> Under Warranty</span>
+                                        @else
+                                            <span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Warranty Expired</span>
+                                        @endif
+                                    @elseif($data->warranty_end)
+                                        @if(\Carbon\Carbon::parse($data->warranty_end)->isFuture())
+                                            <span class="badge badge-success"><i class="fa-solid fa-check"></i> Under Warranty</span>
+                                        @else
+                                            <span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Warranty Expired</span>
+                                        @endif
+                                    @else
+                                        <span class="badge badge-secondary">N/A</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card card-success card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fa-solid fa-bolt"></i> Quick Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        @if($status === 'stock')
+                            <button type="button" class="btn btn-success btn-block mb-2" data-toggle="modal" data-target="#assignModal">
+                                <i class="fa-solid fa-user-plus"></i> Assign to Client
+                            </button>
+                        @endif
+
+                        @if($status === 'assigned')
+                            <form method="POST" action="{{ route('admin.inventory.serial.return') }}" class="mb-2" onsubmit="return confirm('Are you sure you want to return this device to stock?')">
+                                @csrf
+                                <input type="hidden" name="serial_id" value="{{ $data->id }}">
+                                <button type="submit" class="btn btn-warning btn-block">
+                                    <i class="fa-solid fa-rotate-left"></i> Return to Stock
+                                </button>
+                            </form>
+                        @endif
+
+                        @if($status !== 'damaged')
+                            <button type="button" class="btn btn-danger btn-block mb-2" data-toggle="modal" data-target="#damageModal">
+                                <i class="fa-solid fa-heart-crack"></i> Mark as Damaged
+                            </button>
+                        @endif
+                    </div>
+                </div>
+
+                @isset($history)
+                <div class="card card-secondary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> Movement History</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-bordered table-sm table-striped mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                    <th>By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($history as $record)
+                                <tr>
+                                    <td>{{ \Carbon\Carbon::parse($record->created_at)->format('d-m-y H:i') }}</td>
+                                    <td>
+                                        @php
+                                            $actionBadge = match($record->action ?? '') {
+                                                'assigned' => 'badge-primary',
+                                                'returned' => 'badge-warning',
+                                                'damaged' => 'badge-danger',
+                                                'purchased', 'stocked' => 'badge-success',
+                                                default => 'badge-secondary'
+                                            };
+                                        @endphp
+                                        <span class="badge {{ $actionBadge }}">{{ ucfirst($record->action ?? 'N/A') }}</span>
+                                    </td>
+                                    <td>{{ $record->details ?? $record->description ?? '-' }}</td>
+                                    <td>{{ $record->user->name ?? $record->performed_by ?? 'System' }}</td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">No movement history found.</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endisset
+            </div>
+        </div>
+
+        @if($status === 'stock')
+        <div class="modal fade" id="assignModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <form method="POST" action="{{ route('admin.inventory.serial.assign') }}">
+                        @csrf
+                        <input type="hidden" name="serial_id" value="{{ $data->id }}">
+                        <div class="modal-header bg-success">
+                            <h5 class="modal-title text-white"><i class="fa-solid fa-user-plus"></i> Assign Serial to Client</h5>
+                            <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Assigning serial: <strong><code>{{ $data->serial_number }}</code></strong></p>
+                            <div class="form-group">
+                                <label for="client_id"><i class="fa-solid fa-user"></i> Client ID or Search</label>
+                                <input type="text" name="client_id" id="client_id" class="form-control" placeholder="Enter Client ID or search by name..." required>
+                                <small class="text-muted">Enter client ID number or search for client</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fa-solid fa-check"></i> Assign
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        @if($status !== 'damaged')
+        <div class="modal fade" id="damageModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <form method="POST" action="{{ route('admin.inventory.serial.damage') }}">
+                        @csrf
+                        <input type="hidden" name="serial_id" value="{{ $data->id }}">
+                        <div class="modal-header bg-danger">
+                            <h5 class="modal-title text-white"><i class="fa-solid fa-heart-crack"></i> Mark as Damaged</h5>
+                            <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Marking serial as damaged: <strong><code>{{ $data->serial_number }}</code></strong></p>
+                            <div class="form-group">
+                                <label for="reason"><i class="fa-solid fa-comment"></i> Reason / Remarks <span class="text-danger">*</span></label>
+                                <textarea name="reason" id="reason" class="form-control" rows="3" placeholder="Describe the damage or reason..." required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fa-solid fa-check"></i> Mark Damaged
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        @endisset
+@endsection

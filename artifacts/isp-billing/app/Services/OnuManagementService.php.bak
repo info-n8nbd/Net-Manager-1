@@ -1,0 +1,356 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\OltDevice;
+use App\Services\OLT\OIDMapping;
+use App\Services\OLT\SNMPClient;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class OnuManagementService
+{
+    protected OltRealtimeService $oltService;
+    protected RealTimeAlertService $alertService;
+
+    public function __construct()
+    {
+        $this->oltService = app(OltRealtimeService::class);
+        $this->alertService = app(RealTimeAlertService::class);
+    }
+
+    public function rebootOnu(int $onuId, int $userId, string $reason = ''): array
+    {
+        $onu = DB::table('onus')->find($onuId);
+        if (!$onu) {
+            return ['success' => false, 'message' => 'ONU not found'];
+        }
+
+        $olt = OltDevice::find($onu->olt_device_id);
+        if (!$olt || !$olt->is_active) {
+            return ['success' => false, 'message' => 'OLT device not available'];
+        }
+
+        $this->logReboot($onuId, $onu->client_id, $onu->serial_number, $userId, $reason, 'pending');
+
+        try {
+            $result = $this->executeOnuReboot($olt, $onu);
+            
+            $this->updateRebootResult($onuId, $result['success'] ? 'success' : 'failed', $result['message']);
+            
+            return $result;
+        } catch (\Exception $e) {
+            $this->updateRebootResult($onuId, 'failed', $e->getMessage());
+            Log::error("ONU reboot failed: " . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    protected function executeOnuReboot(OltDevice $olt, object $onu): array
+    {
+        $oidMapping = OIDMapping::forVendor($olt->vendor ?? 'generic', $olt->pon_type ?? 'epon');
+        $rebootOid = $oidMapping->getRebootOid();
+
+        if (!$rebootOid) {
+            return $this->executeOnuRebootViaCli($olt, $onu);
+        }
+
+        $snmpClient = SNMPClient::fromDevice($olt);
+        $fullOid = $rebootOid . '.' . $onu->pon_port . '.' . $onu->onu_number;
+
+        $result = $snmpClient->set($fullOid, 'i', 1);
+
+        if ($result) {
+            return ['success' => true, 'message' => 'Reboot command sent successfully via SNMP'];
+        }
+
+        $error = $snmpClient->getLastError();
+        Log::warning("ONU reboot SNMP failed for {$onu->serial_number}: {$error}, trying CLI fallback");
+
+        return $this->executeOnuRebootViaCli($olt, $onu);
+    }
+
+    protected function executeOnuRebootViaCli(OltDevice $olt, object $onu): array
+    {
+        if (!$olt->username || !$olt->connection_type || $olt->connection_type === 'snmp') {
+            return ['success' => false, 'message' => 'SNMP reboot failed and no CLI credentials available for fallback'];
+        }
+
+        try {
+            $api = OltService::fromDevice($olt);
+            if (!$api->connect()) {
+                return ['success' => false, 'message' => 'Failed to connect to OLT for CLI reboot: ' . $api->getLastError()];
+            }
+
+            $vendor = strtolower($olt->vendor ?? 'generic');
+            $port = $onu->pon_port;
+            $onuNum = $onu->onu_number;
+
+            $output = match($vendor) {
+                'huawei' => $this->rebootHuaweiCli($api, $port, $onuNum),
+                'zte' => $this->rebootZteCli($api, $port, $onuNum),
+                'bdcom' => $this->rebootBdcomCli($api, $port, $onuNum),
+                default => null,
+            };
+
+            $api->disconnect();
+
+            if ($output !== null) {
+                return ['success' => true, 'message' => 'Reboot command sent via CLI'];
+            }
+
+            return ['success' => false, 'message' => "CLI reboot not supported for vendor: {$vendor}"];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => 'CLI reboot failed: ' . $e->getMessage()];
+        }
+    }
+
+    protected function rebootHuaweiCli(OltService $api, $port, $onuNum): string
+    {
+        $api->sendCommand('enable');
+        $api->sendCommand('config');
+        $api->sendCommand("interface gpon {$port}");
+        $output = $api->sendCommand("ont reboot {$onuNum}");
+        $api->sendCommand('quit');
+        $api->sendCommand('quit');
+        return $output;
+    }
+
+    protected function rebootZteCli(OltService $api, $port, $onuNum): string
+    {
+        $api->sendCommand('enable');
+        $api->sendCommand('configure terminal');
+        $output = $api->sendCommand("pon-onu-mng gpon-onu_{$port}:{$onuNum}");
+        $output .= $api->sendCommand('reboot');
+        $api->sendCommand('exit');
+        $api->sendCommand('exit');
+        return $output;
+    }
+
+    protected function rebootBdcomCli(OltService $api, $port, $onuNum): string
+    {
+        $api->sendCommand('enable');
+        $api->sendCommand('configure terminal');
+        $api->sendCommand("interface EPON{$port}");
+        $output = $api->sendCommand("epon reboot onu {$onuNum}");
+        $api->sendCommand('exit');
+        $api->sendCommand('exit');
+        return $output;
+    }
+
+    protected function logReboot(int $onuId, ?int $clientId, ?string $serial, int $userId, string $reason, string $result): void
+    {
+        DB::table('onu_reboot_history')->insert([
+            'onu_id' => $onuId,
+            'client_id' => $clientId,
+            'serial_number' => $serial,
+            'reboot_type' => 'manual',
+            'initiated_by' => 'user',
+            'initiated_by_user_id' => $userId,
+            'reason' => $reason,
+            'result' => $result,
+            'rebooted_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    protected function updateRebootResult(int $onuId, string $result, string $message): void
+    {
+        DB::table('onu_reboot_history')
+            ->where('onu_id', $onuId)
+            ->orderByDesc('created_at')
+            ->limit(1)
+            ->update([
+                'result' => $result,
+                'result_message' => $message,
+                'updated_at' => now(),
+            ]);
+    }
+
+    public function getOnuRebootHistory(int $onuId, int $limit = 10): array
+    {
+        return DB::table('onu_reboot_history')
+            ->where('onu_id', $onuId)
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get()
+            ->toArray();
+    }
+
+    public function getClientOnuRebootHistory(int $clientId, int $limit = 10): array
+    {
+        return DB::table('onu_reboot_history')
+            ->where('client_id', $clientId)
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get()
+            ->toArray();
+    }
+
+    public function getOnuAlarms(?int $oltId = null, bool $unresolvedOnly = true): array
+    {
+        $query = DB::table('onu_alarm_logs');
+        
+        if ($oltId) {
+            $query->where('olt_device_id', $oltId);
+        }
+        
+        if ($unresolvedOnly) {
+            $query->where('is_resolved', false);
+        }
+
+        return $query->orderByDesc('created_at')->limit(100)->get()->toArray();
+    }
+
+    public function logOnuAlarm(int $oltId, ?int $onuId, string $serial, string $alarmType, string $severity, ?float $rxPower = null, ?float $txPower = null): int
+    {
+        $id = DB::table('onu_alarm_logs')->insertGetId([
+            'olt_device_id' => $oltId,
+            'onu_id' => $onuId,
+            'serial_number' => $serial,
+            'alarm_type' => $alarmType,
+            'severity' => $severity,
+            'rx_power' => $rxPower,
+            'tx_power' => $txPower,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        if ($alarmType === 'LOS' || $alarmType === 'LOF') {
+            $this->alertService->createLosAlarmAlert($oltId, $serial, $rxPower ?? -99);
+        }
+
+        return $id;
+    }
+
+    public function resolveOnuAlarm(int $alarmId): void
+    {
+        DB::table('onu_alarm_logs')
+            ->where('id', $alarmId)
+            ->update([
+                'is_resolved' => true,
+                'resolved_at' => now(),
+                'updated_at' => now(),
+            ]);
+    }
+
+    public function getOnuTemperature(OltDevice $olt, object $onu): ?float
+    {
+        $oidMapping = OIDMapping::forVendor($olt->vendor ?? 'generic', $olt->pon_type ?? 'epon');
+        $tempOid = $oidMapping->getOnuTemperatureOid();
+
+        if (!$tempOid) {
+            return null;
+        }
+
+        $snmpClient = SNMPClient::fromDevice($olt);
+        $fullOid = $tempOid . '.' . $onu->pon_port . '.' . $onu->onu_number;
+        $result = $snmpClient->get($fullOid);
+
+        if ($result !== null && $result !== '') {
+            preg_match('/(\d+\.?\d*)/', $result, $matches);
+            if (isset($matches[1])) {
+                $val = (float) $matches[1];
+                if ($val > 200) {
+                    return $val / 100.0;
+                }
+                return $val;
+            }
+        }
+
+        return null;
+    }
+
+    public function getOnuUptimeSeconds(OltDevice $olt, object $onu): ?int
+    {
+        $oidMapping = OIDMapping::forVendor($olt->vendor ?? 'generic', $olt->pon_type ?? 'epon');
+        $uptimeOid = $oidMapping->getOnuUptimeOid();
+
+        if (!$uptimeOid) {
+            return null;
+        }
+
+        $snmpClient = SNMPClient::fromDevice($olt);
+        $fullOid = $uptimeOid . '.' . $onu->pon_port . '.' . $onu->onu_number;
+        $result = $snmpClient->get($fullOid);
+
+        if ($result !== null && $result !== '') {
+            $parsed = $oidMapping->parseUptime($result);
+            return $parsed !== null ? (int) $parsed : null;
+        }
+
+        return null;
+    }
+
+    public function getOltPortSummary(int $oltId): array
+    {
+        $onus = DB::table('onus')
+            ->where('olt_device_id', $oltId)
+            ->select('pon_port', DB::raw('COUNT(*) as total'), 
+                     DB::raw("SUM(CASE WHEN status = 'online' THEN 1 ELSE 0 END) as online"),
+                     DB::raw("SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) as offline"))
+            ->groupBy('pon_port')
+            ->orderBy('pon_port')
+            ->get();
+
+        return $onus->toArray();
+    }
+
+    public function detectFiberCuts(): array
+    {
+        $suspected = [];
+        
+        $ports = DB::table('onus')
+            ->select('olt_device_id', 'pon_port', 
+                     DB::raw('COUNT(*) as total'),
+                     DB::raw("SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) as offline"))
+            ->groupBy('olt_device_id', 'pon_port')
+            ->havingRaw('COUNT(*) >= 3')
+            ->havingRaw("SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) >= COUNT(*) * 0.8")
+            ->get();
+
+        foreach ($ports as $port) {
+            if ($port->offline >= 3) {
+                $suspected[] = [
+                    'olt_device_id' => $port->olt_device_id,
+                    'port' => $port->pon_port,
+                    'total_onus' => $port->total,
+                    'offline_onus' => $port->offline,
+                    'offline_percent' => round(($port->offline / $port->total) * 100, 1),
+                ];
+
+                $existing = DB::table('network_event_logs')
+                    ->where('event_type', 'fiber_cut')
+                    ->where('olt_device_id', $port->olt_device_id)
+                    ->where('is_resolved', false)
+                    ->whereRaw("metadata->>'port' = ?", [$port->pon_port])
+                    ->first();
+
+                if (!$existing) {
+                    $this->alertService->createFiberCutAlert((int)$port->olt_device_id, (int)$port->pon_port, (int)$port->offline);
+                    
+                    $this->alertService->logNetworkEvent('fiber_cut', [
+                        'severity' => 'critical',
+                        'olt_device_id' => $port->olt_device_id,
+                        'description' => "Suspected fiber cut on port {$port->pon_port}: {$port->offline} ONUs offline",
+                        'affected_count' => $port->offline,
+                    ]);
+                }
+            }
+        }
+
+        return $suspected;
+    }
+
+    public function getOnuClientMapping(): array
+    {
+        return DB::table('onus')
+            ->join('clients', 'onus.client_id', '=', 'clients.id')
+            ->select('onus.serial_number', 'onus.status as onu_status', 
+                     'clients.id as client_id', 'clients.name', 'clients.client_id as client_code',
+                     'clients.connection_status', 'clients.status as client_status')
+            ->get()
+            ->toArray();
+    }
+}

@@ -1,0 +1,1051 @@
+<?php
+
+namespace App\Services\OLT;
+
+use App\Models\OltDevice;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\OLT\BdcomGponSnmpCollector;
+use App\Services\OLT\GponTelnetCollector;
+
+class MonitoringService
+{
+    protected SNMPClient $snmpClient;
+    protected OIDMapping $oidMapping;
+    protected OltDevice $device;
+
+    public function __construct(OltDevice $device)
+    {
+        $this->device = $device;
+        $this->snmpClient = SNMPClient::fromDevice($device);
+        $this->oidMapping = OIDMapping::forVendor(
+            $device->vendor ?? 'generic',
+            $device->pon_type ?? 'epon'
+        );
+    }
+
+    public function pollAll(): array
+    {
+        $results = [
+            'device_id' => $this->device->id,
+            'device_name' => $this->device->name,
+            'system_info' => null,
+            'onu_stats' => null,
+            'traffic_stats' => null,
+            'errors' => [],
+        ];
+
+        try {
+            $results['system_info'] = $this->pollSystemInfo();
+        } catch (\Exception $e) {
+            $results['errors'][] = 'System info: ' . $e->getMessage();
+            Log::error("OLT Monitor [{$this->device->name}] system info failed: " . $e->getMessage());
+        }
+
+        try {
+            $results['onu_stats'] = $this->pollOnuStatus();
+        } catch (\Exception $e) {
+            $results['errors'][] = 'ONU status: ' . $e->getMessage();
+            Log::error("OLT Monitor [{$this->device->name}] ONU poll failed: " . $e->getMessage());
+        }
+
+        try {
+            $results['traffic_stats'] = $this->pollTrafficStats();
+        } catch (\Exception $e) {
+            $results['errors'][] = 'Traffic stats: ' . $e->getMessage();
+            Log::error("OLT Monitor [{$this->device->name}] traffic poll failed: " . $e->getMessage());
+        }
+
+        return $results;
+    }
+
+    public function pollSystemInfo(): array
+    {
+        $sysInfo = $this->snmpClient->getSystemInfo();
+
+        $cpuOid = $this->oidMapping->getCpuUsageOid();
+        $memOid = $this->oidMapping->getMemoryUsageOid();
+        $tempOid = $this->oidMapping->getTemperatureOid();
+        $fwOid = $this->oidMapping->getFirmwareOid();
+
+        if ($cpuOid) {
+            $cpu = $this->snmpClient->get($cpuOid);
+            if ($cpu !== null && $cpu !== '') $sysInfo['cpu_usage'] = (float)$cpu;
+        }
+        if ($memOid) {
+            $mem = $this->snmpClient->get($memOid);
+            if ($mem !== null && $mem !== '') $sysInfo['memory_usage'] = (float)$mem;
+        }
+        if ($tempOid) {
+            $temp = $this->snmpClient->get($tempOid);
+            if ($temp !== null && $temp !== '') $sysInfo['temperature'] = (float)$temp;
+        }
+        if ($fwOid) {
+            $fw = $this->snmpClient->get($fwOid);
+            if ($fw !== null && $fw !== '') $sysInfo['firmware_version'] = $fw;
+        }
+
+        $uptimeSeconds = null;
+        if (isset($sysInfo['uptime_raw'])) {
+            $uptimeSeconds = $this->oidMapping->parseUptime($sysInfo['uptime_raw']);
+            $sysInfo['uptime_seconds'] = $uptimeSeconds;
+        }
+
+        $updateData = array_filter([
+            'system_description' => $sysInfo['system_description'] ?? null,
+            'firmware_version' => $sysInfo['firmware_version'] ?? null,
+            'cpu_usage' => $sysInfo['cpu_usage'] ?? null,
+            'memory_usage' => $sysInfo['memory_usage'] ?? null,
+            'temperature' => $sysInfo['temperature'] ?? null,
+            'uptime_seconds' => $uptimeSeconds,
+            'last_sync' => now(),
+            'status' => 'online',
+        ], fn($v) => $v !== null);
+
+        if (!empty($updateData)) {
+            $this->device->update($updateData);
+        }
+
+        return $sysInfo;
+    }
+
+    public function pollOnuStatus(): array
+    {
+        // BDCOM EPON: dedicated collector using MAC+IF-MIB (status OID not available)
+        if (strtolower($this->device->vendor ?? '') === 'bdcom' &&
+            strtolower($this->device->pon_type ?? '') === 'epon') {
+            return $this->pollBdcomEponViaSnmp();
+        }
+
+        // BDCOM GPON: use dedicated IF-MIB based collector
+        if (strtolower($this->device->vendor ?? '') === 'bdcom' &&
+            strtolower($this->device->pon_type ?? '') === 'gpon') {
+            return $this->pollBdcomGponViaSnmp();
+        }
+
+        $statusOid = $this->oidMapping->getOnuStatusOid();
+        if (!$statusOid) {
+            return $this->pollOnuStatusFromDb();
+        }
+
+        $statusResults = $this->snmpClient->walk($statusOid);
+        if (empty($statusResults)) {
+            Log::info("OLT Monitor [{$this->device->name}]: No ONU status data via SNMP, using DB fallback");
+            return $this->pollOnuStatusFromDb();
+        }
+
+        // Pre-populate ONU index→port map for vendors that require it (e.g. BDCOM GPON)
+        if (method_exists($this->oidMapping, 'getOnuIndexToPortMap')) {
+            $this->oidMapping->getOnuIndexToPortMap($this->snmpClient);
+        }
+
+        $macOid = $this->oidMapping->getOnuMacOid();
+        $serialOid = $this->oidMapping->getOnuSerialOid();
+        $rxOid = $this->oidMapping->getOnuRxPowerOid();
+        $txOid = $this->oidMapping->getOnuTxPowerOid();
+
+        $macResults = $macOid ? $this->snmpClient->walk($macOid) : [];
+        $serialResults = $serialOid ? $this->snmpClient->walk($serialOid) : [];
+        $rxResults = $rxOid ? $this->snmpClient->walk($rxOid) : [];
+        $txResults = $txOid ? $this->snmpClient->walk($txOid) : [];
+
+        $inOctetsOid  = method_exists($this->oidMapping, 'getOnuInOctetsOid')  ? $this->oidMapping->getOnuInOctetsOid()  : null;
+        $outOctetsOid = method_exists($this->oidMapping, 'getOnuOutOctetsOid') ? $this->oidMapping->getOnuOutOctetsOid() : null;
+        $inOctetsResults  = $inOctetsOid  ? $this->snmpClient->walk($inOctetsOid)  : [];
+        $outOctetsResults = $outOctetsOid ? $this->snmpClient->walk($outOctetsOid) : [];
+
+        $onus = [];
+        $totalOnline = 0;
+        $totalOffline = 0;
+        $rxPowers = [];
+
+        foreach ($statusResults as $oid => $rawStatus) {
+            $idx = $this->oidMapping->parseOnuIndex($oid);
+            $portIndex = $idx['port_index'];
+            $onuIndex = $idx['onu_index'];
+
+            $status = method_exists($this->oidMapping, 'parseOnuStatus')
+                ? $this->oidMapping->parseOnuStatus($rawStatus)
+                : ($rawStatus == 1 ? 'online' : 'offline');
+
+            $suffix = $this->extractSuffix($oid, $statusOid);
+
+            $mac = $this->findMatchingValue($macResults, $macOid, $suffix);
+            $serial = $this->findMatchingValue($serialResults, $serialOid, $suffix);
+            $rxRaw = $this->findMatchingValue($rxResults, $rxOid, $suffix);
+            $txRaw = $this->findMatchingValue($txResults, $txOid, $suffix);
+            $inOctetsRaw  = $this->findMatchingValue($inOctetsResults,  $inOctetsOid,  $suffix);
+            $outOctetsRaw = $this->findMatchingValue($outOctetsResults, $outOctetsOid, $suffix);
+
+            $rxPower = $this->oidMapping->parseRxPower($rxRaw);
+            $txPower = $this->oidMapping->parseTxPower($txRaw);
+
+            if ($mac && method_exists($this->oidMapping, 'parseMacAddress')) {
+                $mac = $this->oidMapping->parseMacAddress($mac);
+            }
+
+            if ($status === 'online') $totalOnline++;
+            else $totalOffline++;
+
+            if ($rxPower !== null) $rxPowers[] = $rxPower;
+
+            $intf = $this->oidMapping->formatOnuInterface($portIndex, $onuIndex);
+
+            // Sanitise serial/MAC: small integers are SNMP enum artifacts (e.g. BDCOM GPON auth-type=5)
+            if ($serial !== null && is_numeric($serial) && abs((float)$serial) < 100) {
+                $serial = null;
+            }
+            if ($mac !== null && preg_match('/^[0-9]+$/', str_replace([':', '-'], '', $mac)) && strlen(str_replace([':', '-'], '', $mac)) < 12) {
+                $mac = null;
+            }
+            // If still no real serial/MAC (GPON firmware limitation), synthesise a stable unique ID
+            if (!$serial && !$mac) {
+                $serial = 'SYN-OLT' . $this->device->id . '-' . ltrim($suffix, '.');
+            }
+
+            $onus[] = [
+                'port_index' => $portIndex,
+                'onu_index' => $onuIndex,
+                'interface' => $intf,
+                'status' => $status,
+                'mac_address' => $mac,
+                'serial_number' => $serial,
+                'rx_power' => $rxPower,
+                'tx_power' => $txPower,
+                'in_octets'  => isset($inOctetsRaw)  && $inOctetsRaw  !== null ? (int)$inOctetsRaw  : null,
+                'out_octets' => isset($outOctetsRaw) && $outOctetsRaw !== null ? (int)$outOctetsRaw : null,
+            ];
+        }
+
+        // BDCOM EPON: enrich with IF-MIB 64-bit traffic counters
+        if (strtolower($this->device->vendor ?? '') === 'bdcom' &&
+            strtolower($this->device->pon_type  ?? '') === 'epon') {
+            $onus = $this->enrichBdcomEponTrafficViaIfMib($onus);
+        }
+
+        $this->syncOnusToDb($onus);
+
+        $this->updateOltPorts($onus);
+
+        $avgRxPower = !empty($rxPowers) ? round(array_sum($rxPowers) / count($rxPowers), 2) : null;
+
+        $now = now();
+        DB::table('olt_snmp_stats')->insert([
+            'olt_device_id' => $this->device->id,
+            'company_id' => $this->device->company_id ?? null,
+            'cpu_usage' => $this->device->cpu_usage,
+            'memory_usage' => $this->device->memory_usage,
+            'temperature' => $this->device->temperature,
+            'uptime_seconds' => $this->device->uptime_seconds,
+            'total_onu' => count($onus),
+            'online_onu' => $totalOnline,
+            'offline_onu' => $totalOffline,
+            'avg_rx_power' => $avgRxPower,
+            'polled_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        Log::info("OLT Monitor [{$this->device->name}]: Polled " . count($onus) . " ONUs ({$totalOnline} online, {$totalOffline} offline)");
+
+        return [
+            'total' => count($onus),
+            'online' => $totalOnline,
+            'offline' => $totalOffline,
+            'avg_rx_power' => $avgRxPower,
+            'onus' => $onus,
+        ];
+    }
+
+
+
+    /**
+     * BDCOM EPON dedicated SNMP collector.
+     * Uses MAC OID (suffix=ifIndex) + IF-MIB (ifDescr, ifOperStatus,
+     * ifHCInOctets, ifHCOutOctets) + proprietary power OIDs.
+     * The standard EPON_ONU_STATUS OID is not available on all firmwares.
+     */
+    protected function pollBdcomEponViaSnmp(): array
+    {
+        // ── Step 1: MAC walk — suffix IS the ifIndex ────────────────────────
+        $macRaw = $this->snmpClient->walk(BdcomOIDMapping::EPON_ONU_MAC);
+        if (empty($macRaw)) {
+            Log::warning("OLT Monitor [{$this->device->name}]: EPON MAC walk empty, falling back to DB");
+            return $this->pollOnuStatusFromDb();
+        }
+
+        // ── Step 2: Build reference tables via IF-MIB walks ────────────────
+        $ifDescrRaw    = $this->snmpClient->walk(OIDMapping::IF_DESCR);
+        $ifOperRaw     = $this->snmpClient->walk(OIDMapping::IF_OPER_STATUS);
+        $hcInRaw       = $this->snmpClient->walk(OIDMapping::IF_HC_IN_OCTETS);
+        $hcOutRaw      = $this->snmpClient->walk(OIDMapping::IF_HC_OUT_OCTETS);
+        $rxPowerRaw    = $this->snmpClient->walk(BdcomOIDMapping::EPON_ONU_RX_POWER);
+        $txPowerRaw    = $this->snmpClient->walk(BdcomOIDMapping::EPON_ONU_TX_POWER);
+
+        // Fallback 32-bit traffic if HC not available
+        if (empty($hcInRaw)) {
+            $hcInRaw  = $this->snmpClient->walk(OIDMapping::IF_IN_OCTETS);
+            $hcOutRaw = $this->snmpClient->walk(OIDMapping::IF_OUT_OCTETS);
+        }
+
+        // Helper: extract ifIndex from last OID component
+        $ifIdx = static function(string $oid): int {
+            preg_match('/\.(\d+)$/', $oid, $m);
+            return isset($m[1]) ? (int)$m[1] : 0;
+        };
+
+        // ifIndex-keyed maps
+        $descrMap   = [];  // ifIndex => "EPON0/X:Y"
+        $operMap    = [];  // ifIndex => 1|2 (1=up, 2=down)
+        $hcInMap    = [];  // ifIndex => bytes
+        $hcOutMap   = [];  // ifIndex => bytes
+        $rxPowerMap = [];  // ifIndex => dBm (float|null)
+        $txPowerMap = [];  // ifIndex => dBm (float|null)
+
+        foreach ($ifDescrRaw as $oid => $v)  { $i = $ifIdx($oid); if ($i) $descrMap[$i]   = trim($v, '"'); }
+        foreach ($ifOperRaw  as $oid => $v)  { $i = $ifIdx($oid); if ($i) $operMap[$i]    = (int)$v; }
+        foreach ($hcInRaw    as $oid => $v)  { $i = $ifIdx($oid); if ($i) $hcInMap[$i]    = (int)$v; }
+        foreach ($hcOutRaw   as $oid => $v)  { $i = $ifIdx($oid); if ($i) $hcOutMap[$i]   = (int)$v; }
+        foreach ($rxPowerRaw as $oid => $v)  {
+            $i = $ifIdx($oid);
+            if ($i) $rxPowerMap[$i] = $this->oidMapping->parseRxPower($v);
+        }
+        foreach ($txPowerRaw as $oid => $v)  {
+            $i = $ifIdx($oid);
+            if ($i) $txPowerMap[$i] = $this->oidMapping->parseTxPower($v);
+        }
+
+        // ── Step 3: Build ONU list ──────────────────────────────────────────
+        $onus         = [];
+        $totalOnline  = 0;
+        $totalOffline = 0;
+        $rxPowers     = [];
+
+        foreach ($macRaw as $oid => $rawMac) {
+            $idx = $ifIdx($oid);
+            if (!$idx) continue;
+
+            $mac = method_exists($this->oidMapping, 'parseMacAddress')
+                ? $this->oidMapping->parseMacAddress($rawMac)
+                : strtoupper($rawMac);
+
+            // Skip empty or obviously invalid MACs
+            if (!$mac || strlen(str_replace(':', '', $mac)) < 12) continue;
+
+            // Derive port/ONU index from ifDescr ("EPON0/1:2" → port=1 onu=2)
+            $descr     = $descrMap[$idx] ?? '';
+            $portIndex = 0;
+            $onuIndex  = 0;
+            if (preg_match('/^EPON\d+\/(\d+):(\d+)$/i', $descr, $pm)) {
+                $portIndex = (int)$pm[1];
+                $onuIndex  = (int)$pm[2];
+            }
+
+            $status   = (isset($operMap[$idx]) && $operMap[$idx] == 1) ? 'online' : 'offline';
+            $rxPower  = $rxPowerMap[$idx] ?? null;
+            $txPower  = $txPowerMap[$idx] ?? null;
+            $inBytes  = $hcInMap[$idx]  ?? null;
+            $outBytes = $hcOutMap[$idx] ?? null;
+
+            if ($status === 'online') $totalOnline++;
+            else $totalOffline++;
+            if ($rxPower !== null) $rxPowers[] = $rxPower;
+
+            $intf = $this->oidMapping->formatOnuInterface($portIndex, $onuIndex);
+
+            $serial = null; // EPON ONUs identified by MAC; no serial via SNMP
+
+            $onus[] = [
+                'port_index'    => $portIndex,
+                'onu_index'     => $onuIndex,
+                'interface'     => $intf,
+                'status'        => $status,
+                'mac_address'   => $mac,
+                'serial_number' => $serial,
+                'rx_power'      => $rxPower,
+                'tx_power'      => $txPower,
+                'in_octets'     => $inBytes,
+                'out_octets'    => $outBytes,
+            ];
+        }
+
+        // ── Step 4: Persist ─────────────────────────────────────────────────
+        $this->syncOnusToDb($onus);
+        $this->updateOltPorts($onus);
+
+        $avgRxPower  = !empty($rxPowers)
+            ? round(array_sum($rxPowers) / count($rxPowers), 2)
+            : null;
+        $totalOnline  = count(array_filter($onus, fn($o) => $o['status'] === 'online'));
+        $totalOffline = count($onus) - $totalOnline;
+
+        $now = now();
+        DB::table('olt_snmp_stats')->insert([
+            'olt_device_id' => $this->device->id,
+            'company_id'    => $this->device->company_id ?? null,
+            'cpu_usage'     => $this->device->cpu_usage,
+            'memory_usage'  => $this->device->memory_usage,
+            'temperature'   => $this->device->temperature,
+            'total_onu'     => count($onus),
+            'online_onu'    => $totalOnline,
+            'offline_onu'   => $totalOffline,
+            'avg_rx_power'  => $avgRxPower,
+            'created_at'    => $now,
+            'updated_at'    => $now,
+        ]);
+
+        Log::info("BDCOM EPON [{$this->device->name}]: polled " . count($onus) . " ONUs ($totalOnline online, $totalOffline offline) via MAC+IF-MIB");
+
+        return [
+            'total'         => count($onus),
+            'online'        => $totalOnline,
+            'offline'       => $totalOffline,
+            'avg_rx_power'  => $avgRxPower,
+            'onus'          => [],
+        ];
+    }
+
+    /**
+     * BDCOM GPON dedicated SNMP collector.
+     * GP3600-08D fw 10.3.0D Build 147850: per-ONU serial/power NOT available
+     * via SNMP. Uses IF-MIB (ifDescr/ifOperStatus) + port-level DDM.
+     */
+    protected function pollBdcomGponViaSnmp(): array
+    {
+        // Use telnet collector for telnet-configured GPON OLTs
+        $isTelnet = strtolower($this->device->connection_type ?? '') === 'telnet';
+        if ($isTelnet) {
+            $collector = new GponTelnetCollector($this->device);
+        } else {
+            $collector = new BdcomGponSnmpCollector($this->device);
+        }
+        $onuList   = $collector->collectAll();
+
+        if (empty($onuList)) {
+            Log::warning("OLT Monitor [{$this->device->name}]: GPON collector returned empty, falling back to DB");
+            return $this->pollOnuStatusFromDb();
+        }
+
+        $totalOnline  = 0;
+        $totalOffline = 0;
+        $rxPowers     = [];
+
+        foreach ($onuList as $item) {
+            if ($item['status'] === 'online') $totalOnline++;
+            else $totalOffline++;
+            if ($item['rx_power'] !== null) $rxPowers[] = $item['rx_power'];
+
+            // pon_port may be an int (SNMP collector) or a string like "GPON0/1" (telnet collector)
+            if (is_int($item['pon_port'])) {
+                $ponPort = $this->oidMapping->formatPortName($item['pon_port']);
+            } elseif (preg_match('/GPON\d+\/(?:\d+\/)?(\d+)/i', $item['pon_port'], $pm)) {
+                // Normalize to "GPON0/X" format expected by the DB
+                $ponPort = 'GPON0/' . $pm[1];
+            } else {
+                $ponPort = $item['pon_port'];
+            }
+
+            // Find existing ONU — port+onu_number is the stable key for GPON
+            $existing = DB::table('onus')
+                ->where('olt_device_id', $this->device->id)
+                ->where('pon_port', $ponPort)
+                ->where('onu_number', $item['onu_number'])
+                ->first();
+
+            // Fallback: match by synthetic serial
+            if (!$existing && !empty($item['serial_number'])) {
+                $existing = DB::table('onus')
+                    ->where('olt_device_id', $this->device->id)
+                    ->where('serial_number', $item['serial_number'])
+                    ->first();
+            }
+
+            $updateData = [
+                'status'     => $item['status'],
+                'pon_port'   => $ponPort,
+                'onu_number' => $item['onu_number'],
+                'updated_at' => now(),
+            ];
+
+            if ($item['rx_power']    !== null) $updateData['rx_power']    = $item['rx_power'];
+            if ($item['tx_power']    !== null) $updateData['tx_power']    = $item['tx_power'];
+            if ($item['temperature'] !== null) $updateData['temperature'] = $item['temperature'];
+            if ($item['voltage']     !== null) $updateData['voltage']     = $item['voltage'];
+            if (isset($item['tx_bias']) && $item['tx_bias'] !== null) $updateData['tx_bias'] = $item['tx_bias'];
+            // Traffic counters per ONU via SNMP (ifInOctets/ifOutOctets)
+            if (isset($item['in_octets']))  $updateData['in_octets']  = (int)$item['in_octets'];
+            if (isset($item['out_octets'])) $updateData['out_octets'] = (int)$item['out_octets'];
+            // GPON telnet extra fields
+            if (isset($item['config_status']))       $updateData['config_status']      = $item['config_status'];
+            if (isset($item['olt_offline_reason']))  $updateData['olt_offline_reason'] = $item['olt_offline_reason'];
+            if (!empty($item['olt_online_time']))    $updateData['last_online']        = $item['olt_online_time'];
+            if (!empty($item['olt_offline_time']))   $updateData['last_offline_at']    = $item['olt_offline_time'];
+            if (isset($item['distance'])  && $item['distance'] !== null) $updateData['distance'] = $item['distance'];
+
+            // Context array for Telegram helpers (need port_index / onu_index keys)
+            $onuCtx = array_merge($item, [
+                'port_index' => $item['pon_port'],
+                'onu_index'  => $item['onu_number'],
+            ]);
+
+            if ($item['status'] === 'online') {
+                $updateData['last_online'] = now();
+                if ($existing && $existing->status === 'offline') {
+                    DB::table('onu_alarm_logs')
+                        ->where('onu_id', $existing->id)
+                        ->where('is_resolved', false)
+                        ->update(['is_resolved' => true, 'resolved_at' => now(), 'updated_at' => now()]);
+                    $this->sendOnuUpTelegram($existing, $onuCtx);
+                }
+            } elseif ($item['status'] === 'offline' && $existing && $existing->status === 'online') {
+                $updateData['last_offline'] = now();
+                DB::table('onu_alarm_logs')->insert([
+                    'olt_device_id' => $this->device->id,
+                    'onu_id'        => $existing->id,
+                    'serial_number' => $existing->serial_number,
+                    'alarm_type'    => 'LOS',
+                    'severity'      => 'warning',
+                    'description'   => "ONU {$existing->serial_number} went offline on {$ponPort}",
+                    'rx_power'      => $item['rx_power'],
+                    'tx_power'      => $item['tx_power'],
+                    'is_resolved'   => false,
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
+                ]);
+                $this->sendOnuDownTelegram($existing, $onuCtx, 'LOS');
+            }
+
+            if ($existing) {
+                DB::table('onus')->where('id', $existing->id)->update($updateData);
+            } else {
+                DB::table('onus')->insert(array_merge($updateData, [
+                    'olt_device_id' => $this->device->id,
+                    'company_id'    => $this->device->company_id ?? null,
+                    'serial_number' => $item['serial_number'],
+                    'mac_address'   => $item['mac_address'],
+                    'vendor'             => $item['vendor'] ?? null,
+                    'model'              => $item['model'] ?? null,
+                    'config_status'      => $item['config_status'] ?? null,
+                    'olt_offline_reason' => $item['olt_offline_reason'] ?? null,
+                    'distance'           => $item['distance'] ?? null,
+                    'last_online'        => !empty($item['olt_online_time'])  ? $item['olt_online_time']  : (($item['status'] === 'online')  ? now() : null),
+                    'last_offline'       => !empty($item['olt_offline_time']) ? $item['olt_offline_time'] : (($item['status'] === 'offline') ? now() : null),
+                    'created_at'         => now(),
+                ]));
+                Log::info("BdcomGPON: Auto-created ONU {$ponPort}:{$item['onu_number']} serial={$item['serial_number']} for OLT [{$this->device->name}]");
+            }
+
+            // Auto-link client by ONU serial (if not already linked)
+            if (empty($existing->client_id ?? null) && !empty($item['serial_number'])) {
+                $cleanSerial = strtoupper(preg_replace('/[:\-\s]/', '', $item['serial_number']));
+                $matchedClient = DB::table('clients')
+                    ->whereRaw("UPPER(REPLACE(REPLACE(REPLACE(onu_serial, ':', ''), '-', ''), ' ', '')) = ?", [$cleanSerial])
+                    ->first();
+                if ($matchedClient) {
+                    // Get the ONU id (existing or newly inserted)
+                    $onuRow = DB::table('onus')
+                        ->where('olt_device_id', $this->device->id)
+                        ->where('onu_number', $item['onu_number'])
+                        ->where('pon_port', $ponPort)
+                        ->first();
+                    if ($onuRow) {
+                        DB::table('onus')->where('id', $onuRow->id)->update(['client_id' => $matchedClient->id]);
+                        Log::info("BdcomGPON: Auto-linked ONU {$item['serial_number']} to client [{$matchedClient->username}]");
+                    }
+                }
+            }
+        }
+
+        // Update olt_ports totals
+        $this->updateOltPorts(array_map(function($i) {
+            $raw = $i['pon_port'];
+            if (is_int($raw)) {
+                $portIdx = $raw;
+            } elseif (preg_match('/GPON\d+\/(?:\d+\/)?(\d+)/i', (string)$raw, $pm2)) {
+                $portIdx = (int)$pm2[1];
+            } else {
+                $portIdx = 0;
+            }
+            return ['port_index' => $portIdx, 'status' => $i['status']];
+        }, $onuList));
+
+        // Aggregate per-ONU traffic into olt_traffic_stats (one row per GPON port per poll)
+        $portTraffic = [];
+        foreach ($onuList as $onu) {
+            // Extract integer port from pon_port string (e.g. "GPON0/1" → 1)
+            $rawPort = $onu['pon_port'];
+            if (is_int($rawPort)) {
+                $pKey = $rawPort;
+            } elseif (preg_match('/GPON\d+\/(?:\d+\/)?(\d+)/i', (string)$rawPort, $pm)) {
+                $pKey = (int)$pm[1];
+            } else {
+                $pKey = 0;
+            }
+            if (!isset($portTraffic[$pKey])) {
+                $portTraffic[$pKey] = ['in_octets'=>0, 'out_octets'=>0, 'total'=>0, 'online'=>0];
+            }
+            $portTraffic[$pKey]['in_octets']  += (int)($onu['in_octets']  ?? 0);
+            $portTraffic[$pKey]['out_octets'] += (int)($onu['out_octets'] ?? 0);
+            $portTraffic[$pKey]['total']++;
+            if ($onu['status'] === 'online') $portTraffic[$pKey]['online']++;
+        }
+        $tNow = now();
+        foreach ($portTraffic as $portNum => $ptraf) {
+            DB::table('olt_traffic_stats')->insert([
+                'olt_device_id' => $this->device->id,
+                'company_id'    => $this->device->company_id ?? null,
+                'port_no'       => $portNum,
+                'in_octets'     => $ptraf['in_octets'],
+                'out_octets'    => $ptraf['out_octets'],
+                'in_rate_bps'   => 0,
+                'out_rate_bps'  => 0,
+                'total_onu'     => $ptraf['total'],
+                'online_onu'    => $ptraf['online'],
+                'polled_at'     => $tNow,
+                'created_at'    => $tNow,
+                'updated_at'    => $tNow,
+            ]);
+        }
+
+        // Sync clients — normalize serial colon variants (HWTC:XXXX = HWTCXXXX)
+        DB::statement("
+            UPDATE clients
+            SET onu_status   = onus.status,
+                onu_rx_power = onus.rx_power,
+                onu_id       = onus.id
+            FROM onus
+            WHERE onus.olt_device_id = ?
+              AND (
+                REPLACE(clients.onu_serial, ':', '') = REPLACE(onus.serial_number, ':', '')
+                OR clients.onu_mac = onus.mac_address
+              )
+        ", [$this->device->id]);
+
+        // Fallback: clients already linked by onu_id FK (set by Telnet job)
+        DB::statement("
+            UPDATE clients
+            SET onu_status   = onus.status,
+                onu_rx_power = onus.rx_power
+            FROM onus
+            WHERE clients.onu_id = onus.id
+              AND onus.olt_device_id = ?
+        ", [$this->device->id]);
+
+        $avgRxPower = !empty($rxPowers) ? round(array_sum($rxPowers) / count($rxPowers), 2) : null;
+
+        $now = now();
+        DB::table('olt_snmp_stats')->insert([
+            'olt_device_id'  => $this->device->id,
+            'company_id'     => $this->device->company_id ?? null,
+            'cpu_usage'      => $this->device->cpu_usage,
+            'memory_usage'   => $this->device->memory_usage,
+            'temperature'    => $this->device->temperature,
+            'uptime_seconds' => $this->device->uptime_seconds,
+            'total_onu'      => count($onuList),
+            'online_onu'     => $totalOnline,
+            'offline_onu'    => $totalOffline,
+            'avg_rx_power'   => $avgRxPower,
+            'polled_at'      => $now,
+            'created_at'     => $now,
+            'updated_at'     => $now,
+        ]);
+
+        Log::info("OLT Monitor [{$this->device->name}] GPON SNMP: " . count($onuList) . " ONUs ({$totalOnline} online, {$totalOffline} offline), avgRX={$avgRxPower} dBm");
+
+        return [
+            'total'        => count($onuList),
+            'online'       => $totalOnline,
+            'offline'      => $totalOffline,
+            'avg_rx_power' => $avgRxPower,
+            'onus'         => array_map(fn($i) => array_merge($i, [
+                'port_index' => $i['pon_port'],
+                'onu_index'  => $i['onu_number'],
+            ]), $onuList),
+        ];
+    }
+
+    protected function pollOnuStatusFromDb(): array
+    {
+        $stats = DB::table('onus')
+            ->where('olt_device_id', $this->device->id)
+            ->selectRaw("COUNT(*) as total, SUM(CASE WHEN status='online' THEN 1 ELSE 0 END) as online_count, SUM(CASE WHEN status='offline' THEN 1 ELSE 0 END) as offline_count, AVG(CASE WHEN rx_power IS NOT NULL THEN rx_power END) as avg_rx")
+            ->first();
+
+        return [
+            'total' => (int)($stats->total ?? 0),
+            'online' => (int)($stats->online_count ?? 0),
+            'offline' => (int)($stats->offline_count ?? 0),
+            'avg_rx_power' => $stats->avg_rx ? round((float)$stats->avg_rx, 2) : null,
+            'onus' => [],
+        ];
+    }
+
+    public function pollTrafficStats(): array
+    {
+        // GPON OLTs: traffic is collected per-ONU in pollBdcomGponViaSnmp()
+        // and aggregated into olt_traffic_stats there. Skip EPON-style walk.
+        if (strtolower($this->device->vendor ?? '') === 'bdcom' &&
+            strtolower($this->device->pon_type ?? '') === 'gpon') {
+            return [];
+        }
+
+        $totalPorts = $this->device->total_ports ?? 8;
+        $trafficData = [];
+
+        $ifDescrResults = $this->snmpClient->walk(OIDMapping::IF_DESCR);
+
+        $ponIfIndexes = [];
+        foreach ($ifDescrResults as $oid => $descr) {
+            if (preg_match('/EPON|GPON|PON/i', $descr) && !preg_match('/^(GigabitEthernet|FastEthernet|TenGigabitEthernet|Management|Loopback)/i', $descr)) {
+                if (preg_match('/\.(\d+)$/', $oid, $m)) {
+                    $ponIfIndexes[] = [
+                        'if_index' => (int)$m[1],
+                        'name' => $descr,
+                    ];
+                }
+            }
+        }
+
+        if (empty($ponIfIndexes)) {
+            for ($i = 1; $i <= $totalPorts; $i++) {
+                $ponIfIndexes[] = [
+                    'if_index' => $i,
+                    'name' => $this->oidMapping->formatPortName($i),
+                ];
+            }
+        }
+
+        $now = now();
+        $prevStats = DB::table('olt_traffic_stats')
+            ->where('olt_device_id', $this->device->id)
+            ->orderByDesc('polled_at')
+            ->limit($totalPorts * 2)
+            ->get()
+            ->groupBy('port_no');
+
+        foreach ($ponIfIndexes as $portInfo) {
+            $ifIndex = $portInfo['if_index'];
+            $traffic = $this->snmpClient->getInterfaceTraffic($ifIndex);
+
+            $prev = $prevStats->get($ifIndex)?->first();
+            $inRate = 0;
+            $outRate = 0;
+
+            if ($prev && $traffic['in_octets'] !== null && $prev->in_octets > 0) {
+                $elapsed = $now->timestamp - (new \DateTime($prev->polled_at))->getTimestamp();
+                if ($elapsed > 0) {
+                    $inRate = max(0, ($traffic['in_octets'] - $prev->in_octets) * 8 / $elapsed);
+                    $outRate = max(0, ($traffic['out_octets'] - $prev->out_octets) * 8 / $elapsed);
+                }
+            }
+
+            $portName = $portInfo['name'];
+            $portOnuStats = DB::table('onus')
+                ->where('olt_device_id', $this->device->id)
+                ->where(function ($q) use ($portName, $ifIndex) {
+                    $q->where('pon_port', $portName)
+                      ->orWhere('pon_port', (string)$ifIndex)
+                      ->orWhere('pon_port', $this->oidMapping->formatPortName($ifIndex));
+                })
+                ->selectRaw("COUNT(*) as total, SUM(CASE WHEN status='online' THEN 1 ELSE 0 END) as online_count")
+                ->first();
+
+            DB::table('olt_traffic_stats')->insert([
+                'olt_device_id' => $this->device->id,
+                'company_id' => $this->device->company_id ?? null,
+                'port_no' => $ifIndex,
+                'in_octets' => $traffic['in_octets'] ?? 0,
+                'out_octets' => $traffic['out_octets'] ?? 0,
+                'in_rate_bps' => (int)$inRate,
+                'out_rate_bps' => (int)$outRate,
+                'total_onu' => (int)($portOnuStats->total ?? 0),
+                'online_onu' => (int)($portOnuStats->online_count ?? 0),
+                'polled_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $trafficData[] = [
+                'port_no' => $ifIndex,
+                'name' => $portInfo['name'],
+                'in_octets' => $traffic['in_octets'],
+                'out_octets' => $traffic['out_octets'],
+                'in_rate_bps' => (int)$inRate,
+                'out_rate_bps' => (int)$outRate,
+            ];
+        }
+
+        return $trafficData;
+    }
+
+
+    /** Enrich BDCOM EPON ONU list with IF-MIB 64-bit traffic counters. */
+    protected function enrichBdcomEponTrafficViaIfMib(array $onus): array
+    {
+        try {
+            $ifDescrRaw = $this->snmpClient->walk(OIDMapping::IF_DESCR);
+            $ifIndexMap = [];
+            foreach ($ifDescrRaw as $oid => $descr) {
+                $descr = trim($descr, '"');
+                if (preg_match('/^EPON\\d+\/\\d+:\\d+$/i', $descr)) {
+                    if (preg_match('/\\.(\\d+)$/', $oid, $m)) {
+                        $ifIndexMap[$descr] = (int)$m[1];
+                    }
+                }
+            }
+            if (empty($ifIndexMap)) return $onus;
+
+            $hcIn  = $this->snmpClient->walk(OIDMapping::IF_HC_IN_OCTETS);
+            $hcOut = $this->snmpClient->walk(OIDMapping::IF_HC_OUT_OCTETS);
+            if (empty($hcIn)) {
+                $hcIn  = $this->snmpClient->walk(OIDMapping::IF_IN_OCTETS);
+                $hcOut = $this->snmpClient->walk(OIDMapping::IF_OUT_OCTETS);
+            }
+            $inMap = []; $outMap = [];
+            foreach ($hcIn  as $oid => $val) {
+                if (preg_match('/\\.(\\d+)$/', $oid, $m)) $inMap[(int)$m[1]] = (int)$val;
+            }
+            foreach ($hcOut as $oid => $val) {
+                if (preg_match('/\\.(\\d+)$/', $oid, $m)) $outMap[(int)$m[1]] = (int)$val;
+            }
+            foreach ($onus as &$onu) {
+                $iface = $onu['interface'] ?? '';
+                if (isset($ifIndexMap[$iface])) {
+                    $idx = $ifIndexMap[$iface];
+                    if (isset($inMap[$idx]))  $onu['in_octets']  = $inMap[$idx];
+                    if (isset($outMap[$idx])) $onu['out_octets'] = $outMap[$idx];
+                }
+            }
+            unset($onu);
+            Log::info("EPON IF-MIB: enriched " . count($onus) . " ONUs [{" . $this->device->name . "}]");
+        } catch (\Exception $e) {
+            Log::warning("EPON IF-MIB failed [{" . $this->device->name . "}]: " . $e->getMessage());
+        }
+        return $onus;
+    }
+
+    protected function syncOnusToDb(array $onus): void
+    {
+        foreach ($onus as $onu) {
+            $identifier = $onu['serial_number'] ?: $onu['mac_address'];
+            if (!$identifier) continue;
+
+            $existing = DB::table('onus')
+                ->where('olt_device_id', $this->device->id)
+                ->where(function ($q) use ($onu) {
+                    if ($onu['serial_number']) {
+                        $q->where('serial_number', $onu['serial_number']);
+                    } elseif ($onu['mac_address']) {
+                        $q->where('mac_address', $onu['mac_address']);
+                    }
+                })
+                ->first();
+
+            $updateData = [
+                'status' => $onu['status'],
+                'rx_power' => $onu['rx_power'],
+                'tx_power' => $onu['tx_power'],
+                'pon_port' => $this->oidMapping->formatPortName($onu['port_index']),
+                'onu_number' => $onu['onu_index'],
+                'updated_at' => now(),
+            ];
+
+            // Save traffic counters if available (e.g. from IF-MIB enrichment)
+            if (isset($onu['in_octets']))  $updateData['in_octets']  = (int)$onu['in_octets'];
+            if (isset($onu['out_octets'])) $updateData['out_octets'] = (int)$onu['out_octets'];
+
+            if ($onu['status'] === 'online') {
+                $updateData['last_online'] = now();
+                // ONU came back online — resolve alarm & send recovery notification
+                if ($existing && $existing->status === 'offline') {
+                    DB::table('onu_alarm_logs')
+                        ->where('onu_id', $existing->id)
+                        ->where('is_resolved', false)
+                        ->update([
+                            'is_resolved' => true,
+                            'resolved_at' => now(),
+                            'updated_at'  => now(),
+                        ]);
+                    $this->sendOnuUpTelegram($existing, $onu);
+                }
+            } elseif ($onu['status'] === 'offline' && $existing && $existing->status === 'online') {
+                $updateData['last_offline'] = now();
+
+                $downReason = $existing->down_reason ?? $existing->last_down_reason ?? 'LOS';
+
+                DB::table('onu_alarm_logs')->insert([
+                    'olt_device_id' => $this->device->id,
+                    'onu_id' => $existing->id,
+                    'serial_number' => $existing->serial_number,
+                    'alarm_type' => 'LOS',
+                    'severity' => 'warning',
+                    'description' => "ONU {$existing->serial_number} went offline on " . $this->oidMapping->formatPortName($onu['port_index']),
+                    'rx_power' => $onu['rx_power'],
+                    'tx_power' => $onu['tx_power'],
+                    'is_resolved' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $this->sendOnuDownTelegram($existing, $onu, $downReason);
+            }
+
+            if ($existing) {
+                DB::table('onus')->where('id', $existing->id)->update($updateData);
+            } else {
+                DB::table('onus')->insert(array_merge($updateData, [
+                    'olt_device_id' => $this->device->id,
+                    'company_id' => $this->device->company_id ?? null,
+                    'serial_number' => $onu['serial_number'],
+                    'mac_address' => $onu['mac_address'],
+                    'created_at' => now(),
+                ]));
+            }
+        }
+    }
+
+    protected function updateOltPorts(array $onus): void
+    {
+        $portStats = [];
+        foreach ($onus as $onu) {
+            $portKey = $onu['port_index'];
+            if (!isset($portStats[$portKey])) {
+                $portStats[$portKey] = ['total' => 0, 'online' => 0, 'offline' => 0];
+            }
+            $portStats[$portKey]['total']++;
+            if ($onu['status'] === 'online') $portStats[$portKey]['online']++;
+            else $portStats[$portKey]['offline']++;
+        }
+
+        foreach ($portStats as $portNo => $stats) {
+            DB::table('olt_ports')->updateOrInsert(
+                ['olt_device_id' => $this->device->id, 'port_no' => $portNo],
+                [
+                    'total_onu' => $stats['total'],
+                    'online_onu' => $stats['online'],
+                    'offline_onu' => $stats['offline'],
+                    'last_polled' => now(),
+                    'company_id' => $this->device->company_id ?? null,
+                    'updated_at' => now(),
+                ]
+            );
+        }
+    }
+
+    protected function extractSuffix(string $fullOid, string $baseOid): string
+    {
+        $baseLen = strlen($baseOid);
+        if (str_starts_with($fullOid, $baseOid)) {
+            return substr($fullOid, $baseLen);
+        }
+        if (preg_match('/\.(\d+(?:\.\d+)*)$/', $fullOid, $m)) {
+            return '.' . $m[1];
+        }
+        return '';
+    }
+
+    protected function findMatchingValue(array $results, ?string $baseOid, string $suffix): ?string
+    {
+        if (empty($results) || !$baseOid) return null;
+
+        $fullOid = $baseOid . $suffix;
+        if (isset($results[$fullOid])) {
+            return $results[$fullOid];
+        }
+
+        foreach ($results as $oid => $value) {
+            if (str_ends_with($oid, $suffix)) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    protected function getClientForOnu(object $onu): ?object
+    {
+        if (!$onu->client_id) return null;
+        return DB::table('clients')->where('id', $onu->client_id)->first();
+    }
+
+    protected function sendOnuDownTelegram(object $existing, array $onu, string $downReason): void
+    {
+        try {
+            $client  = $this->getClientForOnu($existing);
+            $ponPort = $this->oidMapping->formatPortName($onu['port_index']);
+            $area    = '';
+            if ($client && $client->area_id) {
+                $areaRow = DB::table('areas')->where('id', $client->area_id)->first();
+                $area = $areaRow->name ?? '';
+            }
+
+            $telegram = new \App\Services\TelegramService();
+            $telegram->sendOnuDownAlert(
+                serial:     $existing->serial_number  ?? $existing->mac_address ?? 'N/A',
+                ponPort:    $ponPort,
+                onuNumber:  (string)($existing->onu_number ?? $onu['onu_index']),
+                rxPower:    $onu['rx_power'],
+                txPower:    $onu['tx_power'],
+                downReason: strtoupper($downReason ?: 'LOS'),
+                vendor:     $existing->vendor ?? '',
+                model:      $existing->model  ?? '',
+                clientId:   $client ? ($client->client_id ?? (string)$client->id) : 'N/A',
+                clientName: $client ? ($client->name ?? 'N/A') : 'N/A',
+                pppoeId:    $client ? ($client->username ?? 'N/A') : 'N/A',
+                phone:      $client ? ($client->phone ?? '') : '',
+                oltName:    $this->device->name ?? 'OLT',
+                address:    $client ? ($client->address ?? '') : '',
+                area:       $area,
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('ONU down Telegram failed: ' . $e->getMessage());
+        }
+    }
+
+    protected function sendOnuUpTelegram(object $existing, array $onu): void
+    {
+        try {
+            $client  = $this->getClientForOnu($existing);
+            $ponPort = $this->oidMapping->formatPortName($onu['port_index']);
+
+            // Calculate downtime
+            $downtime = '';
+            if ($existing->last_offline) {
+                $downAt = \Carbon\Carbon::parse($existing->last_offline);
+                $diff   = $downAt->diff(now());
+                if ($diff->days > 0) {
+                    $downtime = $diff->days . 'd ' . $diff->h . 'h ' . $diff->i . 'min';
+                } elseif ($diff->h > 0) {
+                    $downtime = $diff->h . 'h ' . $diff->i . 'min';
+                } else {
+                    $downtime = $diff->i . ' min';
+                }
+            }
+
+            $telegram = new \App\Services\TelegramService();
+            $telegram->sendOnuUpAlert(
+                onuSerial:  $existing->serial_number  ?? $existing->mac_address ?? 'N/A',
+                ponPort:    $ponPort,
+                onuNumber:  (string)($existing->onu_number ?? $onu['onu_index']),
+                rxPower:    $onu['rx_power'],
+                txPower:    $onu['tx_power'],
+                clientId:   $client ? ($client->client_id ?? (string)$client->id) : 'N/A',
+                clientName: $client ? ($client->name ?? 'N/A') : 'N/A',
+                pppoeId:    $client ? ($client->username ?? 'N/A') : 'N/A',
+                oltName:    $this->device->name ?? 'OLT',
+                downtime:   $downtime,
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('ONU up Telegram failed: ' . $e->getMessage());
+        }
+    }
+
+    public static function cleanupOldStats(int $daysToKeep = 7): int
+    {
+        $cutoff = now()->subDays($daysToKeep);
+        $deleted = 0;
+        $deleted += DB::table('olt_snmp_stats')->where('polled_at', '<', $cutoff)->delete();
+        $deleted += DB::table('olt_traffic_stats')->where('polled_at', '<', $cutoff)->delete();
+        return $deleted;
+    }
+}
