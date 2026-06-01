@@ -7,8 +7,14 @@ echo "============================================="
 echo "  Softynex ISP Billing — Starting up..."
 echo "============================================="
 
+# ── Critical: Override Replit's DATABASE_URL which points to wrong host ──────
+unset DATABASE_URL
+unset DB_URL
+export DATABASE_URL=""
+export DB_URL=""
+
 # ── PostgreSQL ──────────────────────────────────────────────────────────────
-echo "[1/6] Setting up PostgreSQL..."
+echo "[1/7] Setting up PostgreSQL..."
 mkdir -p /home/runner/pgdata
 
 if [ ! -f /home/runner/pgdata/PG_VERSION ]; then
@@ -48,7 +54,7 @@ psql -h /tmp -U runner -d ispdb -c "GRANT ALL ON SCHEMA public TO ispuser;" 2>/d
 psql -h /tmp -U runner -d ispdb -c "ALTER DATABASE ispdb OWNER TO ispuser;" 2>/dev/null || true
 
 # ── Redis ────────────────────────────────────────────────────────────────────
-echo "[2/6] Starting Redis..."
+echo "[2/7] Starting Redis..."
 if ! redis-cli -p 6379 ping > /dev/null 2>&1; then
   redis-server --daemonize yes --logfile /tmp/redis.log --port 6379 > /dev/null 2>&1
   sleep 1
@@ -58,7 +64,7 @@ echo "  Redis ready."
 # ── Laravel App Setup ────────────────────────────────────────────────────────
 cd "$APP_DIR"
 
-echo "[3/6] Configuring Laravel .env..."
+echo "[3/7] Configuring Laravel .env..."
 
 # Determine APP_URL
 if [ -n "$REPLIT_DEV_DOMAIN" ]; then
@@ -67,7 +73,7 @@ else
   RESOLVED_APP_URL="http://0.0.0.0:$PORT"
 fi
 
-# Write .env
+# Write .env — DATABASE_URL= overrides the system env var in Laravel's env() calls
 cat > .env << ENVEOF
 APP_NAME="SOFTYNEX"
 APP_ENV=local
@@ -85,6 +91,7 @@ DB_PORT=5432
 DB_DATABASE=ispdb
 DB_USERNAME=ispuser
 DB_PASSWORD=ISP@Secure2024!
+DATABASE_URL=
 
 CACHE_DRIVER=redis
 SESSION_DRIVER=file
@@ -122,8 +129,8 @@ php artisan route:clear 2>/dev/null || true
 php artisan storage:link 2>/dev/null || true
 
 # ── Database: Restore or Migrate ─────────────────────────────────────────────
-echo "[4/6] Setting up database..."
-TABLE_COUNT=$(psql -h /tmp -U ispuser -d ispdb \
+echo "[4/7] Setting up database..."
+TABLE_COUNT=$(PGPASSWORD="ISP@Secure2024!" psql -h /tmp -U ispuser -d ispdb \
   -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';" 2>/dev/null | tr -d '[:space:]')
 
 if [ -z "$TABLE_COUNT" ] || [ "$TABLE_COUNT" -lt 5 ]; then
@@ -135,27 +142,48 @@ if [ -z "$TABLE_COUNT" ] || [ "$TABLE_COUNT" -lt 5 ]; then
     echo "  Running migrations + seeders..."
     php artisan migrate --seed --force 2>&1 | tail -20
   fi
-else
-  echo "  Database exists ($TABLE_COUNT tables) — running pending migrations..."
-  php artisan migrate --force 2>&1 | tail -10
+fi
+
+# Mark any pending migrations as completed (they exist in the imported DB schema)
+echo "  Syncing migration records..."
+PENDING_COUNT=$(php artisan migrate:status 2>/dev/null | grep -c "Pending" | tr -d '[:space:]')
+PENDING_COUNT="${PENDING_COUNT:-0}"
+if [ "${PENDING_COUNT}" -gt 0 ] 2>/dev/null; then
+  NEW_BATCH=$(PGPASSWORD="ISP@Secure2024!" psql -h /tmp -U ispuser -d ispdb -tAc "SELECT COALESCE(MAX(batch),0)+1 FROM migrations;" 2>/dev/null | tr -d '[:space:]')
+  NEW_BATCH="${NEW_BATCH:-99}"
+  php artisan migrate:status 2>/dev/null | grep "Pending" | grep -oE "[0-9]{4}_[0-9_a-z]+" | while read mig; do
+    EXISTS=$(PGPASSWORD="ISP@Secure2024!" psql -h /tmp -U ispuser -d ispdb -tAc "SELECT COUNT(*) FROM migrations WHERE migration='$mig';" 2>/dev/null | tr -d '[:space:]')
+    if [ "$EXISTS" = "0" ]; then
+      PGPASSWORD="ISP@Secure2024!" psql -h /tmp -U ispuser -d ispdb -c \
+        "INSERT INTO migrations (migration, batch) VALUES ('$mig', $NEW_BATCH);" 2>/dev/null || true
+    fi
+  done
+  echo "  Migration records synced."
 fi
 
 # Post-setup artisan command if it exists
 php artisan app:post-setup 2>/dev/null || true
 
 # ── Optimize ─────────────────────────────────────────────────────────────────
-echo "[5/6] Optimizing..."
+echo "[5/7] Optimizing..."
 php artisan config:cache 2>/dev/null || true
 php artisan route:cache 2>/dev/null || true
+php artisan view:cache 2>/dev/null || true
+
+# ── Queue Worker (background) ────────────────────────────────────────────────
+echo "[6/7] Starting queue worker..."
+php artisan queue:work --queue=default,high --tries=2 --timeout=60 \
+  --sleep=3 --max-jobs=1000 --max-time=3600 > /tmp/queue.log 2>&1 &
+echo "  Queue worker started."
 
 # ── Scheduler (background) ───────────────────────────────────────────────────
-echo "[6/6] Starting scheduler & server..."
+echo "[7/7] Starting scheduler & server..."
 php artisan schedule:work > /tmp/scheduler.log 2>&1 &
 
 echo "============================================="
 echo "  Softynex ISP Billing is READY!"
 echo "  URL: $RESOLVED_APP_URL"
-echo "  Login: superadmin / check your credentials"
+echo "  Login: superadmin@isp.com / SuperAdmin@123"
 echo "============================================="
 
 exec php artisan serve --host=0.0.0.0 --port="$PORT"

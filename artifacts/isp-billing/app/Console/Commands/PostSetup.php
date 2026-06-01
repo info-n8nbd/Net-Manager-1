@@ -1416,8 +1416,10 @@ class PostSetup extends Command
         foreach ($departmentsWithDesignations as $deptName => $designations) {
             $dept = DB::table('departments')->where('name', $deptName)->first();
             if (!$dept) {
+                $defaultCompanyId = DB::table('companies')->orderBy('id')->value('id') ?? 1;
                 $deptId = DB::table('departments')->insertGetId([
                     'name' => $deptName,
+                    'company_id' => $defaultCompanyId,
                     'is_active' => true,
                     'created_at' => $now,
                     'updated_at' => $now,
